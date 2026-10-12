@@ -115,12 +115,12 @@ def run_migration(app=None, dry_run=False):
             if existing:
                 report["users"]["existing"] += 1
                 user_phone_map[phone] = existing.id
-                # Ensure admin role if matches admin_email
-                if email == admin_email and existing.role != "admin":
+                # Ensure admin role if matches admin_email or legacy admin
+                if (email == admin_email or email == "akashbaddur2007@gmail.com") and existing.role != "admin":
                     existing.role = "admin"
                 continue
 
-            role = "admin" if email == admin_email else "user"
+            role = "admin" if (email == admin_email or email == "akashbaddur2007@gmail.com") else "user"
             new_user = User(
                 id=u_id,
                 name=name,

@@ -2,8 +2,14 @@
 Pytest configuration and disposable fixtures for iSellora.
 Uses in-memory SQLite and isolated test contexts.
 """
-import pytest
+import sys
+import os
 import uuid
+import pytest
+
+# Ensure repository root is in sys.path for direct pytest invocation
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from backend.app import create_app
 from backend.database import db
 from backend.models import User, Listing, ListingImage, Order, OrderStatusHistory, Notification, utc_now

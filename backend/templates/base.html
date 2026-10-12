@@ -551,7 +551,13 @@
     <header class="navbar">
         <div class="container nav-inner">
             <a href="{{ url_for('home') }}" class="logo">
-                <span class="logo-badge">✦</span>
+                <span class="logo-badge">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+                        <rect x="5" y="2" width="14" height="20" rx="3" stroke="#ffffff" stroke-width="2" fill="none"/>
+                        <line x1="10" y1="18" x2="14" y2="18" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M8.5 10.5l2.5 2.5 4.5-4.5" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
                 <span>iSellora</span>
             </a>
 
@@ -671,7 +677,16 @@
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <h4>iSellora<span>™</span></h4>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                        <span class="logo-badge" style="width: 32px; height: 32px; box-shadow: none;">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+                                <rect x="5" y="2" width="14" height="20" rx="3" stroke="#ffffff" stroke-width="2" fill="none"/>
+                                <line x1="10" y1="18" x2="14" y2="18" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M8.5 10.5l2.5 2.5 4.5-4.5" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                        <h4 style="margin: 0; font-size: 20px; font-weight: 800; color: var(--primary);">iSellora<span>™</span></h4>
+                    </div>
                     <p style="margin-bottom: 16px;">The transparent, community-driven marketplace for certified pre-owned smartphones. Clear grading, honest descriptions, and zero deceptive practices.</p>
                     <div class="footer-notice">
                         <strong>🛡️ Safe Fulfillment Policy:</strong> Online card/UPI payment gateways are strictly deferred. All transactions are settled directly upon verified handover or delivery inspection (Cash on Delivery / Direct Settlement).

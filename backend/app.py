@@ -3,7 +3,14 @@ iSellora Marketplace Application
 Full-featured, secure, and relational-backed marketplace for second-hand smartphones.
 """
 import os
+import sys
 import uuid
+
+# Ensure project root is in sys.path so 'backend' is recognized regardless of invocation method
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 from datetime import datetime, timezone
 from urllib.parse import quote_plus
 from flask import (

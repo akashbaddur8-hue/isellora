@@ -1,868 +1,200 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% extends "base.html" %}
 
-    <title>My Orders - iSellora</title>
+{% block title %}My Orders | iSellora{% endblock %}
 
-    <style>
-        * {
-            box-sizing: border-box;
+{% block extra_css %}
+<style>
+    .page-title-row {
+        margin-bottom: 24px;
+    }
+
+    .page-title-row h1 {
+        font-size: 26px;
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+
+    .orders-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .order-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .order-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 14px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .order-meta {
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+
+    .order-meta strong {
+        color: var(--text-main);
+    }
+
+    .badge-status {
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: var(--radius-full);
+    }
+
+    .status-pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .status-confirmed { background: var(--primary-light); color: var(--primary); border: 1px solid #c7d2fe; }
+    .status-shipped { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .status-delivered { background: var(--success-light); color: #065f46; border: 1px solid #a7f3d0; }
+    .status-cancelled { background: var(--error-light); color: #991b1b; border: 1px solid #fecaca; }
+
+    .order-card-body {
+        display: grid;
+        grid-template-columns: 2fr 1.5fr 1fr;
+        gap: 20px;
+        align-items: center;
+    }
+
+    .order-phone-info h4 {
+        font-size: 17px;
+        font-weight: 800;
+        margin-bottom: 4px;
+    }
+
+    .order-delivery-info {
+        font-size: 13px;
+        color: #475569;
+        line-height: 1.5;
+    }
+
+    .order-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-end;
+    }
+
+    .btn-cancel-order {
+        background: none;
+        border: 1px solid var(--error);
+        color: var(--error);
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 14px;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+    }
+
+    .btn-cancel-order:hover {
+        background: var(--error);
+        color: white;
+    }
+
+    .btn-tracking {
+        background: #0284c7;
+        color: white;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 12px;
+        border-radius: var(--radius-md);
+        display: inline-block;
+    }
+
+    @media (max-width: 800px) {
+        .order-card-body {
+            grid-template-columns: 1fr;
         }
-
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f5f6fa;
-            color: #222;
-        }
-
-        /* NAVBAR */
-
-        .navbar {
-            background: linear-gradient(135deg, #5b21b6, #2563eb);
-            color: white;
-            padding: 15px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .nav-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        .nav-links a:hover {
-            text-decoration: underline;
-        }
-
-        /* CONTAINER */
-
-        .container {
-            width: 95%;
-            max-width: 1100px;
-            margin: 30px auto;
-        }
-
-        h1 {
-            margin-bottom: 25px;
-        }
-
-        /* ORDER CARD */
-
-        .order-card {
-            background: white;
-            border-radius: 16px;
-            padding: 22px;
-            margin-bottom: 22px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-        }
-
-        .order-header {
-            display: flex;
-            justify-content: space-between;
+        .order-actions {
             align-items: flex-start;
-            gap: 15px;
-            flex-wrap: wrap;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
         }
-
-        .product-name {
-            font-size: 21px;
-            font-weight: bold;
-        }
-
-        .order-id {
-            color: #777;
-            font-size: 13px;
-            margin-top: 6px;
-        }
-
-        .price {
-            font-size: 21px;
-            font-weight: bold;
-        }
-
-        /* STATUS */
-
-        .status {
-            display: inline-block;
-            margin-top: 9px;
-            padding: 7px 13px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: bold;
-        }
-
-        .pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .confirmed {
-            background: #dbeafe;
-            color: #1d4ed8;
-        }
-
-        .shipped {
-            background: #ede9fe;
-            color: #6d28d9;
-        }
-
-        .delivered {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .cancelled {
-            background: #fee2e2;
-            color: #b91c1c;
-        }
-
-        /* DETAILS */
-
-        .details {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-top: 18px;
-        }
-
-        .detail-box {
-            background: #f8fafc;
-            padding: 14px;
-            border-radius: 10px;
-        }
-
-        .label {
-            color: #777;
-            font-size: 12px;
-            margin-bottom: 5px;
-        }
-
-        .value {
-            font-weight: bold;
-        }
-
-        /* DELIVERY */
-
-        .delivery-box {
-            margin-top: 18px;
-            padding: 18px;
-            border-radius: 12px;
-            background: #f1f5f9;
-        }
-
-        .delivery-box h3 {
-            margin-top: 0;
-        }
-
-        .address-box {
-            background: white;
-            padding: 13px;
-            border-radius: 9px;
-            line-height: 1.5;
-            margin-top: 8px;
-        }
-
-        /* TRACKING */
-
-        .tracking-box {
-            margin-top: 15px;
-            background: white;
-            border: 1px solid #ddd;
-            padding: 16px;
-            border-radius: 10px;
-        }
-
-        .tracking-title {
-            font-size: 15px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .tracking-number {
-            font-size: 18px;
-            font-weight: bold;
-            margin: 5px 0;
-            word-break: break-word;
-        }
-
-        .track-link {
-            display: inline-block;
-            margin-top: 9px;
-            padding: 10px 15px;
-            background: #2563eb;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: bold;
-        }
-
-        .track-link:hover {
-            opacity: 0.9;
-        }
-
-        .no-tracking {
-            color: #777;
-            font-size: 14px;
-        }
-
-        /* INFO */
-
-        .info-message {
-            background: #eff6ff;
-            color: #1e40af;
-            padding: 13px;
-            border-radius: 9px;
-            line-height: 1.5;
-            margin-top: 10px;
-        }
-
-        .success-message {
-            background: #ecfdf5;
-            color: #166534;
-            padding: 13px;
-            border-radius: 9px;
-            line-height: 1.5;
-            margin-top: 10px;
-        }
-
-        .danger-message {
-            background: #fef2f2;
-            color: #991b1b;
-            padding: 13px;
-            border-radius: 9px;
-            line-height: 1.5;
-            margin-top: 10px;
-        }
-
-        /* TIMELINE */
-
-        .timeline-box {
-            margin-top: 20px;
-            padding: 18px;
-            border-top: 1px solid #eee;
-        }
-
-        .timeline-box h3 {
-            margin-top: 0;
-        }
-
-        .timeline {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            position: relative;
-            margin-top: 25px;
-        }
-
-        .timeline::before {
-            content: "";
-            position: absolute;
-            top: 15px;
-            left: 8%;
-            right: 8%;
-            height: 3px;
-            background: #ddd;
-            z-index: 0;
-        }
-
-        .timeline-step {
-            position: relative;
-            z-index: 1;
-            text-align: center;
-            width: 25%;
-        }
-
-        .timeline-dot {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: #ddd;
-            margin: 0 auto 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .timeline-step.completed .timeline-dot {
-            background: #16a34a;
-            color: white;
-        }
-
-        .timeline-step.current .timeline-dot {
-            background: #2563eb;
-            color: white;
-        }
-
-        .timeline-label {
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .timeline-date {
-            font-size: 10px;
-            color: #777;
-            margin-top: 4px;
-        }
-
-        /* BUTTONS */
-
-        .button-row {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 18px;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 11px 18px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 14px;
-            border: none;
-            cursor: pointer;
-        }
-
-        .primary-btn {
-            background: #2563eb;
-            color: white;
-        }
-
-        .secondary-btn {
-            background: #111827;
-            color: white;
-        }
-
-        /* EMPTY */
-
-        .empty {
-            background: white;
-            padding: 50px 20px;
-            text-align: center;
-            border-radius: 15px;
-        }
-
-        .empty h2 {
-            margin-bottom: 8px;
-        }
-
-        /* RESPONSIVE */
-
-        @media (max-width: 700px) {
-
-            .navbar {
-                padding: 14px 15px;
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .nav-links {
-                gap: 10px;
-            }
-
-            .nav-links a {
-                font-size: 12px;
-            }
-
-            .container {
-                width: 92%;
-                margin: 20px auto;
-            }
-
-            .details {
-                grid-template-columns: 1fr;
-            }
-
-            .price {
-                font-size: 18px;
-            }
-
-            .timeline-label {
-                font-size: 10px;
-            }
-
-            .timeline-date {
-                display: none;
-            }
-
-            .button-row {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                text-align: center;
-            }
-        }
-    </style>
-</head>
-
-<body>
-
-<!-- NAVBAR -->
-
-<div class="navbar">
-
-    <div class="logo">
-        📱 iSellora
-    </div>
-
-    <div class="nav-links">
-        <a href="{{ url_for('home') }}">Home</a>
-        <a href="{{ url_for('products') }}">Products</a>
-        <a href="{{ url_for('account') }}">Account</a>
-    </div>
-
-</div>
-
-
+    }
+</style>
+{% endblock %}
+
+{% block content %}
 <div class="container">
 
-    <h1>📦 My Orders</h1>
-
+    <div class="page-title-row">
+        <h1>My Purchases & Reservations</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">Track ongoing smartphone orders, delivery status, and historical purchases.</p>
+    </div>
 
     {% if orders %}
-
-        {% for order in orders %}
-
-        {% set status = order.get('status', 'Pending') %}
-        {% set delivery_method = order.get('delivery_method', 'shipping') %}
-
-        <div class="order-card">
-
-            <!-- HEADER -->
-
-            <div class="order-header">
-
-                <div>
-
-                    <div class="product-name">
-                        {{ order.get('brand', '') }}
-                        {{ order.get('model', 'Phone') }}
+        <div class="orders-list">
+            {% for order in orders %}
+                <div class="order-card">
+                    <div class="order-card-header">
+                        <div class="order-meta">
+                            Order <strong>#{{ order.id }}</strong> · Placed on {{ order.created_at.strftime('%d %B %Y, %I:%M %p') if order.created_at else '' }}
+                        </div>
+                        <div>
+                            <span class="badge-status status-{{ order.status|lower }}">{{ order.status }}</span>
+                        </div>
                     </div>
 
-                    <div class="order-id">
-                        Order ID:
-                        <strong>
-                            {{ order.get('order_id', 'N/A') }}
-                        </strong>
-                    </div>
-
-                    <div class="status
-                        {% if status == 'Pending' %}
-                            pending
-                        {% elif status == 'Confirmed' %}
-                            confirmed
-                        {% elif status == 'Shipped' %}
-                            shipped
-                        {% elif status == 'Delivered' %}
-                            delivered
-                        {% elif status == 'Cancelled' %}
-                            cancelled
-                        {% endif %}
-                    ">
-                        {{ status }}
-                    </div>
-
-                </div>
-
-                <div class="price">
-                    ₹{{ order.get('price', 0) }}
-                </div>
-
-            </div>
-
-
-            <!-- PRODUCT DETAILS -->
-
-            <div class="details">
-
-                <div class="detail-box">
-
-                    <div class="label">
-                        📱 Storage
-                    </div>
-
-                    <div class="value">
-                        {{ order.get('storage', 'Not specified') }}
-                    </div>
-
-                </div>
-
-
-                <div class="detail-box">
-
-                    <div class="label">
-                        💳 Payment
-                    </div>
-
-                    <div class="value">
-                        {{ order.get('payment_status', 'Pending') }}
-                    </div>
-
-                </div>
-
-
-                <div class="detail-box">
-
-                    <div class="label">
-                        🚚 Delivery Method
-                    </div>
-
-                    <div class="value">
-
-                        {% if delivery_method == 'shipping' %}
-                            🚚 Shipping
-                        {% else %}
-                            🤝 Local Pickup
-                        {% endif %}
-
-                    </div>
-
-                </div>
-
-
-                <div class="detail-box">
-
-                    <div class="label">
-                        📅 Ordered On
-                    </div>
-
-                    <div class="value">
-                        {{ order.get('created_at', 'N/A') }}
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- DELIVERY DETAILS -->
-
-            <div class="delivery-box">
-
-                <h3>🚚 Delivery Details</h3>
-
-
-                {% if delivery_method == 'shipping' %}
-
-                    <p>
-                        <strong>📍 Delivery Address</strong>
-                    </p>
-
-                    <div class="address-box">
-
-                        {{ order.get('address', 'Not provided') }}
-
-                        <br>
-
-                        <strong>
-                            PIN:
-                            {{ order.get('pincode', 'Not provided') }}
-                        </strong>
-
-                    </div>
-
-
-                    <p>
-                        <strong>
-                            Delivery Charge:
-                        </strong>
-
-                        ₹{{ order.get('delivery_charge', 0) }}
-                    </p>
-
-
-                    <!-- TRACKING -->
-
-                    {% if order.get('courier_name') or order.get('tracking_number') %}
-
-                        <div class="tracking-box">
-
-                            <div class="tracking-title">
-                                📦 Tracking Information
+                    <div class="order-card-body">
+                        <div class="order-phone-info">
+                            <h4>{{ order.brand }} {{ order.model }}</h4>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 6px;">{{ order.storage }} · {{ order.delivery_method|capitalize }}</p>
+                            <div style="font-size: 18px; font-weight: 800; color: var(--primary);">
+                                {{ order.formatted_total }}
                             </div>
-
-
-                            <p>
-                                <strong>
-                                    Courier:
-                                </strong>
-
-                                {{ order.get('courier_name', 'Not specified') }}
-                            </p>
-
-
-                            <p>
-                                <strong>
-                                    Tracking / AWB:
-                                </strong>
-                            </p>
-
-
-                            <div class="tracking-number">
-                                {{ order.get('tracking_number', 'Not available') }}
+                            <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+                                Payment Status: <strong>{{ order.payment_status }}</strong>
                             </div>
-
-
-                            {% if order.get('tracking_url') %}
-
-                                <a
-                                    href="{{ order.get('tracking_url') }}"
-                                    class="track-link"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >
-                                    🔎 Track Shipment
-                                </a>
-
-                            {% else %}
-
-                                <div class="no-tracking">
-                                    Tracking link is not available yet.
-                                </div>
-
-                            {% endif %}
-
                         </div>
 
-                    {% else %}
-
-                        {% if status == 'Pending' %}
-
-                            <div class="info-message">
-                                ⏳ Your order is waiting for seller
-                                confirmation.
-                            </div>
-
-                        {% elif status == 'Confirmed' %}
-
-                            <div class="info-message">
-                                ✅ Order confirmed.
-                                <br>
-                                Seller will add courier and tracking
-                                information before shipping.
-                            </div>
-
-                        {% endif %}
-
-                    {% endif %}
-
-
-                {% else %}
-
-                    <div class="info-message">
-                        🤝 You selected
-                        <strong>Local Pickup</strong>.
-                        <br>
-                        Please collect the phone from the seller.
-                    </div>
-
-                {% endif %}
-
-
-                <!-- STATUS MESSAGES -->
-
-                {% if status == 'Shipped' %}
-
-                    <div class="success-message">
-                        🚚 Your phone has been shipped.
-                        <br>
-                        Use the tracking information above to follow
-                        the delivery.
-                    </div>
-
-                {% elif status == 'Delivered' %}
-
-                    <div class="success-message">
-                        🎉 <strong>Delivered Successfully!</strong>
-                        <br>
-                        Your phone has been delivered.
-                    </div>
-
-                {% elif status == 'Cancelled' %}
-
-                    <div class="danger-message">
-                        ❌ <strong>Order Cancelled</strong>
-                        <br>
-                        This order is no longer active.
-                    </div>
-
-                {% endif %}
-
-            </div>
-
-
-            <!-- ORDER TIMELINE -->
-
-            {% if status != 'Cancelled' %}
-
-                <div class="timeline-box">
-
-                    <h3>📊 Delivery Status</h3>
-
-                    {% if delivery_method == 'shipping' %}
-
-                        {% set steps = [
-                            'Pending',
-                            'Confirmed',
-                            'Shipped',
-                            'Delivered'
-                        ] %}
-
-                    {% else %}
-
-                        {% set steps = [
-                            'Pending',
-                            'Confirmed',
-                            'Delivered'
-                        ] %}
-
-                    {% endif %}
-
-
-                    {% set current_index =
-                        steps.index(status)
-                        if status in steps
-                        else -1
-                    %}
-
-
-                    <div class="timeline">
-
-                        {% for step in steps %}
-
-                            {% set step_index = loop.index0 %}
-
-                            <div class="timeline-step
-                                {% if step_index < current_index %}
-                                    completed
-                                {% elif step_index == current_index %}
-                                    current
-                                {% endif %}
-                            ">
-
-                                <div class="timeline-dot">
-
-                                    {% if step_index < current_index %}
-
-                                        ✓
-
-                                    {% elif step_index == current_index %}
-
-                                        ●
-
-                                    {% else %}
-
-                                        {{ loop.index }}
-
-                                    {% endif %}
-
+                        <div class="order-delivery-info">
+                            <strong>Fulfillment Destination:</strong>
+                            <p>{{ order.shipping_address }}</p>
+                            {% if order.courier_name and order.tracking_number %}
+                                <div style="margin-top: 8px; font-size: 12px;">
+                                    <strong>Courier:</strong> {{ order.courier_name }} (AWB: {{ order.tracking_number }})
                                 </div>
+                            {% endif %}
+                        </div>
 
+                        <div class="order-actions">
+                            {% if order.tracking_url %}
+                                <a href="{{ order.tracking_url }}" target="_blank" rel="noopener noreferrer" class="btn-tracking">Track Courier ↗</a>
+                            {% endif %}
 
-                                <div class="timeline-label">
-                                    {% if step == 'Pending' %}
-                                        Order Placed
-                                    {% elif step == 'Confirmed' %}
-                                        Confirmed
-                                    {% elif step == 'Shipped' %}
-                                        Shipped
-                                    {% elif step == 'Delivered' %}
-                                        Delivered
-                                    {% endif %}
-                                </div>
+                            {% if order.status == 'Pending' %}
+                                <form action="{{ url_for('cancel_order', order_id=order.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this order? The smartphone will be released.');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="reason" value="Cancelled by buyer">
+                                    <button type="submit" class="btn-cancel-order">Cancel Order</button>
+                                </form>
+                            {% endif %}
 
-                            </div>
-
-                        {% endfor %}
-
+                            <a href="{{ url_for('support') }}" style="font-size: 12px; color: var(--text-muted); text-decoration: underline;">Need help?</a>
+                        </div>
                     </div>
-
                 </div>
-
-            {% endif %}
-
-
-            <!-- BUTTONS -->
-
-            <div class="button-row">
-
-                {% if order.get('listing_id') %}
-
-                    <a
-                        href="{{ url_for(
-                            'product_detail',
-                            listing_id=order.get('listing_id')
-                        ) }}"
-                        class="btn primary-btn"
-                    >
-                        📱 View Phone
-                    </a>
-
-                {% endif %}
-
-
-                <a
-                    href="{{ url_for('orders') }}"
-                    class="btn secondary-btn"
-                >
-                    🔄 Refresh Orders
-                </a>
-
-            </div>
-
+            {% endfor %}
         </div>
-
-        {% endfor %}
-
-
     {% else %}
-
-        <div class="empty">
-
-            <h2>📦 No Orders Yet</h2>
-
-            <p>
-                When you buy a phone,
-                your orders will appear here.
-            </p>
-
-            <a
-                href="{{ url_for('products') }}"
-                class="btn primary-btn"
-            >
-                🛍️ Browse Phones
-            </a>
-
+        <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 56px 20px; text-align: center;">
+            <div style="font-size: 40px; margin-bottom: 12px;">📦</div>
+            <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">No orders found</h3>
+            <p style="color: var(--text-muted); margin-bottom: 24px;">You haven't ordered or reserved any smartphones yet.</p>
+            <a href="{{ url_for('products') }}" class="btn-sell">Browse Available Phones</a>
         </div>
-
     {% endif %}
 
 </div>
-
-</body>
-</html>
+{% endblock %}

@@ -1,908 +1,186 @@
-
 {% extends "base.html" %}
 
-{% block title %}My Account | iSellora{% endblock %}
+{% block title %}My Account & Security | iSellora{% endblock %}
 
 {% block extra_css %}
 <style>
-    .account-page {
-        background: #f5f7ff;
-        color: #222;
-        padding: 35px 18px 60px;
-        min-height: 100vh;
-    }
-
-    .account-container {
-        max-width: 1100px;
-        margin: 0 auto;
-    }
-
-    .account-welcome {
-        background: linear-gradient(135deg, #5b21b6, #2563eb);
-        color: white;
-        padding: 32px;
-        border-radius: 20px;
-        margin-bottom: 25px;
-        box-shadow: 0 10px 30px rgba(37, 99, 235, 0.15);
-    }
-
-    .account-welcome h1 {
-        font-size: 30px;
-        margin-bottom: 10px;
-        color: white;
-    }
-
-    .account-welcome p {
-        color: #e9e5ff;
-        line-height: 1.6;
-    }
-
-    .account-section {
-        background: white;
-        border-radius: 18px;
-        padding: 26px;
-        margin-bottom: 25px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-    }
-
-    .account-section h2 {
-        font-size: 22px;
-        margin-bottom: 20px;
-    }
-
-    /* PROFILE */
-
-    .account-profile-grid {
+    .account-layout {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+        margin-bottom: 50px;
     }
 
-    .account-profile-item {
-        padding: 18px;
-        background: #f8f7ff;
-        border: 1px solid #eee9ff;
-        border-radius: 12px;
-        min-width: 0;
-    }
-
-    .account-label {
-        color: #6b7280;
-        font-size: 13px;
-        margin-bottom: 8px;
-    }
-
-    .account-value {
-        font-size: 15px;
-        font-weight: bold;
-        overflow-wrap: anywhere;
-    }
-
-    /* QUICK ACTIONS */
-
-    .account-actions {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
-        margin-bottom: 25px;
-    }
-
-    .account-action {
-        display: block;
+    .account-card {
         background: white;
-        padding: 23px;
-        border-radius: 16px;
-        text-decoration: none;
-        color: #222;
-        border: 1px solid #eee;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04);
-        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 30px;
+        box-shadow: var(--shadow-sm);
     }
 
-    .account-action:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.09);
-    }
-
-    .account-action-icon {
-        font-size: 30px;
-        margin-bottom: 12px;
-    }
-
-    .account-action h3 {
-        font-size: 17px;
-        margin-bottom: 7px;
-        color: #5b21b6;
-    }
-
-    .account-action p {
-        font-size: 13px;
-        color: #6b7280;
-        line-height: 1.6;
-    }
-
-    /* NEW: LISTING STATUS SUMMARY */
-
-    .account-status-summary {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 15px;
-        margin-bottom: 25px;
-    }
-
-    .account-summary-card {
-        background: white;
-        border: 1px solid #eee;
-        border-radius: 15px;
-        padding: 22px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04);
-    }
-
-    .account-summary-number {
-        font-size: 29px;
-        font-weight: 800;
-        margin-bottom: 7px;
-    }
-
-    .account-summary-label {
-        font-size: 13px;
-        color: #6b7280;
-    }
-
-    .account-summary-approved {
-        border-top: 4px solid #16a34a;
-    }
-
-    .account-summary-approved .account-summary-number {
-        color: #15803d;
-    }
-
-    .account-summary-pending {
-        border-top: 4px solid #f59e0b;
-    }
-
-    .account-summary-pending .account-summary-number {
-        color: #b45309;
-    }
-
-    .account-summary-hidden {
-        border-top: 4px solid #ef4444;
-    }
-
-    .account-summary-hidden .account-summary-number {
-        color: #dc2626;
-    }
-
-    /* MY LISTINGS */
-
-    .account-listing {
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        padding: 20px 0;
-        border-bottom: 1px solid #eee;
-    }
-
-    .account-listing:last-child {
-        border-bottom: none;
-    }
-
-    .account-listing-image {
-        width: 105px;
-        height: 105px;
-        flex-shrink: 0;
-        border-radius: 12px;
-        object-fit: cover;
-        background: #f1f1f5;
-    }
-
-    .account-image-placeholder {
-        width: 105px;
-        height: 105px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f1f1f5;
-        border-radius: 12px;
-        font-size: 35px;
-    }
-
-    .account-listing-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .account-listing-info h3 {
+    .account-card h3 {
         font-size: 18px;
-        margin-bottom: 8px;
-        overflow-wrap: anywhere;
+        font-weight: 800;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 10px;
     }
 
-    .account-price {
-        color: #6d28d9;
-        font-size: 20px;
-        font-weight: bold;
-        margin-bottom: 7px;
+    .form-group {
+        margin-bottom: 16px;
     }
 
-    .account-meta {
+    .form-label {
+        display: block;
         font-size: 13px;
-        color: #6b7280;
-        line-height: 1.6;
+        font-weight: 700;
+        margin-bottom: 6px;
     }
 
-    /* NEW: APPROVAL STATUS */
-
-    .seller-approval-status {
-        margin-top: 13px;
-        padding: 12px;
-        border-radius: 11px;
+    .form-input {
+        width: 100%;
+        padding: 10px 14px;
         background: #f8fafc;
-        border: 1px solid #e5e7eb;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 14px;
     }
 
-    .seller-approval-status span {
-        display: inline-block;
-        padding: 7px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: bold;
+    .form-input:focus {
+        outline: none;
+        background: white;
+        border-color: var(--border-focus);
     }
 
-    .seller-approval-status p {
-        margin: 9px 0 0;
-        font-size: 12px;
-        color: #64748b;
-        line-height: 1.6;
-    }
-
-    .listing-approved {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .listing-pending {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .listing-hidden {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    /* LISTING BUTTONS */
-
-    .account-listing-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 9px;
-        justify-content: flex-end;
-    }
-
-    .account-btn {
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        border: none;
-        border-radius: 9px;
-        padding: 11px 15px;
-        text-decoration: none;
-        font-size: 13px;
-        font-weight: bold;
-        cursor: pointer;
-        white-space: nowrap;
-    }
-
-    .account-btn-view {
-        background: #2563eb;
+    .btn-save {
+        background: var(--primary);
         color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: var(--radius-md);
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
     }
 
-    .account-btn-edit {
-        background: #ede9fe;
-        color: #5b21b6;
+    .danger-zone {
+        border-color: #fecaca;
+        background: #fffafa;
     }
 
-    .account-btn-delete {
-        background: #fee2e2;
-        color: #b91c1c;
+    .danger-zone h3 {
+        color: var(--error);
+        border-color: #fecaca;
     }
 
-    .account-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-    .account-empty {
-        text-align: center;
-        padding: 38px 15px;
-        color: #6b7280;
-    }
-
-    .account-empty-icon {
-        font-size: 45px;
-        margin-bottom: 12px;
-    }
-
-    .account-empty p {
-        margin-bottom: 20px;
-    }
-
-    .account-count {
-        display: inline-block;
-        padding: 5px 11px;
-        background: #ede9fe;
-        color: #5b21b6;
-        border-radius: 20px;
+    .btn-danger {
+        background: var(--error);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: var(--radius-md);
+        font-weight: 700;
         font-size: 13px;
-        vertical-align: middle;
-        margin-left: 8px;
+        cursor: pointer;
     }
 
-    .account-logout {
-        text-align: center;
-        margin-top: 15px;
-    }
-
-    .account-logout a {
-        display: inline-block;
-        padding: 12px 24px;
-        color: #b91c1c;
-        background: #fee2e2;
-        border-radius: 10px;
-        text-decoration: none;
-        font-weight: bold;
-    }
-
-    @media (max-width: 850px) {
-        .account-profile-grid {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        .account-actions {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        .account-listing {
-            flex-wrap: wrap;
-        }
-
-        .account-listing-buttons {
-            width: 100%;
-            justify-content: flex-start;
-        }
-    }
-
-    @media (max-width: 600px) {
-        .account-page {
-            padding: 20px 12px 45px;
-        }
-
-        .account-welcome {
-            padding: 24px;
-        }
-
-        .account-welcome h1 {
-            font-size: 24px;
-        }
-
-        .account-section {
-            padding: 19px;
-        }
-
-        .account-profile-grid,
-        .account-actions,
-        .account-status-summary {
+    @media (max-width: 800px) {
+        .account-layout {
             grid-template-columns: 1fr;
-        }
-
-        .account-status-summary {
-            gap: 10px;
-        }
-
-        .account-summary-card {
-            padding: 16px;
-        }
-
-        .account-listing-image,
-        .account-image-placeholder {
-            width: 80px;
-            height: 80px;
-        }
-
-        .account-listing-info h3 {
-            font-size: 16px;
-        }
-
-        .account-listing-buttons {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-        }
-
-        .account-btn {
-            padding: 10px 8px;
-            font-size: 12px;
-        }
-
-        .account-delete-form {
-            display: flex;
-        }
-
-        .account-delete-form button {
-            width: 100%;
         }
     }
 </style>
 {% endblock %}
 
-
 {% block content %}
-
-<div class="account-page">
-    <div class="account-container">
-
-        <!-- WELCOME -->
-
-        <section class="account-welcome">
-
-            <h1>
-                👋 Welcome,
-                {{ user.get('name', session.get('user_name', 'User')) | e }}!
-            </h1>
-
-            <p>
-                Manage your account, phone listings,
-                purchases and sales in one place.
-            </p>
-
-        </section>
-
-
-        <!-- MY PROFILE -->
-
-        <section class="account-section">
-
-            <h2>👤 My Profile</h2>
-
-            <div class="account-profile-grid">
-
-                <div class="account-profile-item">
-                    <div class="account-label">
-                        Full Name
-                    </div>
-
-                    <div class="account-value">
-                        {{ user.get('name', '-') | e }}
-                    </div>
-                </div>
-
-                <div class="account-profile-item">
-                    <div class="account-label">
-                        Email Address
-                    </div>
-
-                    <div class="account-value">
-                        {{ user.get('email', '-') | e }}
-                    </div>
-                </div>
-
-                <div class="account-profile-item">
-                    <div class="account-label">
-                        Mobile Number
-                    </div>
-
-                    <div class="account-value">
-                        {{ (user.get('phone') or 'Not added') | e }}
-                    </div>
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- QUICK ACTIONS -->
-
-        <div class="account-actions">
-
-            <a
-                href="{{ url_for('sell') }}"
-                class="account-action"
-            >
-                <div class="account-action-icon">📱</div>
-                <h3>Sell Phone</h3>
-                <p>Create a new phone listing.</p>
-            </a>
-
-            <a
-                href="{{ url_for('products') }}"
-                class="account-action"
-            >
-                <div class="account-action-icon">🛍️</div>
-                <h3>Browse Products</h3>
-                <p>Explore available second-hand phones.</p>
-            </a>
-
-            <a
-                href="{{ url_for('orders') }}"
-                class="account-action"
-            >
-                <div class="account-action-icon">🛒</div>
-                <h3>My Orders</h3>
-                <p>Track phones you have ordered.</p>
-            </a>
-
-            <a
-                href="{{ url_for('sales') }}"
-                class="account-action"
-            >
-                <div class="account-action-icon">💰</div>
-                <h3>My Sales</h3>
-                <p>Manage buyer orders and delivery.</p>
-            </a>
-
-            <a
-                href="{{ url_for('seller_dashboard') }}"
-                class="account-action"
-            >
-                <div class="account-action-icon">📊</div>
-                <h3>Seller Dashboard</h3>
-                <p>View your listings and order statistics.</p>
-            </a>
-
-            <a
-                href="{{ url_for('home') }}"
-                class="account-action"
-            >
-                <div class="account-action-icon">🏠</div>
-                <h3>Home</h3>
-                <p>Return to the iSellora homepage.</p>
-            </a>
-
-        </div>
-
-
-        <!-- NEW: STATUS SUMMARY -->
-
-        {% set ns = namespace(
-            approved=0,
-            pending=0,
-            hidden=0
-        ) %}
-
-        {% for phone in my_listings %}
-
-            {% set status = phone.get(
-                'approval_status',
-                'approved'
-            ) | lower %}
-
-            {% if status == 'approved' %}
-
-                {% set ns.approved = ns.approved + 1 %}
-
-            {% elif status == 'pending' %}
-
-                {% set ns.pending = ns.pending + 1 %}
-
-            {% elif status == 'hidden' %}
-
-                {% set ns.hidden = ns.hidden + 1 %}
-
-            {% endif %}
-
-        {% endfor %}
-
-        <div class="account-status-summary">
-
-            <div class="account-summary-card account-summary-approved">
-
-                <div class="account-summary-number">
-                    {{ ns.approved }}
-                </div>
-
-                <div class="account-summary-label">
-                    ✓ Approved Listings
-                </div>
-
-            </div>
-
-            <div class="account-summary-card account-summary-pending">
-
-                <div class="account-summary-number">
-                    {{ ns.pending }}
-                </div>
-
-                <div class="account-summary-label">
-                    ⏳ Pending Approval
-                </div>
-
-            </div>
-
-            <div class="account-summary-card account-summary-hidden">
-
-                <div class="account-summary-number">
-                    {{ ns.hidden }}
-                </div>
-
-                <div class="account-summary-label">
-                    ✕ Hidden Listings
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- MY LISTINGS -->
-
-        <section class="account-section">
-
-            <h2>
-                📦 My Listings
-
-                <span class="account-count">
-                    {{ my_listings | length }}
-                </span>
-            </h2>
-
-            {% if my_listings %}
-
-                {% for phone in my_listings %}
-
-                    <div class="account-listing">
-
-                        <!-- PRODUCT IMAGE -->
-
-                        {% set images = phone.get('images') or phone.get('photos') or [] %}
-
-                        {% if images %}
-
-                            {% set first_image = images[0] %}
-
-                            {% if first_image.startswith('/') %}
-
-                                <img
-                                    class="account-listing-image"
-                                    src="{{ first_image | e }}"
-                                    alt="{{ phone.get('brand', '') | e }} {{ phone.get('model', '') | e }}"
-                                    loading="lazy"
-                                >
-
-                            {% else %}
-
-                                <img
-                                    class="account-listing-image"
-                                    src="{{ url_for('static', filename='uploads/' ~ first_image) }}"
-                                    alt="{{ phone.get('brand', '') | e }} {{ phone.get('model', '') | e }}"
-                                    loading="lazy"
-                                >
-
-                            {% endif %}
-
-                        {% else %}
-
-                            <div class="account-image-placeholder">
-                                📱
-                            </div>
-
-                        {% endif %}
-
-
-                        <!-- PRODUCT DETAILS -->
-
-                        <div class="account-listing-info">
-
-                            <h3>
-                                {{ phone.get('brand', '') | e }}
-                                {{ phone.get('model', '') | e }}
-                            </h3>
-
-                            <div class="account-price">
-                                ₹{{ phone.get('price', '0') | e }}
-                            </div>
-
-                            <div class="account-meta">
-                                {{ phone.get('storage', '-') | e }}
-                                •
-                                {{ phone.get('condition', '-') | e }}
-                            </div>
-
-
-                            <!-- NEW: SELLER LISTING STATUS -->
-
-                            {% set approval = phone.get(
-                                'approval_status',
-                                'approved'
-                            ) | lower %}
-
-                            <div class="seller-approval-status">
-
-                                {% if approval == 'approved' %}
-
-                                    <span class="listing-approved">
-                                        ✓ Approved
-                                    </span>
-
-                                    <p>
-                                        Your phone is live.
-                                        Buyers can view and order it.
-                                    </p>
-
-                                {% elif approval == 'pending' %}
-
-                                    <span class="listing-pending">
-                                        ⏳ Pending Approval
-                                    </span>
-
-                                    <p>
-                                        Your phone is waiting for
-                                        admin approval.
-                                        It is not visible to buyers yet.
-                                    </p>
-
-                                {% elif approval == 'hidden' %}
-
-                                    <span class="listing-hidden">
-                                        ✕ Hidden by Admin
-                                    </span>
-
-                                    <p>
-                                        Your phone is currently hidden
-                                        from the public website.
-                                    </p>
-
-                                {% else %}
-
-                                    <span class="listing-pending">
-                                        Status Unavailable
-                                    </span>
-
-                                    <p>
-                                        Please contact the administrator.
-                                    </p>
-
-                                {% endif %}
-
-                            </div>
-
-                        </div>
-
-
-                        <!-- LISTING ACTIONS -->
-
-                        {% if phone.get('id') %}
-
-                            <div class="account-listing-buttons">
-
-                                <a
-                                    href="{{ url_for(
-                                        'listing_detail',
-                                        listing_id=phone.get('id')
-                                    ) }}"
-                                    class="account-btn account-btn-view"
-                                >
-                                    View
-                                </a>
-
-                                <a
-                                    href="{{ url_for(
-                                        'edit_listing',
-                                        listing_id=phone.get('id')
-                                    ) }}"
-                                    class="account-btn account-btn-edit"
-                                >
-                                    Edit
-                                </a>
-
-                                <form
-                                    action="{{ url_for(
-                                        'delete_listing',
-                                        listing_id=phone.get('id')
-                                    ) }}"
-                                    method="POST"
-                                    class="account-delete-form"
-                                    data-phone-name="{{ (phone.get('brand', '') ~ ' ' ~ phone.get('model', '')) | e }}"
-                                >
-                                    <button
-                                        type="submit"
-                                        class="account-btn account-btn-delete"
-                                    >
-                                        Delete
-                                    </button>
-                                </form>
-
-                            </div>
-
-                        {% endif %}
-
-                    </div>
-
-                {% endfor %}
-
-            {% else %}
-
-                <div class="account-empty">
-
-                    <div class="account-empty-icon">
-                        📱
-                    </div>
-
-                    <p>
-                        You haven't posted any phones yet.
-                    </p>
-
-                    <a
-                        href="{{ url_for('sell') }}"
-                        class="account-btn account-btn-view"
-                    >
-                        + Sell Your First Phone
-                    </a>
-
-                </div>
-
-            {% endif %}
-
-        </section>
-
-
-        <!-- LOGOUT -->
-
-        <div class="account-logout">
-
-            <a href="{{ url_for('logout') }}">
-                Logout
-            </a>
-
-        </div>
-
+<div class="container">
+
+    <div style="margin-bottom: 24px;">
+        <h1 style="font-size: 26px; font-weight: 800;">Account & Security Settings</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">Manage your profile information, password, and account preferences.</p>
     </div>
+
+    <div class="account-layout">
+        <!-- PROFILE INFORMATION -->
+        <div class="account-card">
+            <h3>👤 Profile Details</h3>
+            <form action="{{ url_for('account') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="update_profile">
+
+                <div class="form-group">
+                    <label class="form-label" for="emailField">Email Address</label>
+                    <input type="email" id="emailField" class="form-input" value="{{ user.email }}" disabled style="color: #94a3b8; cursor: not-allowed;">
+                    <small style="color: var(--text-muted); font-size: 11px;">Email cannot be modified directly.</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="nameField">Full Name</label>
+                    <input type="text" id="nameField" name="name" class="form-input" value="{{ user.name }}" required minlength="2">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="phoneField">Phone Number</label>
+                    <input type="tel" id="phoneField" name="phone" class="form-input" value="{{ user.phone }}" required pattern="[6-9][0-9]{9}">
+                </div>
+
+                <button type="submit" class="btn-save">Update Profile</button>
+            </form>
+        </div>
+
+        <!-- PASSWORD UPDATE -->
+        <div class="account-card">
+            <h3>🔒 Change Password</h3>
+            <form action="{{ url_for('account') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="change_password">
+
+                <div class="form-group">
+                    <label class="form-label" for="current_password">Current Password</label>
+                    <input type="password" id="current_password" name="current_password" class="form-input" required autocomplete="current-password">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="new_password">New Password</label>
+                    <input type="password" id="new_password" name="new_password" class="form-input" placeholder="Min 8 characters (letters + numbers)" required minlength="8" autocomplete="new-password">
+                </div>
+
+                <button type="submit" class="btn-save">Change Password</button>
+            </form>
+        </div>
+
+        <!-- QUICK LINKS -->
+        <div class="account-card">
+            <h3>📱 Activity Overview</h3>
+            <div style="display: flex; gap: 16px; margin-bottom: 20px;">
+                <div style="flex: 1; background: #f8fafc; padding: 14px; border-radius: var(--radius-md); text-align: center;">
+                    <span style="font-size: 24px; font-weight: 800; color: var(--primary);">{{ my_listings|length }}</span>
+                    <small style="display: block; color: var(--text-muted); font-size: 12px;">My Listings</small>
+                </div>
+                <div style="flex: 1; background: #f8fafc; padding: 14px; border-radius: var(--radius-md); text-align: center;">
+                    <span style="font-size: 24px; font-weight: 800; color: var(--primary);">{{ recent_orders|length }}</span>
+                    <small style="display: block; color: var(--text-muted); font-size: 12px;">Recent Orders</small>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <a href="{{ url_for('seller_dashboard') }}" class="btn-save" style="background: #334155; text-align: center; flex: 1;">Seller Dashboard</a>
+                <a href="{{ url_for('orders') }}" class="btn-save" style="background: #334155; text-align: center; flex: 1;">My Orders</a>
+            </div>
+        </div>
+
+        <!-- DANGER ZONE -->
+        <div class="account-card danger-zone">
+            <h3>⚠️ Deactivate Account</h3>
+            <p style="font-size: 13px; color: #7f1d1d; margin-bottom: 16px; line-height: 1.5;">
+                Deactivating will revoke access to your dashboard, hide active listings, and invalidate active sessions. Historical orders are preserved for audit and dispute compliance.
+            </p>
+            <form action="{{ url_for('deactivate_account') }}" method="POST" onsubmit="return confirm('Are you sure you want to deactivate your account? You will be signed out.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-danger">Deactivate My Account</button>
+            </form>
+        </div>
+    </div>
+
 </div>
-
-{% endblock %}
-
-
-{% block extra_js %}
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-
-    const deleteForms =
-        document.querySelectorAll(".account-delete-form");
-
-    deleteForms.forEach(function (form) {
-
-        form.addEventListener("submit", function (event) {
-
-            const phoneName =
-                form.dataset.phoneName || "this phone";
-
-            const confirmed = confirm(
-                "Are you sure you want to delete " +
-                phoneName +
-                "?\n\nThis action cannot be undone."
-            );
-
-            if (!confirmed) {
-                event.preventDefault();
-                return;
-            }
-
-            const button =
-                form.querySelector("button[type='submit']");
-
-            if (button) {
-                button.disabled = true;
-                button.textContent = "Deleting...";
-            }
-
-        });
-
-    });
-
-});
-</script>
-
 {% endblock %}

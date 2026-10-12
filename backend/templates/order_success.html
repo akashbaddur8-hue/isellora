@@ -1,220 +1,178 @@
-
 {% extends "base.html" %}
 
-{% block content %}
+{% block title %}Order Confirmed | Order #{{ order.id[:8] }}{% endblock %}
+
+{% block extra_css %}
 <style>
-.order-wrap {
-    max-width: 850px;
-    margin: 35px auto;
-    padding: 20px;
-    color: #1f2937;
-}
-.order-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 18px;
-    padding: 25px;
-    margin-bottom: 20px;
-    box-shadow: 0 8px 25px rgba(0,0,0,.05);
-}
-.order-heading {
-    text-align: center;
-    padding: 25px 10px;
-}
-.order-heading h1 {
-    color: #15803d;
-    margin-bottom: 8px;
-}
-.order-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-}
-.order-item {
-    background: #f9fafb;
-    border-radius: 10px;
-    padding: 13px;
-    overflow-wrap: anywhere;
-}
-.order-item small {
-    display: block;
-    color: #6b7280;
-    margin-bottom: 5px;
-}
-.status {
-    display: inline-block;
-    padding: 7px 12px;
-    border-radius: 20px;
-    background: #fef3c7;
-    color: #92400e;
-    font-weight: 700;
-}
-.payment-form input {
-    box-sizing: border-box;
-    width: 100%;
-    padding: 13px;
-    margin: 10px 0;
-    border: 1px solid #d1d5db;
-    border-radius: 9px;
-}
-.order-btn {
-    display: inline-block;
-    padding: 12px 18px;
-    border: 0;
-    border-radius: 9px;
-    background: #111827;
-    color: white;
-    text-decoration: none;
-    cursor: pointer;
-    font-weight: 700;
-}
-.order-note {
-    padding: 13px;
-    background: #eff6ff;
-    border-radius: 10px;
-    line-height: 1.6;
-}
-@media (max-width: 600px) {
-    .order-grid { grid-template-columns: 1fr; }
-    .order-card { padding: 18px; }
-}
+    .success-card {
+        max-width: 680px;
+        margin: 30px auto 60px;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 40px;
+        box-shadow: var(--shadow-md);
+        text-align: center;
+    }
+
+    .success-icon {
+        width: 68px;
+        height: 68px;
+        background: var(--success-light);
+        color: var(--success);
+        font-size: 32px;
+        border-radius: var(--radius-full);
+        display: grid;
+        place-items: center;
+        margin: 0 auto 20px;
+    }
+
+    .success-card h1 {
+        font-size: 26px;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+    .success-subtitle {
+        color: var(--text-muted);
+        font-size: 15px;
+        margin-bottom: 28px;
+    }
+
+    .order-summary-box {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        text-align: left;
+        margin-bottom: 28px;
+    }
+
+    .order-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+    }
+
+    .order-row:last-child {
+        border-bottom: none;
+    }
+
+    .order-row span {
+        color: var(--text-muted);
+    }
+
+    .order-row strong {
+        color: var(--text-main);
+    }
+
+    .payment-status-badge {
+        display: inline-block;
+        background: #fef3c7;
+        color: #92400e;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: var(--radius-full);
+    }
+
+    .next-steps-box {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: var(--radius-md);
+        padding: 18px;
+        text-align: left;
+        font-size: 13px;
+        color: #166534;
+        line-height: 1.6;
+        margin-bottom: 28px;
+    }
+
+    .next-steps-box h4 {
+        font-size: 14px;
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+
+    .success-actions {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+    }
+
+    .btn-action-primary {
+        background: var(--primary);
+        color: white;
+        padding: 12px 24px;
+        border-radius: var(--radius-md);
+        font-weight: 700;
+        font-size: 14px;
+    }
+
+    .btn-action-secondary {
+        background: #f1f5f9;
+        color: var(--text-main);
+        padding: 12px 24px;
+        border-radius: var(--radius-md);
+        font-weight: 700;
+        font-size: 14px;
+    }
 </style>
+{% endblock %}
 
-<div class="order-wrap">
+{% block content %}
+<div class="container">
 
-    <div class="order-card order-heading">
-        <div style="font-size:48px;">✓</div>
-        <h1>Order Placed Successfully!</h1>
-        <p>Thank you, {{ buyer_name|default('Customer') }}.</p>
-        <p>Your order ID:</p>
-        <strong>{{ order_id }}</strong>
-    </div>
+    <div class="success-card">
+        <div class="success-icon">✓</div>
+        <h1>Order Confirmed & Smartphone Reserved</h1>
+        <p class="success-subtitle">Order Reference: <strong>#{{ order.id }}</strong></p>
 
-    <div class="order-card">
-        <h2>Order Details</h2>
-
-        <div class="order-grid">
-            <div class="order-item">
-                <small>Product</small>
-                <strong>
-                    {{ phone.get('brand', order.get('brand', 'Product')) }}
-                    {{ phone.get('model', order.get('model', '')) }}
-                </strong>
+        <div class="order-summary-box">
+            <div class="order-row">
+                <span>Smartphone</span>
+                <strong>{{ order.brand }} {{ order.model }} ({{ order.storage }})</strong>
             </div>
-
-            <div class="order-item">
-                <small>Order Amount</small>
-                <strong>₹{{ order.get('price', phone.get('price', 0)) }}</strong>
+            <div class="order-row">
+                <span>Total Amount to Pay</span>
+                <strong style="color: var(--primary); font-size: 16px;">{{ order.formatted_total }}</strong>
             </div>
-
-            <div class="order-item">
-                <small>Order Status</small>
-                <strong>{{ order.get('status', 'Pending') }}</strong>
+            <div class="order-row">
+                <span>Fulfillment Type</span>
+                <strong>{{ 'Local Pickup Handover' if order.delivery_method == 'pickup' else 'Insured Courier Shipping' }}</strong>
             </div>
-
-            <div class="order-item">
-                <small>Payment Status</small>
-                <span class="status">
-                    {{ order.get('payment_status', 'Not collected') }}
-                </span>
+            <div class="order-row">
+                <span>Delivery Destination</span>
+                <strong>{{ order.shipping_address }}</strong>
             </div>
-
-            <div class="order-item">
-                <small>Delivery Method</small>
-                <strong>{{ order.get('delivery_method', delivery_method or 'Not specified')|title }}</strong>
-            </div>
-
-            <div class="order-item">
-                <small>Seller</small>
-                <strong>{{ order.get('seller_name', 'Seller') }}</strong>
+            <div class="order-row">
+                <span>Payment Status</span>
+                <div>
+                    <span class="payment-status-badge">{{ order.payment_status }}</span>
+                </div>
             </div>
         </div>
 
-        {% if order.get('delivery_method') == 'shipping' %}
-        <div class="order-item" style="margin-top:16px;">
-            <small>Delivery Address</small>
-            <strong>
-                {{ order.get('address', 'Not provided') }}
-                {% if order.get('pincode') %}
-                    - {{ order.get('pincode') }}
-                {% endif %}
-            </strong>
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="order-card">
-        <h2>UPI Payment</h2>
-
-        <div class="order-note">
-            <strong>Important:</strong>
-            UPI payment ಮಾಡಿದ ನಂತರ ನಿಮ್ಮ UTR / transaction reference number ಸಲ್ಲಿಸಿ.
-            Admin transaction ಪರಿಶೀಲಿಸಿದ ನಂತರವೇ payment status Paid ಆಗುತ್ತದೆ.
+        <div class="next-steps-box">
+            <h4>📦 What happens next?</h4>
+            <ol style="padding-left: 20px; margin: 0;">
+                <li>The seller has received notification of your order.</li>
+                <li>{% if order.delivery_method == 'pickup' %}
+                    You can coordinate with the seller to meet at a safe public venue to test and inspect the phone.
+                    {% else %}
+                    The seller will dispatch the phone via insured courier and post the tracking number to your dashboard.
+                    {% endif %}
+                </li>
+                <li>Inspect all hardware, display, and camera features firsthand. Once completely satisfied, settle payment directly.</li>
+            </ol>
         </div>
 
-        <p style="margin-top:18px;">
-            <strong>Current payment status:</strong>
-            {{ order.get('payment_status', 'Not collected') }}
-        </p>
-
-        {% if order.get('payment_reference') %}
-            <div class="order-item">
-                <small>Submitted Payment Reference</small>
-                <strong>{{ order.get('payment_reference') }}</strong>
-            </div>
-
-            {% if order.get('payment_status') == 'Pending verification' %}
-                <p style="color:#92400e;">
-                    ನಿಮ್ಮ reference ಸಲ್ಲಿಸಲಾಗಿದೆ. Admin verification ಗಾಗಿ ಕಾಯಿರಿ.
-                </p>
-            {% elif order.get('payment_status') == 'Paid' %}
-                <p style="color:#15803d;">
-                    Payment verified successfully.
-                </p>
-            {% elif order.get('payment_status') == 'Rejected' %}
-                <p style="color:#b91c1c;">
-                    Payment reference rejected. Transaction details ಪರಿಶೀಲಿಸಿ,
-                    ಅಗತ್ಯವಿದ್ದರೆ Admin ಅನ್ನು ಸಂಪರ್ಕಿಸಿ.
-                </p>
-            {% endif %}
-
-        {% elif order.get('payment_status') != 'Paid' %}
-            <form class="payment-form"
-                  method="POST"
-                  action="{{ url_for('submit_payment_reference', order_id=order_id) }}">
-
-                <label for="payment_reference">
-                    <strong>UPI UTR / Transaction Reference Number</strong>
-                </label>
-
-                <input
-                    type="text"
-                    id="payment_reference"
-                    name="payment_reference"
-                    placeholder="Enter your UTR / reference number"
-                    minlength="6"
-                    maxlength="40"
-                    pattern="[A-Za-z0-9]{6,40}"
-                    title="Enter 6 to 40 letters or numbers"
-                    autocomplete="off"
-                    required>
-
-                <button class="order-btn" type="submit">
-                    Submit Payment Reference
-                </button>
-            </form>
-
-            <p style="font-size:13px;color:#6b7280;margin-top:12px;">
-                Reference ಸಲ್ಲಿಸುವುದರಿಂದ ಮಾತ್ರ payment Paid ಆಗುವುದಿಲ್ಲ.
-                ನಿಮ್ಮ bank/UPI transaction ಯಶಸ್ವಿಯಾಗಿದೆಯೇ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ.
-            </p>
-        {% endif %}
-    </div>
-
-    <div style="text-align:center;margin:25px 0;">
-        <a class="order-btn" href="{{ url_for('products') }}">
-            Continue Shopping
-        </a>
+        <div class="success-actions">
+            <a href="{{ url_for('orders') }}" class="btn-action-primary">View My Orders</a>
+            <a href="{{ url_for('products') }}" class="btn-action-secondary">Continue Browsing</a>
+        </div>
     </div>
 
 </div>

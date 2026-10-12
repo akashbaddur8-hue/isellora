@@ -1,129 +1,124 @@
-
 {% extends "base.html" %}
 
-{% block title %}
-Akash | iSellora Admin Dashboard
-{% endblock %}
+{% block title %}iSellora Administration Console{% endblock %}
 
 {% block extra_css %}
 <style>
-    .admin-page {
-        background: #f5f7ff;
-        min-height: 100vh;
-        padding: 35px 18px 60px;
-        color: #1f2937;
-    }
-
-    .admin-container {
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-
     .admin-header {
-        background: linear-gradient(135deg, #5b21b6, #2563eb);
+        background: linear-gradient(135deg, #1e1b4b, #312e81);
         color: white;
-        border-radius: 20px;
+        border-radius: var(--radius-lg);
         padding: 32px;
-        margin-bottom: 25px;
-        box-shadow: 0 10px 30px rgba(91, 33, 182, 0.15);
-    }
-
-    .admin-badge {
-        display: inline-block;
-        margin-bottom: 15px;
-        background: rgba(255, 255, 255, 0.18);
-        padding: 8px 14px;
-        border-radius: 30px;
-        font-size: 12px;
-        font-weight: bold;
+        margin-bottom: 32px;
+        box-shadow: var(--shadow-md);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
     }
 
     .admin-header h1 {
-        color: white;
-        font-size: 31px;
-        margin: 0 0 10px;
+        font-size: 26px;
+        font-weight: 800;
+        margin-bottom: 6px;
     }
 
     .admin-header p {
-        color: #ede9fe;
-        line-height: 1.7;
-        margin: 0;
-    }
-
-    .admin-founder {
-        display: inline-block;
-        margin-top: 18px;
-        padding: 10px 15px;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.14);
-        font-weight: 600;
-    }
-
-    .admin-stats {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 18px;
-        margin-bottom: 28px;
-    }
-
-    .admin-stat-card {
-        background: white;
-        padding: 25px;
-        border-radius: 17px;
-        border: 1px solid #e9e7f1;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04);
-    }
-
-    .admin-stat-icon {
-        font-size: 31px;
-        margin-bottom: 12px;
-    }
-
-    .admin-stat-value {
-        font-size: 32px;
-        font-weight: bold;
-        color: #5b21b6;
-        margin-bottom: 7px;
-    }
-
-    .admin-stat-label {
-        color: #6b7280;
+        color: #c7d2fe;
         font-size: 14px;
     }
 
-    .admin-section {
+    .admin-logout-form button {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 9px 18px;
+        border-radius: var(--radius-md);
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    /* Metric Counters */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 36px;
+    }
+
+    .metric-card {
         background: white;
-        border: 1px solid #e9e7f1;
-        border-radius: 18px;
-        padding: 25px;
-        margin-bottom: 26px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
     }
 
-    .admin-section-heading {
+    .metric-card span {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+
+    .metric-card strong {
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--text-main);
+    }
+
+    /* Tabs */
+    .tabs-nav {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-bottom: 22px;
+        gap: 8px;
+        border-bottom: 2px solid var(--border);
+        margin-bottom: 24px;
+        overflow-x: auto;
     }
 
-    .admin-section-heading h2 {
-        font-size: 21px;
-        margin: 0;
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 12px 18px;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        white-space: nowrap;
+        transition: color 0.2s, border-color 0.2s;
     }
 
-    .admin-count {
-        background: #ede9fe;
-        color: #5b21b6;
-        padding: 7px 13px;
-        border-radius: 30px;
-        font-size: 12px;
-        font-weight: bold;
+    .tab-btn.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
     }
 
-    .admin-table-wrapper {
+    .tab-pane {
+        display: none;
+    }
+
+    .tab-pane.active {
+        display: block;
+    }
+
+    /* Section & Tables */
+    .admin-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 32px;
+    }
+
+    .table-responsive {
         width: 100%;
         overflow-x: auto;
     }
@@ -131,743 +126,367 @@ Akash | iSellora Admin Dashboard
     .admin-table {
         width: 100%;
         border-collapse: collapse;
-        text-align: left;
-        font-size: 14px;
+        font-size: 13px;
     }
 
     .admin-table th {
-        background: #f5f3ff;
-        color: #5b21b6;
-        padding: 15px;
-        font-size: 13px;
-        white-space: nowrap;
+        text-align: left;
+        padding: 12px;
+        background: #f8fafc;
+        border-bottom: 1px solid var(--border);
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
     }
 
     .admin-table td {
-        padding: 15px;
-        border-bottom: 1px solid #f0eef5;
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
         vertical-align: middle;
-        overflow-wrap: anywhere;
     }
 
-    .admin-table tbody tr:hover {
-        background: #faf9ff;
-    }
-
-    .admin-table tbody tr:last-child td {
-        border-bottom: none;
-    }
-
-    .admin-phone-name {
-        font-weight: bold;
-        color: #111827;
-    }
-
-    .admin-price {
-        font-weight: bold;
-        color: #6d28d9;
-        white-space: nowrap;
-    }
-
-    .admin-view-btn {
+    .badge-pill {
         display: inline-block;
-        background: #ede9fe;
-        color: #5b21b6;
-        padding: 9px 14px;
-        border-radius: 9px;
-        text-decoration: none;
-        font-size: 12px;
-        font-weight: bold;
-        white-space: nowrap;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: var(--radius-full);
     }
+    .badge-approved { background: var(--success-light); color: #065f46; }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-rejected { background: var(--error-light); color: #991b1b; }
 
-    .admin-view-btn:hover {
-        background: #ddd6fe;
-    }
-
-    /* APPROVAL BUTTONS */
-
-    .admin-actions {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 7px;
-        min-width: 250px;
-    }
-
-    .admin-actions form {
-        display: inline-block;
-        margin: 0;
-    }
-
-    .admin-action-btn {
-        border: none;
-        padding: 9px 12px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: bold;
+    .btn-action-sm {
+        padding: 5px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: var(--radius-sm);
         cursor: pointer;
-        white-space: nowrap;
-        transition: opacity 0.2s;
+        border: none;
     }
 
-    .admin-action-btn:hover {
-        opacity: 0.8;
-    }
-
-    .admin-approve-btn {
-        background: #16a34a;
-        color: white;
-    }
-
-    .admin-hide-btn {
-        background: #dc2626;
-        color: white;
-    }
-
-    .admin-pending-btn {
-        background: #f59e0b;
-        color: #111827;
-    }
-
-    .admin-action-btn:disabled {
-        background: #e5e7eb;
-        color: #6b7280;
-        cursor: not-allowed;
-        opacity: 1;
-    }
-
-    /* STATUS BADGES */
-
-    .admin-status {
-        display: inline-block;
-        padding: 7px 11px;
-        border-radius: 30px;
-        font-size: 12px;
-        font-weight: bold;
-        white-space: nowrap;
-    }
-
-    .admin-pending {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .admin-approved,
-    .admin-delivered {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .admin-hidden,
-    .admin-cancelled {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    .admin-confirmed {
-        background: #dbeafe;
-        color: #1d4ed8;
-    }
-
-    .admin-shipped {
-        background: #e0e7ff;
-        color: #4338ca;
-    }
-
-    .admin-empty {
-        text-align: center;
-        padding: 35px 15px;
-        color: #6b7280;
-        line-height: 1.7;
-    }
-
-    .admin-empty-icon {
-        font-size: 40px;
-        margin-bottom: 10px;
-    }
-
-    .admin-notice {
-        background: #eff6ff;
-        border: 1px solid #bfdbfe;
-        border-radius: 13px;
-        padding: 16px;
-        color: #1e40af;
-        font-size: 13px;
-        line-height: 1.7;
-        margin-bottom: 25px;
-    }
-
-    .admin-footer-link {
-        text-align: center;
-        margin-top: 25px;
-    }
-
-    .admin-footer-link a {
-        display: inline-block;
-        text-decoration: none;
-        background: #5b21b6;
-        color: white;
-        padding: 13px 23px;
-        border-radius: 10px;
-        font-weight: bold;
-    }
-
-    @media (max-width: 950px) {
-        .admin-stats {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-    }
-
-    @media (max-width: 550px) {
-        .admin-page {
-            padding: 20px 12px 45px;
-        }
-
-        .admin-header {
-            padding: 24px;
-        }
-
-        .admin-header h1 {
-            font-size: 25px;
-        }
-
-        .admin-stats {
-            gap: 11px;
-        }
-
-        .admin-stat-card {
-            padding: 17px;
-        }
-
-        .admin-stat-value {
-            font-size: 27px;
-        }
-
-        .admin-stat-label {
-            font-size: 12px;
-        }
-
-        .admin-section {
-            padding: 18px;
-        }
-
-        .admin-section-heading h2 {
-            font-size: 18px;
-        }
-    }
+    .btn-approve { background: #059669; color: white; }
+    .btn-reject { background: #dc2626; color: white; }
+    .btn-hide { background: #64748b; color: white; }
 </style>
 {% endblock %}
 
-
 {% block content %}
+<div class="container">
 
-<div class="admin-page">
-    <div class="admin-container">
-
-        <!-- ADMIN HEADER -->
-
-        <header class="admin-header">
-
-            <span class="admin-badge">
-                🛡️ ADMIN ACCESS
-            </span>
-
-            <h1>Welcome, Akash 👑</h1>
-
-            <p>
-                iSellora Founder & Admin Dashboard
-            </p>
-
-            <div class="admin-founder">
-                🚀 Manage Your iSellora Marketplace
-            </div>
-
-        </header>
-
-
-        <!-- STATISTICS -->
-
-        <div class="admin-stats">
-
-            <div class="admin-stat-card">
-                <div class="admin-stat-icon">👥</div>
-
-                <div class="admin-stat-value">
-                    {{ total_users }}
-                </div>
-
-                <div class="admin-stat-label">
-                    Registered Users
-                </div>
-            </div>
-
-            <div class="admin-stat-card">
-                <div class="admin-stat-icon">📱</div>
-
-                <div class="admin-stat-value">
-                    {{ total_listings }}
-                </div>
-
-                <div class="admin-stat-label">
-                    Phone Listings
-                </div>
-            </div>
-
-            <div class="admin-stat-card">
-                <div class="admin-stat-icon">🛒</div>
-
-                <div class="admin-stat-value">
-                    {{ total_orders }}
-                </div>
-
-                <div class="admin-stat-label">
-                    Total Orders
-                </div>
-            </div>
-
-            <div class="admin-stat-card">
-                <div class="admin-stat-icon">⏳</div>
-
-                <div class="admin-stat-value">
-                    {{ pending_listings }}
-                </div>
-
-                <div class="admin-stat-label">
-                    Listings Waiting for Approval
-                </div>
-            </div>
-
+    <!-- HEADER -->
+    <div class="admin-header">
+        <div>
+            <h1>iSellora Administration Console</h1>
+            <p>Verified platform controls, listing moderation, user management, and dispute logs.</p>
         </div>
+        <form action="{{ url_for('admin_logout') }}" method="POST" class="admin-logout-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit">Admin Logout ↪</button>
+        </form>
+    </div>
 
-
-        <!-- ADMIN NOTICE -->
-
-        <div class="admin-notice">
-            <strong>Admin Listing Management:</strong>
-            Approve a phone to show it publicly.
-            Hide a phone to remove it from public pages.
-            Set Pending when a listing needs another review.
-            These actions do not delete the listing.
+    <!-- METRICS GRID (Calculated directly from database) -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <span>Registered Users</span>
+            <strong>{{ total_users }}</strong>
         </div>
+        <div class="metric-card">
+            <span>Active Listings</span>
+            <strong>{{ active_listings }}</strong>
+        </div>
+        <div class="metric-card">
+            <span>Pending Approvals</span>
+            <strong style="color: #d97706;">{{ pending_approvals }}</strong>
+        </div>
+        <div class="metric-card">
+            <span>Total Orders</span>
+            <strong>{{ total_orders }}</strong>
+        </div>
+        <div class="metric-card">
+            <span>Delivered Orders</span>
+            <strong style="color: #059669;">{{ delivered_orders }}</strong>
+        </div>
+        <div class="metric-card">
+            <span>Cancelled Orders</span>
+            <strong style="color: #dc2626;">{{ cancelled_orders }}</strong>
+        </div>
+        <div class="metric-card">
+            <span>Open Tickets</span>
+            <strong>{{ open_tickets }}</strong>
+        </div>
+        <div class="metric-card">
+            <span>Pending Reports</span>
+            <strong style="color: #dc2626;">{{ pending_reports }}</strong>
+        </div>
+    </div>
 
+    <!-- TABS -->
+    <div class="tabs-nav">
+        <button class="tab-btn active" onclick="openTab('tabModeration', this)">Listing Moderation ({{ pending_approvals }})</button>
+        <button class="tab-btn" onclick="openTab('tabOrders', this)">Orders Overview</button>
+        <button class="tab-btn" onclick="openTab('tabUsers', this)">User Management</button>
+        <button class="tab-btn" onclick="openTab('tabTickets', this)">Support Tickets ({{ open_tickets }})</button>
+        <button class="tab-btn" onclick="openTab('tabReports', this)">Disputes & Reports</button>
+        <button class="tab-btn" onclick="openTab('tabAudit', this)">Audit Logs</button>
+    </div>
 
-        <!-- ALL PHONE LISTINGS -->
-
-        <section class="admin-section">
-
-            <div class="admin-section-heading">
-                <h2>📱 Manage Phone Listings</h2>
-
-                <span class="admin-count">
-                    {{ total_listings }} Listings
-                </span>
-            </div>
-
-            {% if listings %}
-
-            <div class="admin-table-wrapper">
-
+    <!-- TAB 1: LISTING MODERATION -->
+    <div class="tab-pane active" id="tabModeration">
+        <div class="admin-card">
+            <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;">Smartphone Listings</h3>
+            <div class="table-responsive">
                 <table class="admin-table">
-
                     <thead>
                         <tr>
-                            <th>Phone</th>
-                            <th>Price</th>
+                            <th>Device</th>
                             <th>Storage</th>
-                            <th>Condition</th>
+                            <th>Price</th>
                             <th>Seller</th>
+                            <th>Condition</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th>Inventory</th>
+                            <th>Moderation Actions</th>
                         </tr>
                     </thead>
-
                     <tbody>
-
                         {% for phone in listings %}
+                            <tr>
+                                <td>
+                                    <strong>{{ phone.brand }} {{ phone.model }}</strong>
+                                    <small style="display: block; color: var(--text-muted);">ID: {{ phone.id[:8] }}</small>
+                                </td>
+                                <td>{{ phone.storage }}</td>
+                                <td><strong>{{ phone.formatted_price }}</strong></td>
+                                <td>{{ phone.seller_name or 'N/A' }}</td>
+                                <td>{{ phone.condition }}</td>
+                                <td>
+                                    <span class="badge-pill badge-{{ phone.approval_status }}">{{ phone.approval_status|capitalize }}</span>
+                                </td>
+                                <td>{{ phone.inventory_status|capitalize }}</td>
+                                <td>
+                                    <div style="display: flex; gap: 6px;">
+                                        {% if phone.approval_status != 'approved' %}
+                                            <form action="{{ url_for('admin_listing_status', listing_id=phone.id) }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="status" value="approved">
+                                                <button type="submit" class="btn-action-sm btn-approve">Approve</button>
+                                            </form>
+                                        {% endif %}
 
-                        {% set approval = phone.get(
-                            'approval_status',
-                            'approved'
-                        ) | lower %}
+                                        {% if phone.approval_status != 'rejected' %}
+                                            <form action="{{ url_for('admin_listing_status', listing_id=phone.id) }}" method="POST" onsubmit="return confirm('Reject listing with feedback?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="status" value="rejected">
+                                                <input type="hidden" name="reason" value="Condition does not match description or photos unclear">
+                                                <button type="submit" class="btn-action-sm btn-reject">Reject</button>
+                                            </form>
+                                        {% endif %}
 
-                        <tr>
-
-                            <td class="admin-phone-name">
-                                {{ phone.get('brand', '-') }}
-                                {{ phone.get('model', '-') }}
-                            </td>
-
-                            <td class="admin-price">
-                                ₹{{ phone.get('price', '0') }}
-                            </td>
-
-                            <td>
-                                {{ phone.get('storage', '-') }}
-                            </td>
-
-                            <td>
-                                {{ phone.get('condition', '-') }}
-                            </td>
-
-                            <td>
-                                {{ phone.get('seller_name', '-') }}
-                            </td>
-
-                            <!-- APPROVAL STATUS -->
-
-                            <td>
-
-                                {% if approval == 'approved' %}
-
-                                <span class="admin-status admin-approved">
-                                    ✓ Approved
-                                </span>
-
-                                {% elif approval == 'hidden' %}
-
-                                <span class="admin-status admin-hidden">
-                                    ✕ Hidden
-                                </span>
-
-                                {% else %}
-
-                                <span class="admin-status admin-pending">
-                                    ⏳ Pending
-                                </span>
-
-                                {% endif %}
-
-                            </td>
-
-
-                            <!-- ADMIN ACTIONS -->
-
-                            <td>
-
-                                {% if phone.get('id') %}
-
-                                <div class="admin-actions">
-
-                                    <!-- VIEW -->
-
-                                    <a
-                                        href="{{ url_for(
-                                            'listing_detail',
-                                            listing_id=phone.get('id')
-                                        ) }}"
-                                        class="admin-view-btn"
-                                    >
-                                        View
-                                    </a>
-
-
-                                    <!-- APPROVE -->
-
-                                    <form
-                                        action="{{ url_for(
-                                            'admin_listing_status',
-                                            listing_id=phone.get('id')
-                                        ) }}"
-                                        method="POST"
-                                    >
-
-                                        <input
-                                            type="hidden"
-                                            name="status"
-                                            value="approved"
-                                        >
-
-                                        <button
-                                            type="submit"
-                                            class="admin-action-btn admin-approve-btn"
-                                            {% if approval == 'approved' %}
-                                                disabled
-                                            {% endif %}
-                                        >
-                                            ✓ Approve
-                                        </button>
-
-                                    </form>
-
-
-                                    <!-- HIDE -->
-
-                                    <form
-                                        action="{{ url_for(
-                                            'admin_listing_status',
-                                            listing_id=phone.get('id')
-                                        ) }}"
-                                        method="POST"
-                                        onsubmit="return confirm(
-                                            'Hide this phone from the public website?'
-                                        );"
-                                    >
-
-                                        <input
-                                            type="hidden"
-                                            name="status"
-                                            value="hidden"
-                                        >
-
-                                        <button
-                                            type="submit"
-                                            class="admin-action-btn admin-hide-btn"
-                                            {% if approval == 'hidden' %}
-                                                disabled
-                                            {% endif %}
-                                        >
-                                            Hide
-                                        </button>
-
-                                    </form>
-
-
-                                    <!-- SET PENDING -->
-
-                                    <form
-                                        action="{{ url_for(
-                                            'admin_listing_status',
-                                            listing_id=phone.get('id')
-                                        ) }}"
-                                        method="POST"
-                                    >
-
-                                        <input
-                                            type="hidden"
-                                            name="status"
-                                            value="pending"
-                                        >
-
-                                        <button
-                                            type="submit"
-                                            class="admin-action-btn admin-pending-btn"
-                                            {% if approval == 'pending' %}
-                                                disabled
-                                            {% endif %}
-                                        >
-                                            Pending
-                                        </button>
-
-                                    </form>
-
-                                </div>
-
-                                {% else %}
-
-                                -
-
-                                {% endif %}
-
-                            </td>
-
-                        </tr>
-
+                                        {% if phone.approval_status != 'pending' %}
+                                            <form action="{{ url_for('admin_listing_status', listing_id=phone.id) }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="status" value="pending">
+                                                <button type="submit" class="btn-action-sm btn-hide">Review</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
                         {% endfor %}
-
                     </tbody>
-
                 </table>
-
             </div>
+        </div>
+    </div>
 
-            {% else %}
-
-            <div class="admin-empty">
-                <div class="admin-empty-icon">📱</div>
-                No phone listings available yet.
-            </div>
-
-            {% endif %}
-
-        </section>
-
-
-        <!-- REGISTERED USERS -->
-
-        <section class="admin-section">
-
-            <div class="admin-section-heading">
-                <h2>👥 Registered Users</h2>
-
-                <span class="admin-count">
-                    {{ total_users }} Users
-                </span>
-            </div>
-
-            {% if users %}
-
-            <div class="admin-table-wrapper">
-
+    <!-- TAB 2: ORDERS -->
+    <div class="tab-pane" id="tabOrders">
+        <div class="admin-card">
+            <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;">Marketplace Orders</h3>
+            <div class="table-responsive">
                 <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Device</th>
+                            <th>Buyer</th>
+                            <th>Total</th>
+                            <th>Fulfillment</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                            <tr>
+                                <td><code>#{{ order.id[:8] }}</code></td>
+                                <td>{{ order.brand }} {{ order.model }}</td>
+                                <td>{{ order.buyer_name }} ({{ order.buyer_phone }})</td>
+                                <td><strong>{{ order.formatted_total }}</strong></td>
+                                <td>{{ order.delivery_method|capitalize }}</td>
+                                <td><span class="badge-pill badge-{{ 'approved' if order.status == 'Delivered' else 'pending' }}">{{ order.status }}</span></td>
+                                <td>{{ order.payment_status }}</td>
+                                <td>{{ order.created_at.strftime('%d %b %Y') if order.created_at else '' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
+    <!-- TAB 3: USERS -->
+    <div class="tab-pane" id="tabUsers">
+        <div class="admin-card">
+            <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;">Registered Accounts</h3>
+            <div class="table-responsive">
+                <table class="admin-table">
                     <thead>
                         <tr>
                             <th>Name</th>
                             <th>Email</th>
                             <th>Phone</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Registered</th>
                         </tr>
                     </thead>
-
                     <tbody>
-
                         {% for user in users %}
-
-                        <tr>
-
-                            <td>
-                                <strong>
-                                    {{ user.get('name', '-') }}
-                                </strong>
-                            </td>
-
-                            <td>
-                                {{ user.get('email', '-') }}
-                            </td>
-
-                            <td>
-                                {{ user.get('phone', '-') }}
-                            </td>
-
-                        </tr>
-
+                            <tr>
+                                <td><strong>{{ user.name }}</strong></td>
+                                <td>{{ user.email }}</td>
+                                <td>{{ user.phone }}</td>
+                                <td><span style="font-weight: 700;">{{ user.role|upper }}</span></td>
+                                <td><span class="badge-pill badge-{{ 'approved' if user.is_active else 'rejected' }}">{{ 'Active' if user.is_active else 'Deactivated' }}</span></td>
+                                <td>{{ user.created_at.strftime('%d %b %Y') if user.created_at else '' }}</td>
+                            </tr>
                         {% endfor %}
-
                     </tbody>
-
                 </table>
-
             </div>
+        </div>
+    </div>
 
+    <!-- TAB 4: SUPPORT TICKETS -->
+    <div class="tab-pane" id="tabTickets">
+        <div class="admin-card">
+            <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;">Customer Support Inquiries</h3>
+            {% if tickets %}
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Ticket #</th>
+                                <th>Subject</th>
+                                <th>User</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tkt in tickets %}
+                                <tr>
+                                    <td><strong>{{ tkt.ticket_number }}</strong></td>
+                                    <td>{{ tkt.subject }}</td>
+                                    <td>{{ tkt.user.name if tkt.user else 'Anonymous' }}</td>
+                                    <td><span style="font-weight: 700;">{{ tkt.priority }}</span></td>
+                                    <td><span class="badge-pill badge-{{ 'approved' if tkt.status == 'Resolved' else 'pending' }}">{{ tkt.status }}</span></td>
+                                    <td>{{ tkt.created_at.strftime('%d %b %Y') if tkt.created_at else '' }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
-
-            <div class="admin-empty">
-                <div class="admin-empty-icon">👥</div>
-                No registered users yet.
-            </div>
-
+                <p style="text-align: center; color: var(--text-muted); padding: 24px;">No support tickets currently open.</p>
             {% endif %}
+        </div>
+    </div>
 
-        </section>
+    <!-- TAB 5: REPORTS & DISPUTES -->
+    <div class="tab-pane" id="tabReports">
+        <div class="admin-card">
+            <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;">Listing Reports & Flagged Devices</h3>
+            {% if reports %}
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Report ID</th>
+                                <th>Listing ID</th>
+                                <th>Type</th>
+                                <th>Details</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rep in reports %}
+                                <tr>
+                                    <td><code>#{{ rep.id[:8] }}</code></td>
+                                    <td><code>{{ rep.listing_id[:8] if rep.listing_id else 'N/A' }}</code></td>
+                                    <td><strong>{{ rep.report_type }}</strong></td>
+                                    <td>{{ rep.reason }}</td>
+                                    <td><span class="badge-pill badge-pending">{{ rep.status }}</span></td>
+                                    <td>{{ rep.created_at.strftime('%d %b %Y') if rep.created_at else '' }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p style="text-align: center; color: var(--text-muted); padding: 24px;">No reported listings or open disputes.</p>
+            {% endif %}
+        </div>
+    </div>
 
-
-        <!-- RECENT ORDERS -->
-
-        <section class="admin-section">
-
-            <div class="admin-section-heading">
-                <h2>📦 Recent Orders</h2>
-
-                <span class="admin-count">
-                    {{ total_orders }} Total
-                </span>
-            </div>
-
-            {% if orders %}
-
-            <div class="admin-table-wrapper">
-
+    <!-- TAB 6: AUDIT LOGS -->
+    <div class="tab-pane" id="tabAudit">
+        <div class="admin-card">
+            <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;">Security & Operational Audit Log</h3>
+            <div class="table-responsive">
                 <table class="admin-table">
-
                     <thead>
                         <tr>
-                            <th>Order ID</th>
-                            <th>Phone</th>
-                            <th>Price</th>
-                            <th>Status</th>
-                            <th>Payment</th>
+                            <th>Action</th>
+                            <th>Target</th>
+                            <th>Details</th>
+                            <th>IP Address</th>
+                            <th>Timestamp</th>
                         </tr>
                     </thead>
-
                     <tbody>
-
-                        {% for order in orders[:20] %}
-
-                        {% set status = order.get(
-                            'status',
-                            'Pending'
-                        ) %}
-
-                        <tr>
-
-                            <td>
-                                {{ order.get(
-                                    'order_id',
-                                    '-'
-                                )[:8] }}
-                            </td>
-
-                            <td>
-                                {{ order.get('brand', '-') }}
-                                {{ order.get('model', '-') }}
-                            </td>
-
-                            <td class="admin-price">
-                                ₹{{ order.get('price', '0') }}
-                            </td>
-
-                            <td>
-
-                                <span class="admin-status
-                                    {% if status == 'Pending' %}
-                                        admin-pending
-                                    {% elif status == 'Confirmed' %}
-                                        admin-confirmed
-                                    {% elif status == 'Shipped' %}
-                                        admin-shipped
-                                    {% elif status == 'Delivered' %}
-                                        admin-delivered
-                                    {% elif status == 'Cancelled' %}
-                                        admin-cancelled
-                                    {% else %}
-                                        admin-pending
-                                    {% endif %}
-                                ">
-                                    {{ status }}
-                                </span>
-
-                            </td>
-
-                            <td>
-                                {{ order.get(
-                                    'payment_status',
-                                    'Not collected'
-                                ) }}
-                            </td>
-
-                        </tr>
-
+                        {% for audit in audit_logs %}
+                            <tr>
+                                <td><strong>{{ audit.action }}</strong></td>
+                                <td>{{ audit.target_type }}: <code>{{ audit.target_id[:8] if audit.target_id else '' }}</code></td>
+                                <td>{{ audit.details or '-' }}</td>
+                                <td>{{ audit.ip_address or '-' }}</td>
+                                <td>{{ audit.created_at.strftime('%d %b %Y, %I:%M:%S %p') if audit.created_at else '' }}</td>
+                            </tr>
                         {% endfor %}
-
                     </tbody>
-
                 </table>
-
             </div>
-
-            {% else %}
-
-            <div class="admin-empty">
-                <div class="admin-empty-icon">📦</div>
-                No customer orders yet.
-            </div>
-
-            {% endif %}
-
-        </section>
-
-
-        <!-- BACK TO WEBSITE -->
-
-        <div class="admin-footer-link">
-
-            <a href="{{ url_for('home') }}">
-                ← Back to iSellora
-            </a>
-
         </div>
-
     </div>
-</div>
 
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openTab(tabId, btn) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        btn.classList.add('active');
+    }
+</script>
 {% endblock %}

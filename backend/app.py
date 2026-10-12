@@ -1,3250 +1,1054 @@
-from flask import (
-    Flask, render_template, request, redirect,
-    url_for, session, abort
-)
-
-from flask_wtf.csrf import CSRFProtect
-
-from werkzeug.security import (
-    generate_password_hash, check_password_hash
-)
-
-from werkzeug.utils import secure_filename
-
-from datetime import datetime, timezone
-from threading import RLock
-from urllib.parse import quote_plus
-
+"""
+iSellora Marketplace Application
+Full-featured, secure, and relational-backed marketplace for second-hand smartphones.
+"""
 import os
 import uuid
-import json
-import re
-import math
+from datetime import datetime, timezone
+from urllib.parse import quote_plus
+from flask import (
+    Flask, render_template, request, redirect,
+    url_for, session, abort, flash, jsonify
+)
+from flask_wtf.csrf import CSRFProtect, CSRFError
+from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 
-
-# =====================================
-# APP CONFIGURATION
-# =====================================
-
-app = Flask(
-    __name__,
-    template_folder="templates"
+from backend.database import db
+from backend.models import (
+    User, Listing, ListingImage, Order, OrderStatusHistory,
+    Notification, SupportTicket, ReportDispute, AuditEvent,
+    utc_now, get_legitimate_tracking_url
+)
+from backend.config import config_by_name
+from backend.services.auth_service import (
+    is_rate_limited, record_failed_attempt, clear_failed_attempts,
+    validate_password_strength, normalize_email, validate_phone
+)
+from backend.services.listing_service import (
+    query_catalog, validate_image_file, moderate_listing
+)
+from backend.services.order_service import (
+    create_order, transition_order_status
+)
+from backend.services.inventory_service import (
+    release_listing_reservation
 )
 
+csrf = CSRFProtect()
 
-from dotenv import load_dotenv
 
-load_dotenv(
-    os.path.join(os.path.dirname(__file__), ".env")
-)
+def create_app(config_name=None):
+    if config_name is None:
+        config_name = os.environ.get("FLASK_ENV", "development")
 
-app.secret_key = os.environ.get("SECRET_KEY")
-
-if not app.secret_key or len(app.secret_key) < 64:
-    raise RuntimeError(
-        "SECRET_KEY missing or too short. Check backend/.env"
+    app = Flask(
+        __name__,
+        template_folder=os.path.join(os.path.dirname(__file__), "templates"),
+        static_folder=os.path.join(os.path.dirname(__file__), "static")
     )
 
-
-app.config.update(
-    MAX_CONTENT_LENGTH=50 * 1024 * 1024,
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="Lax"
-)
-
-
-UPLOAD_FOLDER = os.path.join(
-    app.root_path,
-    "static",
-    "uploads"
-)
-
-LISTINGS_FILE = os.path.join(
-    app.root_path,
-    "listings.json"
-)
-
-USERS_FILE = os.path.join(
-    app.root_path,
-    "users.json"
-)
-
-ORDERS_FILE = os.path.join(
-    app.root_path,
-    "orders.json"
-)
-
-NOTIFICATIONS_FILE = os.path.join(
-    app.root_path,
-    "notifications.json"
-)
-
-
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-os.makedirs(
-    UPLOAD_FOLDER,
-    exist_ok=True
-)
-
-
-ALLOWED_EXTENSIONS = {
-    "png",
-    "jpg",
-    "jpeg",
-    "webp"
-}
-
-
-CONDITION_FIELDS = (
-    "screen_damage",
-    "body_damage",
-    "repair_history",
-    "original_display",
-    "accessories"
-)
-
-
-data_lock = RLock()
-
-
-ADMIN_EMAIL = os.environ.get(
-    "ADMIN_EMAIL",
-    ""
-).strip().lower()
-
-
-# =====================================
-# JSON HELPERS
-# =====================================
-
-def load_json(filename):
-
-    if not os.path.exists(filename):
-        return []
-
-    try:
-
-        with open(
-            filename,
-            "r",
-            encoding="utf-8"
-        ) as f:
-
-            data = json.load(f)
-
-        return (
-            data
-            if isinstance(data, list)
-            else []
-        )
-
-    except (
-        OSError,
-        json.JSONDecodeError
-    ):
-
-        return []
-
-
-def save_json(filename, data):
-
-    temp_file = (
-        filename
-        + "."
-        + str(uuid.uuid4())
-        + ".tmp"
-    )
-
-    try:
-
-        with open(
-            temp_file,
-            "w",
-            encoding="utf-8"
-        ) as f:
-
-            json.dump(
-                data,
-                f,
-                indent=4,
-                ensure_ascii=False
-            )
-
-        os.replace(
-            temp_file,
-            filename
-        )
-
-    finally:
-
-        if os.path.exists(
-            temp_file
-        ):
-
-            os.remove(
-                temp_file
-            )
-
-
-def load_listings():
-
-    return load_json(
-        LISTINGS_FILE
-    )
-
-
-def save_listings(data):
-
-    save_json(
-        LISTINGS_FILE,
-        data
-    )
-
-
-def load_users():
-
-    return load_json(
-        USERS_FILE
-    )
-
-
-def save_users(data):
-
-    save_json(
-        USERS_FILE,
-        data
-    )
-
-
-def load_orders():
-
-    return load_json(
-        ORDERS_FILE
-    )
-
-
-def save_orders(data):
-
-    save_json(
-        ORDERS_FILE,
-        data
-    )
-
-
-# =====================================
-# NOTIFICATION HELPERS
-# =====================================
-
-def load_notifications():
-
-    return load_json(
-        NOTIFICATIONS_FILE
-    )
-
-
-def save_notifications(data):
-
-    save_json(
-        NOTIFICATIONS_FILE,
-        data
-    )
-
-
-def create_notification(
-    user_id,
-    title,
-    message,
-    listing_id=None
-):
-
-    if not user_id:
-        return
-
-    with data_lock:
-
-        notifications = (
-            load_notifications()
-        )
-
-        notifications.insert(
-            0,
-            {
-                "id":
-                    str(uuid.uuid4()),
-
-                "user_id":
-                    user_id,
-
-                "title":
-                    title,
-
-                "message":
-                    message,
-
-                "listing_id":
-                    listing_id,
-
-                "read":
-                    False,
-
-                "created_at":
-                    current_time()
-            }
-        )
-
-        save_notifications(
-            notifications
-        )
-
-
-@app.context_processor
-def inject_notifications():
-
-    user_id = session.get(
-        "user_id"
-    )
-
-    if not user_id:
+    config_class = config_by_name.get(config_name, config_by_name["development"])
+    app.config.from_object(config_class)
+
+    # Initialize extensions
+    db.init_app(app)
+    csrf.init_app(app)
+
+    # Ensure uploads folder exists
+    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+    # =========================================================================
+    # CONTEXT PROCESSORS & SECURITY HEADERS
+    # =========================================================================
+    @app.context_processor
+    def inject_globals():
+        user_id = session.get("user_id")
+        notifications = []
+        unread_count = 0
+        current_user = None
+
+        if user_id:
+            current_user = db.session.get(User, user_id)
+            if current_user and current_user.is_active:
+                notices_query = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc())
+                notifications = notices_query.limit(10).all()
+                unread_count = Notification.query.filter_by(user_id=user_id, is_read=False).count()
+            elif current_user and not current_user.is_active:
+                session.clear()
+                current_user = None
 
         return {
-            "notifications": [],
-            "unread_notification_count": 0
+            "current_user": current_user,
+            "notifications": notifications,
+            "unread_notification_count": unread_count,
+            "now": utc_now()
         }
 
-    my_notifications = [
-        notice
-        for notice in load_notifications()
-        if notice.get(
-            "user_id"
-        ) == user_id
-    ]
-
-    my_notifications.sort(
-        key=lambda notice:
-        notice.get(
-            "created_at",
-            ""
-        ),
-        reverse=True
-    )
-
-    unread_count = sum(
-        1
-        for notice in my_notifications
-        if not notice.get(
-            "read",
-            False
-        )
-    )
-
-    return {
-        "notifications":
-            my_notifications[:10],
-
-        "unread_notification_count":
-            unread_count
-    }
-
-
-# =====================================
-# GENERAL HELPERS
-# =====================================
-
-def current_time():
-
-    return datetime.now(
-        timezone.utc
-    ).isoformat()
-
-
-def valid_phone(value):
-
-    return bool(
-        re.fullmatch(
-            r"[0-9]{10}",
-            str(value)
-        )
-    )
-
-
-def valid_price(value):
-
-    try:
-
-        number = float(
-            str(value)
-            .replace(",", "")
-        )
-
-        return (
-            math.isfinite(number)
-            and 0 < number <= 100000000
-        )
-
-    except (
-        TypeError,
-        ValueError
-    ):
-
-        return False
-
-
-def valid_battery(value):
-
-    if not value:
-        return True
-
-    return (
-        isinstance(value, str)
-        and value.isdigit()
-        and 1 <= int(value) <= 100
-    )
-
-
-def find_listing(listing_id):
-
-    return next(
-        (
-            phone
-            for phone in load_listings()
-            if str(
-                phone.get("id")
-            ) == str(listing_id)
-        ),
-        None
-    )
-
-
-def is_seller_owner(item):
-
-    return bool(
-        session.get("user_id")
-        and item.get("seller_id")
-        == session["user_id"]
-    )
-
-
-def is_order_seller(order):
-
-    return bool(
-        session.get("user_id")
-        and order.get("seller_id")
-        == session["user_id"]
-    )
-
-
-def login_required():
-
-    return bool(
-        session.get("user_id")
-    )
-
-
-# =====================================
-# COURIER TRACKING URL
-# =====================================
-
-def get_tracking_url(
-    courier_name,
-    tracking_number
-):
-
-    if (
-        not courier_name
-        or not tracking_number
-    ):
-
-        return None
-
-    courier = re.sub(
-        r"\s+",
-        " ",
-        str(courier_name).strip().lower()
-    )
-
-    tracking = str(
-        tracking_number
-    ).strip()
-
-    clean_tracking = re.sub(
-        r"[\s-]+",
-        "",
-        tracking
-    )
-
-    tracking_urls = {
-
-        # DTDC
-        "dtdc":
-            (
-                "https://www.dtdc.in/"
-                "tracking/tracking_results.asp"
-                "?Ttype=awb_no"
-                f"&strCnno={clean_tracking}"
-            ),
-
-        # Delhivery
-        "delhivery":
-            (
-                "https://www.delhivery.com/"
-                f"track/package/{clean_tracking}"
-            ),
-
-        # Blue Dart
-        "blue dart":
-            "https://www.bluedart.com/tracking",
-
-        "bluedart":
-            "https://www.bluedart.com/tracking",
-
-        "blue dart express":
-            "https://www.bluedart.com/tracking",
-
-        # India Post
-        "india post":
-            (
-                "https://www.indiapost.gov.in/"
-                "_layouts/15/"
-                "dop.portal.tracking/"
-                "trackconsignment.aspx"
-            ),
-
-        "indiapost":
-            (
-                "https://www.indiapost.gov.in/"
-                "_layouts/15/"
-                "dop.portal.tracking/"
-                "trackconsignment.aspx"
-            ),
-
-        # Ekart
-        "ekart":
-            (
-                "https://ekartlogistics.com/"
-                f"track/{clean_tracking}"
-            ),
-
-        "ekart logistics":
-            (
-                "https://ekartlogistics.com/"
-                f"track/{clean_tracking}"
-            ),
-
-        # XpressBees
-        "xpressbees":
-            (
-                "https://www.xpressbees.com/"
-                "shipment/tracking"
-                f"?awb={clean_tracking}"
-            ),
-
-        "xpress bees":
-            (
-                "https://www.xpressbees.com/"
-                "shipment/tracking"
-                f"?awb={clean_tracking}"
-            ),
-
-        # Ecom Express
-        "ecom express":
-            (
-                "https://www.ecomexpress.in/"
-                "tracking/"
-                f"?awb_field={clean_tracking}"
-            ),
-
-        "ecomexpress":
-            (
-                "https://www.ecomexpress.in/"
-                "tracking/"
-                f"?awb_field={clean_tracking}"
-            ),
-
-        # Professional Couriers
-        "professional couriers":
-            "https://www.tpcindia.com/track.aspx",
-
-        "professional courier":
-            "https://www.tpcindia.com/track.aspx"
-    }
-
-    if courier in tracking_urls:
-
-        return tracking_urls[courier]
-
-    search_text = quote_plus(
-        f"{courier_name} tracking {tracking_number}"
-    )
-
-    return (
-        "https://www.google.com/search?q="
-        + search_text
-    )
-
-
-# =====================================
-# ADMIN
-# =====================================
-
-def is_admin():
-
-    user_id = session.get(
-        "user_id"
-    )
-
-    if not user_id:
-        return False
-
-    if not session.get(
-        "admin_authenticated",
-        False
-    ):
-        return False
-
-    if not ADMIN_EMAIL:
-        return False
-
-    user = next(
-        (
-            item
-            for item in load_users()
-            if item.get("id")
-            == user_id
-        ),
-        None
-    )
-
-    if user is None:
-        return False
-
-    return (
-        str(
-            user.get(
-                "email",
-                ""
+    @app.after_request
+    def set_security_headers(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if not app.debug:
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self' https: data:; "
+                "script-src 'self' 'unsafe-inline' https:; "
+                "style-src 'self' 'unsafe-inline' https:; "
+                "img-src 'self' data: https: /static/;"
             )
-        )
-        .strip()
-        .lower()
-        == ADMIN_EMAIL
-    )
+        return response
 
+    # =========================================================================
+    # ERROR HANDLERS
+    # =========================================================================
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        app.logger.warning(f"CSRF failure: {e.description} from {request.remote_addr}")
+        return render_template("base.html", error_message="Security token expired or invalid. Please refresh the page and try again."), 400
 
-# =====================================
-# LISTING APPROVAL
-# =====================================
+    @app.errorhandler(400)
+    def bad_request(e):
+        return render_template("base.html", error_message=getattr(e, "description", "Bad Request")), 400
 
-def listing_status(phone):
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template("base.html", error_message="Access Denied: You do not have permission to view or modify this resource."), 403
 
-    return str(
-        phone.get(
-            "approval_status",
-            "approved"
-        )
-    ).strip().lower()
+    @app.errorhandler(404)
+    def not_found(e):
+        return render_template("base.html", error_message="The requested page or listing could not be found."), 404
 
+    @app.errorhandler(409)
+    def conflict(e):
+        return render_template("base.html", error_message=getattr(e, "description", "Conflict: Item was modified or claimed by another request.")), 409
 
-def is_public_listing(phone):
+    @app.errorhandler(500)
+    def internal_error(e):
+        db.session.rollback()
+        app.logger.exception("Internal server error")
+        return render_template("base.html", error_message="An unexpected system error occurred. Our engineering team has been alerted."), 500
 
-    return (
-        listing_status(phone)
-        == "approved"
-    )
+    # =========================================================================
+    # AUTHENTICATION HELPERS
+    # =========================================================================
+    def get_current_user():
+        user_id = session.get("user_id")
+        if not user_id:
+            return None
+        user = db.session.get(User, user_id)
+        if not user or not user.is_active:
+            return None
+        return user
 
+    def is_admin():
+        user = get_current_user()
+        if not user:
+            return False
+        return user.role == "admin" and session.get("admin_authenticated", False)
 
-def public_listings():
+    # =========================================================================
+    # PUBLIC DISCOVERY ROUTES
+    # =========================================================================
+    @app.route("/")
+    def home():
+        # Fetch featured and newest approved listings
+        featured_listings = Listing.query.filter_by(
+            approval_status="approved", inventory_status="available"
+        ).order_by(Listing.created_at.desc()).limit(8).all()
+        return render_template("index.html", phones=featured_listings)
 
-    return [
-        phone
-        for phone in load_listings()
-        if is_public_listing(phone)
-    ]
+    @app.route("/product")
+    def product():
+        # Legacy route: redirect to catalog
+        return redirect(url_for("products"))
 
-
-def can_view_listing(phone):
-
-    return (
-        is_public_listing(phone)
-        or is_seller_owner(phone)
-        or is_admin()
-    )
-
-
-# =====================================
-# IMAGE HELPERS
-# =====================================
-
-def image_matches_extension(photo):
-
-    name = secure_filename(
-        photo.filename or ""
-    )
-
-    if "." not in name:
-        return False
-
-    extension = name.rsplit(
-        ".",
-        1
-    )[1].lower()
-
-    if extension not in ALLOWED_EXTENSIONS:
-        return False
-
-    position = photo.stream.tell()
-
-    header = photo.stream.read(16)
-
-    photo.stream.seek(position)
-
-    if extension in (
-        "jpg",
-        "jpeg"
-    ):
-
-        return header.startswith(
-            b"\xff\xd8\xff"
-        )
-
-    if extension == "png":
-
-        return header.startswith(
-            b"\x89PNG\r\n\x1a\n"
-        )
-
-    if extension == "webp":
-
-        return (
-            header.startswith(
-                b"RIFF"
-            )
-            and header[8:12]
-            == b"WEBP"
-        )
-
-    return False
-
-
-def delete_uploaded_images(images):
-
-    for image in images:
-
-        if not isinstance(
-            image,
-            str
-        ):
-            continue
-
-        if not image.startswith(
-            "/static/uploads/"
-        ):
-            continue
-
-        filename = os.path.basename(
-            image
-        )
-
-        path = os.path.join(
-            UPLOAD_FOLDER,
-            filename
-        )
-
+    @app.route("/products")
+    def products():
+        search = request.args.get("search", "").strip()
+        brand = request.args.get("brand", "").strip()
+        condition = request.args.get("condition", "").strip()
+        storage = request.args.get("storage", "").strip()
+        ram = request.args.get("ram", "").strip()
+        sort_by = request.args.get("sort", "latest").strip()
+        
         try:
-
-            if os.path.isfile(path):
-                os.remove(path)
-
-        except OSError:
-
-            pass
-
-
-# =====================================
-# HOME
-# =====================================
-
-@app.route("/")
-def home():
-
-    return render_template(
-        "index.html",
-        phones=
-            public_listings()[:8]
-    )
-
-
-@app.route("/product")
-def product():
-
-    return render_template(
-        "product.html"
-    )
-
-
-@app.route("/products")
-def products():
-
-    return render_template(
-        "products.html",
-        phones=
-            public_listings()
-    )
-
-
-@app.route(
-    "/products/<listing_id>"
-)
-def listing_detail(
-    listing_id
-):
-
-    phone = find_listing(
-        listing_id
-    )
-
-    if phone is None:
-        abort(404)
-
-    if not can_view_listing(
-        phone
-    ):
-        abort(404)
-
-    return render_template(
-        "product_detail.html",
-        phone=phone
-    )
-
-
-# =====================================
-# BUY / CHECKOUT
-# =====================================
-
-@app.route(
-    "/buy/<listing_id>",
-    methods=["GET", "POST"]
-)
-def buy_now(listing_id):
-
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    phone = find_listing(
-        listing_id
-    )
-
-    if (
-        phone is None
-        or not is_public_listing(phone)
-    ):
-
-        return (
-            "This phone is not available.",
-            404
-        )
-
-    if is_seller_owner(phone):
-
-        return (
-            "You cannot buy your own listing.",
-            403
-        )
-
-    if request.method == "GET":
-
-        token = str(
-            uuid.uuid4()
-        )
-
-        session[
-            "checkout_token"
-        ] = token
-
-        session[
-            "checkout_listing_id"
-        ] = str(listing_id)
-
-        return render_template(
-            "checkout.html",
-            phone=phone
-        )
-
-    buyer_name = request.form.get(
-        "buyer_name",
-        ""
-    ).strip()
-
-    buyer_phone = request.form.get(
-        "buyer_phone",
-        ""
-    ).strip()
-
-    if not 2 <= len(
-        buyer_name
-    ) <= 100:
-
-        return (
-            "Enter a valid full name.",
-            400
-        )
-
-    if not valid_phone(
-        buyer_phone
-    ):
-
-        return (
-            "Enter a valid 10-digit phone number.",
-            400
-        )
-
-    delivery_method = request.form.get(
-        "delivery_method",
-        ""
-    ).strip().lower()
-
-    if delivery_method not in (
-        "pickup",
-        "shipping"
-    ):
-
-        return (
-            "Invalid delivery method.",
-            400
-        )
-
-    if delivery_method == "shipping":
-
-        address = request.form.get(
-            "address",
-            ""
-        ).strip()
-
-        pincode = request.form.get(
-            "pincode",
-            ""
-        ).strip()
-
-        if not 10 <= len(
-            address
-        ) <= 500:
-
-            return (
-                "Enter a complete delivery address.",
-                400
-            )
-
-        if not re.fullmatch(
-            r"[0-9]{6}",
-            pincode
-        ):
-
-            return (
-                "Enter a valid 6-digit PIN code.",
-                400
-            )
-
-        delivery_charge = None
-
-    else:
-
-        address = "Local Pickup"
-
-        pincode = ""
-
-        delivery_charge = 0
-
-    checkout_token = session.get(
-        "checkout_token"
-    )
-
-    if (
-        not checkout_token
-        or session.get(
-            "checkout_listing_id"
-        ) != str(listing_id)
-    ):
-
-        return (
-            "Checkout expired or already submitted. "
-            "Open Buy Now again.",
-            409
-        )
-
-    with data_lock:
-
-        all_orders = load_orders()
-
-        existing_order = next(
-            (
-                item
-                for item in all_orders
-                if item.get(
-                    "checkout_token"
-                ) == checkout_token
-                and item.get(
-                    "buyer_id"
-                ) == session["user_id"]
-            ),
-            None
-        )
-
-        if existing_order:
-
-            return redirect(
-                url_for(
-                    "order_confirmation",
-                    order_id=
-                        existing_order[
-                            "order_id"
-                        ]
-                )
-            )
-
-        phone = find_listing(
-            listing_id
-        )
-
-        if (
-            phone is None
-            or not is_public_listing(phone)
-        ):
-
-            return (
-                "This listing is no longer available.",
-                404
-            )
-
-        if is_seller_owner(phone):
-
-            return (
-                "You cannot buy your own listing.",
-                403
-            )
-
-        order = {
-
-            "order_id":
-                str(uuid.uuid4()),
-
-            "checkout_token":
-                checkout_token,
-
-            "product_id":
-                phone.get("id", ""),
-
-            "brand":
-                phone.get("brand", ""),
-
-            "model":
-                phone.get("model", ""),
-
-            "price":
-                phone.get("price", "0"),
-
-            "storage":
-                phone.get("storage", ""),
-
-            "buyer_id":
-                session["user_id"],
-
-            "buyer_name":
-                buyer_name,
-
-            "buyer_phone":
-                buyer_phone,
-
-            "seller_id":
-                phone.get(
-                    "seller_id",
-                    ""
-                ),
-
-            "seller_name":
-                phone.get(
-                    "seller_name",
-                    ""
-                ),
-
-            "seller_phone":
-                phone.get(
-                    "seller_phone"
-                )
-                or phone.get(
-                    "phone",
-                    ""
-                ),
-
-            "delivery_method":
-                delivery_method,
-
-            "address":
-                address,
-
-            "pincode":
-                pincode,
-
-            "delivery_charge":
-                delivery_charge,
-
-            "courier_name":
-                "",
-
-            "tracking_number":
-                "",
-
-            "tracking_url":
-                None,
-
-            "status":
-                "Pending",
-
-            "payment_status":
-                "Not collected",
-
-            "created_at":
-                current_time()
-        }
-
-        all_orders.insert(
-            0,
-            order
-        )
-
-        try:
-
-            save_orders(
-                all_orders
-            )
-
-        except OSError:
-
-            return (
-                "Could not save order. Please try again.",
-                500
-            )
-
-    session.pop(
-        "checkout_token",
-        None
-    )
-
-    session.pop(
-        "checkout_listing_id",
-        None
-    )
-
-    try:
-
-        create_notification(
-            order.get("seller_id"),
-            "New Order Received",
-            (
-                order.get(
-                    "buyer_name",
-                    "A buyer"
-                )
-                + " placed an order for "
-                + order.get(
-                    "brand",
-                    ""
-                )
-                + " "
-                + order.get(
-                    "model",
-                    ""
-                )
-                + "."
-            ),
-            order.get(
-                "product_id"
-            )
-        )
-
-    except OSError:
-
-        app.logger.exception(
-            "Could not create new order notification"
-        )
-
-    return redirect(
-        url_for(
-            "order_confirmation",
-            order_id=
-                order["order_id"]
-        )
-    )
-
-
-# =====================================
-# ORDER SUCCESS
-# =====================================
-
-@app.route(
-    "/order-success/<order_id>"
-)
-def order_confirmation(
-    order_id
-):
-
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    order = next(
-        (
-            item
-            for item in load_orders()
-            if item.get(
-                "order_id"
-            ) == order_id
-            and item.get(
-                "buyer_id"
-            ) == session["user_id"]
-        ),
-        None
-    )
-
-    if order is None:
-
-        return (
-            "Order not found",
-            404
-        )
-
-    phone = find_listing(
-        order.get(
-            "product_id"
-        )
-    )
-
-    if phone is None:
-
-        phone = {
-
-            "brand":
-                order.get(
-                    "brand",
-                    ""
-                ),
-
-            "model":
-                order.get(
-                    "model",
-                    ""
-                ),
-
-            "price":
-                order.get(
-                    "price",
-                    "0"
-                ),
-
-            "storage":
-                order.get(
-                    "storage",
-                    ""
-                ),
-
-            "seller_name":
-                order.get(
-                    "seller_name",
-                    ""
-                )
-        }
-
-    return render_template(
-        "order_success.html",
-        phone=phone,
-        buyer_name=
-            order.get(
-                "buyer_name",
-                "Customer"
-            ),
-        order=order,
-        order_id=
-            order["order_id"],
-        delivery_method=
-            order.get(
-                "delivery_method"
-            )
-    )
-
-
-# =====================================
-# BUYER ORDERS
-# =====================================
-
-@app.route("/orders")
-def orders():
-
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    my_orders = [
-        order
-        for order in load_orders()
-        if order.get(
-            "buyer_id"
-        ) == session["user_id"]
-    ]
-
-    for order in my_orders:
-
-        order["tracking_url"] = (
-            get_tracking_url(
-                order.get(
-                    "courier_name"
-                ),
-                order.get(
-                    "tracking_number"
-                )
-            )
-        )
-
-    return render_template(
-        "orders.html",
-        orders=my_orders
-    )
-
-
-# =====================================
-# SELLER SALES
-# =====================================
-
-@app.route("/sales")
-def sales():
-
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    my_sales = [
-        order
-        for order in load_orders()
-        if order.get(
-            "seller_id"
-        ) == session["user_id"]
-    ]
-
-    for order in my_sales:
-
-        order["tracking_url"] = (
-            get_tracking_url(
-                order.get(
-                    "courier_name"
-                ),
-                order.get(
-                    "tracking_number"
-                )
-            )
-        )
-
-    return render_template(
-        "sales.html",
-        sales=my_sales
-    )
-
-
-# =====================================
-# SELLER DASHBOARD
-# =====================================
-
-@app.route(
-    "/seller-dashboard"
-)
-def seller_dashboard():
-
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    user_id = session[
-        "user_id"
-    ]
-
-    my_listings = [
-        phone
-        for phone in load_listings()
-        if phone.get(
-            "seller_id"
-        ) == user_id
-    ]
-
-    my_sales = [
-        order
-        for order in load_orders()
-        if order.get(
-            "seller_id"
-        ) == user_id
-    ]
-
-    total_sales = 0
-
-    for order in my_sales:
-
-        try:
-
-            price = float(
-                str(
-                    order.get(
-                        "price",
-                        "0"
-                    )
-                ).replace(
-                    ",",
-                    ""
-                )
-            )
-
-            if (
-                math.isfinite(price)
-                and price > 0
-            ):
-
-                total_sales += price
-
-        except (
-            ValueError,
-            TypeError
-        ):
-
-            pass
-
-    pending_orders = sum(
-        1
-        for order in my_sales
-        if str(
-            order.get(
-                "status",
-                ""
-            )
-        ).lower()
-        == "pending"
-    )
-
-    return render_template(
-        "seller_dashboard.html",
-
-        total_sales=int(
-            total_sales
-        ),
-
-        total_listings=len(
-            my_listings
-        ),
-
-        total_orders=len(
-            my_sales
-        ),
-
-        pending_orders=
-            pending_orders,
-
-        my_listings=
-            my_listings,
-
-        my_sales=
-            my_sales
-    )
-
-
-# =====================================
-# UPDATE ORDER STATUS
-# =====================================
-
-@app.route(
-    "/update-order-status/<order_id>",
-    methods=["POST"]
-)
-def update_order_status(
-    order_id
-):
-
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    new_status = request.form.get(
-        "status",
-        ""
-    ).strip()
-
-    allowed_statuses = {
-        "Pending",
-        "Confirmed",
-        "Shipped",
-        "Delivered",
-        "Cancelled"
-    }
-
-    if new_status not in allowed_statuses:
-
-        return (
-            "Invalid order status.",
-            400
-        )
-
-    with data_lock:
-
-        all_orders = load_orders()
-
-        order = next(
-            (
-                item
-                for item in all_orders
-                if item.get(
-                    "order_id"
-                ) == order_id
-            ),
-            None
-        )
-
-        if order is None:
-
-            return (
-                "Order not found",
-                404
-            )
-
-        if not is_order_seller(
-            order
-        ):
-
-            return (
-                "You cannot update this order.",
-                403
-            )
-
-        old_status = order.get(
-            "status",
-            "Pending"
-        )
-
-        if (
-            new_status == "Shipped"
-            and order.get(
-                "delivery_method"
-            ) == "pickup"
-        ):
-
-            return (
-                "Local pickup orders cannot be marked Shipped.",
-                400
-            )
-
-        if (
-            old_status
-            in (
-                "Delivered",
-                "Cancelled"
-            )
-            and new_status
-            != old_status
-        ):
-
-            return (
-                "Completed or cancelled orders cannot be changed.",
-                400
-            )
-
-        if (
-            new_status == "Shipped"
-            and order.get(
-                "delivery_method"
-            ) == "shipping"
-        ):
-
-            if (
-                not order.get(
-                    "courier_name"
-                )
-                or not order.get(
-                    "tracking_number"
-                )
-            ):
-
-                return (
-                    "Add courier name and tracking number before marking the order as Shipped.",
-                    400
-                )
-
-        order["status"] = new_status
-
-        order["updated_at"] = (
-            current_time()
-        )
-
-        save_orders(
-            all_orders
-        )
-
-        buyer_id = order.get(
-            "buyer_id"
-        )
-
-        product_name = (
-            str(
-                order.get(
-                    "brand",
-                    ""
-                )
-            )
-            + " "
-            + str(
-                order.get(
-                    "model",
-                    ""
-                )
-            )
-        ).strip()
-
-        notification_data = {
-
-            "Pending": (
-                "📦 Order Pending",
-                (
-                    f"Your order for "
-                    f"{product_name} is waiting "
-                    f"for seller confirmation."
-                )
-            ),
-
-            "Confirmed": (
-                "✅ Order Confirmed",
-                (
-                    f"Your order for "
-                    f"{product_name} has been "
-                    f"confirmed by the seller."
-                )
-            ),
-
-            "Shipped": (
-                "🚚 Order Shipped",
-                (
-                    f"Your {product_name} "
-                    f"order has been shipped."
-                )
-            ),
-
-            "Delivered": (
-                "🎉 Order Delivered",
-                (
-                    f"Your {product_name} "
-                    f"order has been marked "
-                    f"as delivered."
-                )
-            ),
-
-            "Cancelled": (
-                "❌ Order Cancelled",
-                (
-                    f"Your order for "
-                    f"{product_name} "
-                    f"has been cancelled."
-                )
-            )
-        }
-
-        title, message = (
-            notification_data.get(
-                new_status,
-                (
-                    "Order Updated",
-                    (
-                        f"Your order status "
-                        f"is now {new_status}."
-                    )
-                )
-            )
-        )
-
-        if (
-            buyer_id
-            and new_status != old_status
-        ):
-
-            try:
-
-                create_notification(
-                    buyer_id,
-                    title,
-                    message,
-                    order.get(
-                        "product_id"
-                    )
-                )
-
-            except OSError:
-
-                app.logger.exception(
-                    "Could not create order status notification"
-                )
-
-    return redirect(
-        url_for("sales")
-    )
-
-
-# =====================================
-# UPDATE DELIVERY
-# =====================================
-
-@app.route(
-    "/update-delivery/<order_id>",
-    methods=["POST"]
-)
-def update_delivery(
-    order_id
-):
-
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    courier_name = request.form.get(
-        "courier_name",
-        ""
-    ).strip()
-
-    tracking_number = request.form.get(
-        "tracking_number",
-        ""
-    ).strip()
-
-    charge_text = request.form.get(
-        "delivery_charge",
-        ""
-    ).strip()
-
-    if (
-        len(courier_name) > 100
-        or len(tracking_number) > 100
-    ):
-
-        return (
-            "Courier details are too long.",
-            400
-        )
-
-    if not courier_name:
-
-        return (
-            "Enter courier name.",
-            400
-        )
-
-    if not tracking_number:
-
-        return (
-            "Enter tracking number.",
-            400
-        )
-
-    charge = None
-
-    if charge_text:
-
-        try:
-
-            charge = float(
-                charge_text
-            )
-
-            if not (
-                math.isfinite(
-                    charge
-                )
-                and 0 <= charge <= 100000
-            ):
-
-                raise ValueError
-
+            page = max(1, int(request.args.get("page", 1)))
         except ValueError:
+            page = 1
 
-            return (
-                "Invalid delivery charge.",
-                400
-            )
+        try:
+            min_price = float(request.args.get("min_price", 0)) if request.args.get("min_price") else None
+        except ValueError:
+            min_price = None
 
-    with data_lock:
+        try:
+            max_price = float(request.args.get("max_price", 0)) if request.args.get("max_price") else None
+        except ValueError:
+            max_price = None
 
-        all_orders = load_orders()
-
-        order = next(
-            (
-                item
-                for item in all_orders
-                if item.get(
-                    "order_id"
-                ) == order_id
-            ),
-            None
+        pagination = query_catalog(
+            search=search,
+            brand=brand,
+            condition=condition,
+            storage=storage,
+            ram=ram,
+            min_price=min_price,
+            max_price=max_price,
+            sort_by=sort_by,
+            page=page,
+            per_page=12
         )
 
-        if order is None:
-
-            return (
-                "Order not found",
-                404
-            )
-
-        if not is_order_seller(
-            order
-        ):
-
-            return (
-                "Access denied.",
-                403
-            )
-
-        if order.get(
-            "delivery_method"
-        ) != "shipping":
-
-            return (
-                "Tracking is only available for home delivery.",
-                400
-            )
-
-        if order.get(
-            "status"
-        ) in (
-            "Delivered",
-            "Cancelled"
-        ):
-
-            return (
-                "Delivery details cannot be changed after completion or cancellation.",
-                400
-            )
-
-        old_courier = order.get(
-            "courier_name",
-            ""
+        return render_template(
+            "products.html",
+            pagination=pagination,
+            phones=pagination.items,
+            search=search,
+            brand=brand,
+            condition=condition,
+            storage=storage,
+            ram=ram,
+            min_price=min_price,
+            max_price=max_price,
+            sort=sort_by
         )
 
-        old_tracking = order.get(
-            "tracking_number",
-            ""
+    @app.route("/products/<listing_id>")
+    def listing_detail(listing_id):
+        listing = db.session.get(Listing, listing_id)
+        if not listing:
+            abort(404)
+
+        user = get_current_user()
+        # Allow viewing if approved, or if viewer is the seller owner, or if viewer is admin
+        is_owner = bool(user and listing.seller_id == user.id)
+        admin_viewer = is_admin()
+
+        if listing.approval_status != "approved" and not (is_owner or admin_viewer):
+            abort(404)
+
+        return render_template(
+            "product_detail.html",
+            phone=listing,
+            is_owner=is_owner
         )
 
-        old_charge = order.get(
-            "delivery_charge"
+    # =========================================================================
+    # CHECKOUT & ORDER ROUTES (Payment Gateway strictly deferred)
+    # =========================================================================
+    @app.route("/buy/<listing_id>", methods=["GET", "POST"])
+    def buy_now(listing_id):
+        user = get_current_user()
+        if not user:
+            flash("Please log in to purchase this smartphone.", "info")
+            return redirect(url_for("login", next=request.path))
+
+        listing = db.session.get(Listing, listing_id)
+        if not listing or listing.approval_status != "approved" or listing.inventory_status != "available":
+            return render_template("base.html", error_message="This phone is no longer available for purchase."), 404
+
+        if listing.seller_id == user.id:
+            return render_template("base.html", error_message="You cannot purchase your own listing."), 403
+
+        if request.method == "GET":
+            token = str(uuid.uuid4())
+            session["checkout_token"] = token
+            session["checkout_listing_id"] = str(listing_id)
+            return render_template("checkout.html", phone=listing, checkout_token=token)
+
+        # POST submission
+        checkout_token = request.form.get("checkout_token") or session.get("checkout_token")
+        if not checkout_token or session.get("checkout_listing_id") != str(listing_id):
+            return render_template("base.html", error_message="Checkout session expired. Please start checkout again."), 409
+
+        buyer_name = request.form.get("buyer_name", "").strip()
+        buyer_phone = request.form.get("buyer_phone", "").strip()
+        delivery_method = request.form.get("delivery_method", "pickup").strip().lower()
+        shipping_address = request.form.get("address", "").strip()
+        pincode = request.form.get("pincode", "").strip()
+
+        if not (2 <= len(buyer_name) <= 100):
+            flash("Please enter a valid full name (2-100 characters).", "error")
+            return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 400
+
+        if not validate_phone(buyer_phone):
+            flash("Please enter a valid 10-digit phone number.", "error")
+            return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 400
+
+        if delivery_method not in ("pickup", "shipping"):
+            flash("Invalid delivery method selected.", "error")
+            return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 400
+
+        if delivery_method == "shipping":
+            if len(shipping_address) < 10:
+                flash("Please enter a complete delivery address.", "error")
+                return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 400
+            if not pincode.isdigit() or len(pincode) != 6:
+                flash("Please enter a valid 6-digit PIN code.", "error")
+                return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 400
+        else:
+            shipping_address = "Local Pickup arranged directly with seller"
+            pincode = None
+
+        order, error = create_order(
+            buyer_id=user.id,
+            listing_id=listing_id,
+            buyer_name=buyer_name,
+            buyer_phone=buyer_phone,
+            delivery_method=delivery_method,
+            shipping_address=shipping_address,
+            pincode=pincode,
+            checkout_token=checkout_token
         )
 
-        if charge is not None:
+        if error:
+            flash(error, "error")
+            return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 409
 
-            order[
-                "delivery_charge"
-            ] = round(
-                charge,
-                2
-            )
+        session.pop("checkout_token", None)
+        session.pop("checkout_listing_id", None)
 
-        order[
-            "courier_name"
-        ] = courier_name
+        return redirect(url_for("order_confirmation", order_id=order.id))
 
-        order[
-            "tracking_number"
-        ] = tracking_number
+    @app.route("/order-success/<order_id>")
+    def order_confirmation(order_id):
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login"))
 
-        order[
-            "tracking_url"
-        ] = get_tracking_url(
-            courier_name,
-            tracking_number
+        order = db.session.get(Order, order_id)
+        if not order or (order.buyer_id != user.id and not is_admin()):
+            abort(404)
+
+        return render_template("order_success.html", order=order)
+
+    @app.route("/orders")
+    def orders():
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login", next=request.path))
+
+        my_orders = Order.query.filter_by(buyer_id=user.id).order_by(Order.created_at.desc()).all()
+        return render_template("orders.html", orders=my_orders)
+
+    @app.route("/orders/<order_id>/cancel", methods=["POST"])
+    def cancel_order(order_id):
+        user = get_current_user()
+        if not user:
+            abort(403)
+
+        order = db.session.get(Order, order_id)
+        if not order or (order.buyer_id != user.id and not is_admin()):
+            abort(404)
+
+        if order.status != "Pending":
+            flash("Orders that have already been confirmed or shipped cannot be cancelled directly. Please contact support.", "error")
+            return redirect(url_for("orders"))
+
+        reason = request.form.get("reason", "Cancelled by buyer").strip()
+        success, msg = transition_order_status(
+            order=order,
+            new_status="Cancelled",
+            actor_id=user.id,
+            actor_role="buyer",
+            notes=reason
         )
 
-        order[
-            "updated_at"
-        ] = current_time()
+        if success:
+            flash("Your order has been cancelled and the listing was released.", "success")
+        else:
+            flash(msg, "error")
 
-        save_orders(
-            all_orders
+        return redirect(url_for("orders"))
+
+    @app.route("/sales")
+    def sales():
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login", next=request.path))
+
+        my_sales = Order.query.filter_by(seller_id=user.id).order_by(Order.created_at.desc()).all()
+        return render_template("sales.html", sales=my_sales)
+
+    @app.route("/seller-dashboard")
+    def seller_dashboard():
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login", next=request.path))
+
+        my_listings = Listing.query.filter_by(seller_id=user.id).order_by(Listing.created_at.desc()).all()
+        my_sales = Order.query.filter_by(seller_id=user.id).order_by(Order.created_at.desc()).all()
+
+        total_earnings = sum(order.price_rupees for order in my_sales if order.status == "Delivered")
+        pending_orders = sum(1 for order in my_sales if order.status == "Pending")
+
+        return render_template(
+            "seller_dashboard.html",
+            listings=my_listings,
+            sales=my_sales,
+            total_earnings=total_earnings,
+            pending_orders_count=pending_orders
         )
 
-        buyer_id = order.get(
-            "buyer_id"
+    @app.route("/update-order-status/<order_id>", methods=["POST"])
+    def update_order_status(order_id):
+        user = get_current_user()
+        if not user:
+            abort(403)
+
+        order = db.session.get(Order, order_id)
+        if not order:
+            abort(404)
+
+        # Seller ownership or admin check
+        if order.seller_id != user.id and not is_admin():
+            abort(403)
+
+        new_status = request.form.get("status", "").strip()
+        notes = request.form.get("notes", "").strip()
+
+        actor_role = "admin" if is_admin() else "seller"
+        success, msg = transition_order_status(
+            order=order,
+            new_status=new_status,
+            actor_id=user.id,
+            actor_role=actor_role,
+            notes=notes
         )
 
-        product_name = (
-            str(
-                order.get(
-                    "brand",
-                    ""
-                )
-            )
-            + " "
-            + str(
-                order.get(
-                    "model",
-                    ""
-                )
-            )
-        ).strip()
+        if success:
+            flash(f"Order status updated to {new_status}.", "success")
+        else:
+            flash(msg, "error")
 
-        tracking_changed = (
-            old_courier != courier_name
-            or old_tracking != tracking_number
-            or old_charge != order.get(
-                "delivery_charge"
-            )
-        )
+        return redirect(url_for("sales"))
 
-        if (
-            buyer_id
-            and tracking_changed
-        ):
+    @app.route("/update-delivery/<order_id>", methods=["POST"])
+    def update_delivery(order_id):
+        user = get_current_user()
+        if not user:
+            abort(403)
 
-            message_parts = [
-                (
-                    "Delivery details updated "
-                    f"for your {product_name} order."
-                )
-            ]
+        order = db.session.get(Order, order_id)
+        if not order:
+            abort(404)
 
-            if courier_name:
+        if order.seller_id != user.id and not is_admin():
+            abort(403)
 
-                message_parts.append(
-                    f"Courier: {courier_name}."
-                )
+        if order.delivery_method != "shipping":
+            flash("Delivery tracking can only be added for home delivery orders.", "error")
+            return redirect(url_for("sales"))
 
-            if tracking_number:
+        courier_name = request.form.get("courier_name", "").strip()
+        tracking_number = request.form.get("tracking_number", "").strip()
 
-                message_parts.append(
-                    f"Tracking: {tracking_number}."
-                )
+        if not courier_name or not tracking_number:
+            flash("Please enter both courier name and tracking number.", "error")
+            return redirect(url_for("sales"))
 
-            if order.get(
-                "delivery_charge"
-            ) is not None:
+        order.courier_name = courier_name
+        order.tracking_number = tracking_number
+        order.updated_at = utc_now()
+        db.session.commit()
 
-                message_parts.append(
-                    "Delivery charge: ₹"
-                    + str(
-                        order.get(
-                            "delivery_charge"
-                        )
-                    )
-                    + "."
-                )
+        flash("Delivery details updated successfully.", "success")
+        return redirect(url_for("sales"))
 
+    # =========================================================================
+    # SELLER LISTING MANAGEMENT
+    # =========================================================================
+    @app.route("/sell", methods=["GET", "POST"])
+    def sell():
+        user = get_current_user()
+        if not user:
+            flash("Please log in to list a smartphone for sale.", "info")
+            return redirect(url_for("login", next=request.path))
+
+        if request.method == "GET":
+            return render_template("sell.html", user=user)
+
+        brand = request.form.get("brand", "").strip()
+        model = request.form.get("model", "").strip()
+        price_text = request.form.get("price", "").strip()
+        storage = request.form.get("storage", "").strip()
+        ram = request.form.get("ram", "").strip()
+        color = request.form.get("color", "").strip()
+        condition = request.form.get("condition", "Good").strip()
+        battery_text = request.form.get("battery", "").strip()
+        description = request.form.get("description", "").strip()
+
+        # Disclosure fields
+        screen_damage = request.form.get("screen_damage", "No Damage").strip()
+        body_damage = request.form.get("body_damage", "No Damage").strip()
+        repair_history = request.form.get("repair_history", "Never Repaired").strip()
+        original_display = request.form.get("original_display", "Yes").strip()
+        accessories = request.form.get("accessories", "Phone Only").strip()
+        seller_phone = request.form.get("seller_phone", user.phone).strip()
+
+        if not (brand and model and price_text and storage and description):
+            flash("Please fill in all required fields (brand, model, storage, price, description).", "error")
+            return render_template("sell.html", user=user), 400
+
+        try:
+            price_float = float(price_text.replace(",", "").replace("₹", ""))
+            if price_float < 500 or price_float > 500000:
+                raise ValueError
+            price_paise = int(round(price_float * 100))
+        except ValueError:
+            flash("Please enter a valid price between ₹500 and ₹5,00,000.", "error")
+            return render_template("sell.html", user=user), 400
+
+        battery_val = None
+        if battery_text:
             try:
+                b_int = int(battery_text)
+                if 1 <= b_int <= 100:
+                    battery_val = b_int
+                else:
+                    raise ValueError
+            except ValueError:
+                flash("Battery health must be an integer percentage between 1 and 100.", "error")
+                return render_template("sell.html", user=user), 400
 
-                create_notification(
-                    buyer_id,
-                    "🚚 Delivery Details Updated",
-                    " ".join(
-                        message_parts
-                    ),
-                    order.get(
-                        "product_id"
-                    )
-                )
+        # Handle file uploads
+        uploaded_files = request.files.getlist("photos")
+        valid_files = [f for f in uploaded_files if f and f.filename]
 
-            except OSError:
+        if not (1 <= len(valid_files) <= 10):
+            flash("Please upload between 1 and 10 product photos.", "error")
+            return render_template("sell.html", user=user), 400
 
-                app.logger.exception(
-                    "Could not create delivery notification"
-                )
+        for f in valid_files:
+            if not validate_image_file(f):
+                flash("Only JPG, JPEG, PNG, and WEBP image files are supported.", "error")
+                return render_template("sell.html", user=user), 400
 
-    return redirect(
-        url_for("sales")
-    )
-
-
-# =====================================
-# SELL PHONE
-# =====================================
-
-@app.route(
-    "/sell",
-    methods=["GET", "POST"]
-)
-def sell():
-
-    if request.method == "GET":
-
-        return render_template(
-            "sell.html"
+        listing_id = str(uuid.uuid4())
+        new_listing = Listing(
+            id=listing_id,
+            seller_id=user.id,
+            brand=brand,
+            model=model,
+            price_paise=price_paise,
+            storage=storage,
+            ram=ram or None,
+            color=color or None,
+            battery_health=battery_val,
+            condition=condition,
+            description=description,
+            screen_damage=screen_damage,
+            body_damage=body_damage,
+            repair_history=repair_history,
+            original_display=original_display,
+            accessories=accessories,
+            seller_name=user.name,
+            seller_phone=seller_phone,
+            approval_status="pending",
+            inventory_status="available",
+            created_at=utc_now(),
+            updated_at=utc_now()
         )
+        db.session.add(new_listing)
 
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    fields = (
-        "brand",
-        "model",
-        "price",
-        "storage",
-        "battery",
-        "condition",
-        "description",
-        "seller_name",
-        "seller_phone"
-    ) + CONDITION_FIELDS
-
-    values = {
-        field:
-            request.form.get(
-                field,
-                ""
-            ).strip()
-        for field in fields
-    }
-
-    required = (
-        "brand",
-        "model",
-        "price",
-        "storage",
-        "condition",
-        "description",
-        "seller_name",
-        "seller_phone"
-    ) + CONDITION_FIELDS
-
-    if any(
-        not values[field]
-        for field in required
-    ):
-
-        return (
-            "Please fill all required fields.",
-            400
-        )
-
-    if (
-        len(values["model"]) > 80
-        or len(values["seller_name"]) > 80
-    ):
-
-        return (
-            "Model or seller name is too long.",
-            400
-        )
-
-    if len(
-        values["description"]
-    ) > 1000:
-
-        return (
-            "Description is too long.",
-            400
-        )
-
-    if not valid_price(
-        values["price"]
-    ):
-
-        return (
-            "Please enter a valid price.",
-            400
-        )
-
-    if not valid_battery(
-        values["battery"]
-    ):
-
-        return (
-            "Battery health must be between 1 and 100.",
-            400
-        )
-
-    if not valid_phone(
-        values["seller_phone"]
-    ):
-
-        return (
-            "Enter a valid 10-digit seller phone number.",
-            400
-        )
-
-    listing_type = request.form.get(
-        "listing_type",
-        "free"
-    ).strip()
-
-    if listing_type != "free":
-
-        return (
-            "Paid listings are not available yet. Choose Free Listing.",
-            400
-        )
-
-    photos = [
-        photo
-        for photo in request.files.getlist(
-            "photos"
-        )
-        if photo
-        and photo.filename
-    ]
-
-    if not 1 <= len(
-        photos
-    ) <= 10:
-
-        return (
-            "Upload between 1 and 10 photos.",
-            400
-        )
-
-    for photo in photos:
-
-        if not image_matches_extension(
-            photo
-        ):
-
-            return (
-                "Only valid JPG, JPEG, PNG and WEBP images are allowed.",
-                400
+        # Save photos
+        for idx, f in enumerate(valid_files):
+            ext = secure_filename(f.filename).rsplit(".", 1)[1].lower()
+            fname = f"{uuid.uuid4()}.{ext}"
+            f.save(os.path.join(app.config["UPLOAD_FOLDER"], fname))
+            img_rec = ListingImage(
+                listing_id=listing_id,
+                image_path=f"/static/uploads/{fname}",
+                display_order=idx,
+                created_at=utc_now()
             )
+            db.session.add(img_rec)
 
-    saved_images = []
+        db.session.commit()
+        flash("Your listing has been submitted for review! It will be visible once approved by our moderation team.", "success")
+        return redirect(url_for("seller_dashboard"))
 
-    try:
+    @app.route("/edit/<listing_id>", methods=["GET", "POST"])
+    def edit_listing(listing_id):
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login"))
 
-        for photo in photos:
+        listing = db.session.get(Listing, listing_id)
+        if not listing:
+            abort(404)
 
-            extension = secure_filename(
-                photo.filename
-            ).rsplit(
-                ".",
-                1
-            )[1].lower()
+        if listing.seller_id != user.id and not is_admin():
+            abort(403)
 
-            filename = (
-                str(uuid.uuid4())
-                + "."
-                + extension
-            )
+        if request.method == "GET":
+            return render_template("edit_listing.html", phone=listing)
 
-            photo.save(
-                os.path.join(
-                    UPLOAD_FOLDER,
-                    filename
-                )
-            )
+        # Process edits
+        price_text = request.form.get("price", "").strip()
+        description = request.form.get("description", "").strip()
+        condition = request.form.get("condition", listing.condition).strip()
+        battery_text = request.form.get("battery", "").strip()
 
-            saved_images.append(
-                "/static/uploads/"
-                + filename
-            )
+        if price_text:
+            try:
+                p_float = float(price_text.replace(",", "").replace("₹", ""))
+                if p_float < 500 or p_float > 500000:
+                    raise ValueError
+                listing.price_paise = int(round(p_float * 100))
+            except ValueError:
+                flash("Invalid price value.", "error")
+                return render_template("edit_listing.html", phone=listing), 400
 
-        listing = {
+        if battery_text:
+            try:
+                b_int = int(battery_text)
+                if 1 <= b_int <= 100:
+                    listing.battery_health = b_int
+            except ValueError:
+                pass
 
-            "id":
-                str(uuid.uuid4()),
+        if description:
+            listing.description = description
 
-            **values,
+        listing.condition = condition
+        listing.screen_damage = request.form.get("screen_damage", listing.screen_damage).strip()
+        listing.body_damage = request.form.get("body_damage", listing.body_damage).strip()
+        listing.repair_history = request.form.get("repair_history", listing.repair_history).strip()
+        listing.accessories = request.form.get("accessories", listing.accessories).strip()
 
-            "listing_type":
-                "free",
+        # Sensitive modifications re-trigger moderation unless edited by admin
+        if not is_admin():
+            listing.approval_status = "pending"
+            listing.rejection_reason = None
 
-            "seller_id":
-                session["user_id"],
+        listing.updated_at = utc_now()
+        db.session.commit()
 
-            "images":
-                saved_images,
+        flash("Listing updated. Sensitive edits require administrative re-approval before going live.", "info")
+        return redirect(url_for("listing_detail", listing_id=listing.id))
 
-            "approval_status":
-                "pending",
+    @app.route("/delete/<listing_id>", methods=["POST"])
+    def delete_listing(listing_id):
+        user = get_current_user()
+        if not user:
+            abort(403)
 
-            "created_at":
-                current_time()
-        }
+        listing = db.session.get(Listing, listing_id)
+        if not listing:
+            abort(404)
 
-        with data_lock:
+        if listing.seller_id != user.id and not is_admin():
+            abort(403)
 
-            listings = load_listings()
+        # Check if there are active orders
+        has_active_orders = Order.query.filter_by(listing_id=listing_id).filter(Order.status.in_(["Pending", "Confirmed", "Shipped"])).first()
+        if has_active_orders:
+            flash("Cannot delete a listing that has an active in-progress order.", "error")
+            return redirect(url_for("seller_dashboard"))
 
-            listings.insert(
-                0,
-                listing
-            )
+        # Mark archived rather than hard deleting to preserve historical order integrity
+        listing.approval_status = "archived"
+        listing.inventory_status = "sold"
+        listing.updated_at = utc_now()
+        db.session.commit()
 
-            save_listings(
-                listings
-            )
+        flash("Listing has been archived and removed from the active marketplace.", "success")
+        return redirect(url_for("seller_dashboard"))
 
-    except OSError:
+    # =========================================================================
+    # USER AUTHENTICATION & ACCOUNT
+    # =========================================================================
+    @app.route("/signup", methods=["GET", "POST"])
+    def signup():
+        if request.method == "GET":
+            return render_template("signup.html")
 
-        delete_uploaded_images(
-            saved_images
+        name = request.form.get("name", "").strip()
+        email = normalize_email(request.form.get("email", ""))
+        phone = request.form.get("phone", "").strip()
+        password = request.form.get("password", "")
+
+        if not name or len(name) < 2:
+            flash("Please enter your full name.", "error")
+            return render_template("signup.html"), 400
+
+        if not email or "@" not in email:
+            flash("Please enter a valid email address.", "error")
+            return render_template("signup.html"), 400
+
+        if not validate_phone(phone):
+            flash("Please enter a valid 10-digit mobile number.", "error")
+            return render_template("signup.html"), 400
+
+        is_strong, pwd_err = validate_password_strength(password)
+        if not is_strong:
+            flash(pwd_err, "error")
+            return render_template("signup.html"), 400
+
+        existing = User.query.filter_by(email=email).first()
+        if existing:
+            flash("An account with this email already exists. Please log in.", "error")
+            return render_template("signup.html"), 400
+
+        admin_email = app.config.get("ADMIN_EMAIL", "").strip().lower()
+        role = "admin" if email == admin_email else "user"
+
+        new_user = User(
+            name=name,
+            email=email,
+            phone=phone,
+            role=role,
+            is_active=True
         )
-
-        return (
-            "Could not save listing. Please try again.",
-            500
-        )
-
-    return redirect(
-        url_for("account")
-    )
-
-
-# =====================================
-# EDIT LISTING
-# =====================================
-
-@app.route(
-    "/edit/<listing_id>",
-    methods=["GET", "POST"]
-)
-def edit_listing(
-    listing_id
-):
-
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    if request.method == "GET":
-
-        phone = find_listing(
-            listing_id
-        )
-
-        if phone is None:
-
-            return (
-                "Listing not found",
-                404
-            )
-
-        if not is_seller_owner(
-            phone
-        ):
-
-            return (
-                "You cannot edit this listing.",
-                403
-            )
-
-        return render_template(
-            "edit_listing.html",
-            phone=phone
-        )
-
-    editable_fields = (
-        "brand",
-        "model",
-        "price",
-        "storage",
-        "battery",
-        "condition",
-        "description"
-    ) + CONDITION_FIELDS
-
-    updates = {
-        field:
-            request.form[field].strip()
-        for field in editable_fields
-        if field in request.form
-    }
-
-    with data_lock:
-
-        listings = load_listings()
-
-        phone = next(
-            (
-                item
-                for item in listings
-                if str(
-                    item.get("id")
-                ) == str(listing_id)
-            ),
-            None
-        )
-
-        if phone is None:
-
-            return (
-                "Listing not found",
-                404
-            )
-
-        if not is_seller_owner(
-            phone
-        ):
-
-            return (
-                "You cannot edit this listing.",
-                403
-            )
-
-        new_price = updates.get(
-            "price",
-            phone.get(
-                "price",
-                "0"
-            )
-        )
-
-        if not valid_price(
-            new_price
-        ):
-
-            return (
-                "Invalid price.",
-                400
-            )
-
-        new_battery = updates.get(
-            "battery",
-            str(
-                phone.get(
-                    "battery",
-                    ""
-                )
-            )
-        )
-
-        if not valid_battery(
-            new_battery
-        ):
-
-            return (
-                "Invalid battery health.",
-                400
-            )
-
-        if any(
-            len(value) > 1000
-            for value in updates.values()
-        ):
-
-            return (
-                "Field is too long.",
-                400
-            )
-
-        if updates:
-
-            phone.update(
-                updates
-            )
-
-            phone[
-                "updated_at"
-            ] = current_time()
-
-            phone[
-                "approval_status"
-            ] = "pending"
-
-        save_listings(
-            listings
-        )
-
-    return redirect(
-        url_for(
-            "listing_detail",
-            listing_id=
-                listing_id
-        )
-    )
-
-
-# =====================================
-# DELETE LISTING
-# =====================================
-
-@app.route(
-    "/delete/<listing_id>",
-    methods=["POST"]
-)
-def delete_listing(
-    listing_id
-):
-
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    with data_lock:
-
-        listings = load_listings()
-
-        listing = next(
-            (
-                item
-                for item in listings
-                if str(
-                    item.get("id")
-                ) == str(listing_id)
-            ),
-            None
-        )
-
-        if listing is None:
-
-            return (
-                "Listing not found",
-                404
-            )
-
-        if not is_seller_owner(
-            listing
-        ):
-
-            return (
-                "You cannot delete this listing.",
-                403
-            )
-
-        has_orders = any(
-            str(
-                order.get(
-                    "product_id"
-                )
-            ) == str(listing_id)
-            for order in load_orders()
-        )
-
-        listings = [
-            item
-            for item in listings
-            if str(
-                item.get("id")
-            ) != str(listing_id)
-        ]
-
-        save_listings(
-            listings
-        )
-
-    if not has_orders:
-
-        images = (
-            listing.get("images")
-            or listing.get("photos")
-            or []
-        )
-
-        delete_uploaded_images(
-            images
-        )
-
-    return redirect(
-        url_for("products")
-    )
-
-
-# =====================================
-# SIGN UP
-# =====================================
-
-@app.route(
-    "/signup",
-    methods=["GET", "POST"]
-)
-def signup():
-
-    if request.method == "GET":
-
-        return render_template(
-            "signup.html"
-        )
-
-    name = request.form.get(
-        "name",
-        ""
-    ).strip()
-
-    email = request.form.get(
-        "email",
-        ""
-    ).strip().lower()
-
-    phone = request.form.get(
-        "phone",
-        ""
-    ).strip()
-
-    password = request.form.get(
-        "password",
-        ""
-    )
-
-    if not name:
-
-        return (
-            "Enter your name.",
-            400
-        )
-
-    if not email or "@" not in email:
-
-        return (
-            "Enter a valid email.",
-            400
-        )
-
-    if not valid_phone(
-        phone
-    ):
-
-        return (
-            "Enter a valid phone number.",
-            400
-        )
-
-    if len(password) < 6:
-
-        return (
-            "Password must have at least 6 characters.",
-            400
-        )
-
-    with data_lock:
-
-        users = load_users()
-
-        if any(
-            user.get("email")
-            == email
-            for user in users
-        ):
-
-            return (
-                "Email already registered.",
-                400
-            )
-
-        user = {
-
-            "id":
-                str(uuid.uuid4()),
-
-            "name":
-                name,
-
-            "email":
-                email,
-
-            "phone":
-                phone,
-
-            "password":
-                generate_password_hash(
-                    password
-                )
-        }
-
-        users.append(
-            user
-        )
-
-        save_users(
-            users
-        )
-
-    return redirect(
-        url_for("login")
-    )
-
-
-# =====================================
-# LOGIN
-# =====================================
-
-@app.route(
-    "/login",
-    methods=["GET", "POST"]
-)
-def login():
-
-    if request.method == "GET":
-
-        return render_template(
-            "login.html"
-        )
-
-    email = request.form.get(
-        "email",
-        ""
-    ).strip().lower()
-
-    password = request.form.get(
-        "password",
-        ""
-    )
-
-    if (
-        ADMIN_EMAIL
-        and email == ADMIN_EMAIL
-    ):
-
-        return redirect(
-            url_for("admin_login")
-        )
-
-    user = next(
-        (
-            item
-            for item in load_users()
-            if item.get("email")
-            == email
-        ),
-        None
-    )
-
-    if (
-        user is None
-        or not check_password_hash(
-            user.get(
-                "password",
-                ""
-            ),
-            password
-        )
-    ):
-
-        return (
-            "Incorrect email or password.",
-            401
-        )
-
-    session.clear()
-
-    session[
-        "user_id"
-    ] = user["id"]
-
-    session[
-        "user_name"
-    ] = user["name"]
-
-    session[
-        "user_email"
-    ] = user["email"]
-
-    session[
-        "admin_authenticated"
-    ] = False
-
-    return redirect(
-        url_for("home")
-    )
-
-
-# =====================================
-# LOGOUT
-# =====================================
-
-@app.route("/logout")
-def logout():
-
-    session.clear()
-
-    return redirect(
-        url_for("home")
-    )
-
-
-# =====================================
-# ACCOUNT
-# =====================================
-
-@app.route("/account")
-def account():
-
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    user_id = session[
-        "user_id"
-    ]
-
-    user = next(
-        (
-            item
-            for item in load_users()
-            if item.get("id")
-            == user_id
-        ),
-        None
-    )
-
-    if user is None:
+        new_user.set_password(password)
+
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash("Account created successfully! Please log in to continue.", "success")
+        return redirect(url_for("login"))
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if request.method == "GET":
+            if session.get("user_id"):
+                return redirect(url_for("home"))
+            return render_template("login.html")
+
+        email = normalize_email(request.form.get("email", ""))
+        password = request.form.get("password", "")
+        client_ip = request.remote_addr or "unknown"
+
+        # Rate limiting check
+        if is_rate_limited(email) or is_rate_limited(client_ip):
+            flash("Too many failed login attempts. For security, access is temporarily locked. Please try again in 15 minutes.", "error")
+            return render_template("login.html"), 429
+
+        user = User.query.filter_by(email=email).first()
+
+        if not user or not user.is_active or not user.check_password(password):
+            record_failed_attempt(email)
+            record_failed_attempt(client_ip)
+            flash("Invalid email or password.", "error")
+            return render_template("login.html"), 401
+
+        # Clear failed attempts
+        clear_failed_attempts(email)
+        clear_failed_attempts(client_ip)
 
         session.clear()
+        session["user_id"] = user.id
+        session["user_name"] = user.name
+        session["user_email"] = user.email
+        session["user_role"] = user.role
+        session["admin_authenticated"] = user.is_admin
 
-        return redirect(
-            url_for("login")
+        flash(f"Welcome back, {user.name}!", "success")
+        next_url = request.args.get("next")
+        if next_url and next_url.startswith("/"):
+            return redirect(next_url)
+        return redirect(url_for("home"))
+
+    @app.route("/logout", methods=["GET", "POST"])
+    def logout():
+        session.clear()
+        flash("You have been signed out.", "info")
+        return redirect(url_for("home"))
+
+    @app.route("/account", methods=["GET", "POST"])
+    def account():
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login"))
+
+        if request.method == "POST":
+            # Profile update or password change
+            action = request.form.get("action")
+            if action == "change_password":
+                current_pwd = request.form.get("current_password", "")
+                new_pwd = request.form.get("new_password", "")
+
+                if not user.check_password(current_pwd):
+                    flash("Current password is incorrect.", "error")
+                else:
+                    is_strong, err_msg = validate_password_strength(new_pwd)
+                    if not is_strong:
+                        flash(err_msg, "error")
+                    else:
+                        user.set_password(new_pwd)
+                        user.updated_at = utc_now()
+                        db.session.commit()
+                        flash("Password updated successfully.", "success")
+            elif action == "update_profile":
+                new_name = request.form.get("name", "").strip()
+                new_phone = request.form.get("phone", "").strip()
+                if new_name and len(new_name) >= 2:
+                    user.name = new_name
+                if validate_phone(new_phone):
+                    user.phone = new_phone
+                user.updated_at = utc_now()
+                db.session.commit()
+                session["user_name"] = user.name
+                flash("Profile updated successfully.", "success")
+
+            return redirect(url_for("account"))
+
+        my_listings = Listing.query.filter_by(seller_id=user.id).order_by(Listing.created_at.desc()).all()
+        my_orders = Order.query.filter_by(buyer_id=user.id).order_by(Order.created_at.desc()).limit(5).all()
+
+        return render_template(
+            "account.html",
+            user=user,
+            my_listings=my_listings,
+            recent_orders=my_orders
         )
 
-    my_listings = [
-        phone
-        for phone in load_listings()
-        if phone.get(
-            "seller_id"
-        ) == user_id
-    ]
+    @app.route("/account/deactivate", methods=["POST"])
+    def deactivate_account():
+        user = get_current_user()
+        if not user:
+            abort(403)
 
-    return render_template(
-        "account.html",
-        user=user,
-        my_listings=my_listings
-    )
+        user.is_active = False
+        user.updated_at = utc_now()
+        db.session.commit()
+        session.clear()
+        flash("Your account has been deactivated.", "info")
+        return redirect(url_for("home"))
 
+    # =========================================================================
+    # NOTIFICATIONS
+    # =========================================================================
+    @app.route("/notifications/<notification_id>/read", methods=["POST"])
+    def read_notification(notification_id):
+        user = get_current_user()
+        if not user:
+            abort(403)
 
-# =====================================
-# READ NOTIFICATION
-# =====================================
-
-@app.route(
-    "/notifications/<notification_id>/read",
-    methods=["POST"]
-)
-def read_notification(
-    notification_id
-):
-
-    if not login_required():
-
-        return redirect(
-            url_for("login")
-        )
-
-    with data_lock:
-
-        all_notifications = (
-            load_notifications()
-        )
-
-        notice = next(
-            (
-                item
-                for item in all_notifications
-                if item.get("id")
-                == notification_id
-                and item.get("user_id")
-                == session["user_id"]
-            ),
-            None
-        )
-
-        if notice is None:
+        notice = db.session.get(Notification, notification_id)
+        if not notice or notice.user_id != user.id:
             abort(404)
 
-        if not notice.get(
-            "read",
-            False
-        ):
+        notice.is_read = True
+        db.session.commit()
 
-            notice["read"] = True
+        if notice.listing_id:
+            return redirect(url_for("listing_detail", listing_id=notice.listing_id))
+        elif notice.order_id:
+            return redirect(url_for("orders"))
+        return redirect(url_for("account"))
 
-            notice[
-                "read_at"
-            ] = current_time()
+    # =========================================================================
+    # SUPPORT & DISPUTES
+    # =========================================================================
+    @app.route("/support", methods=["GET", "POST"])
+    def support():
+        user = get_current_user()
+        user_tickets = []
+        if user:
+            user_tickets = SupportTicket.query.filter_by(user_id=user.id).order_by(SupportTicket.created_at.desc()).all()
 
-            save_notifications(
-                all_notifications
+        if request.method == "POST":
+            if not user:
+                flash("Please log in to submit a support ticket.", "error")
+                return redirect(url_for("login"))
+
+            subject = request.form.get("subject", "").strip()
+            description = request.form.get("description", "").strip()
+            order_id = request.form.get("order_id", "").strip() or None
+
+            if not subject or not description:
+                flash("Please provide both a subject and details for your ticket.", "error")
+                return render_template("support.html", tickets=user_tickets), 400
+
+            ticket_num = f"TKT-{uuid.uuid4().hex[:6].upper()}"
+            ticket = SupportTicket(
+                ticket_number=ticket_num,
+                user_id=user.id,
+                order_id=order_id,
+                subject=subject,
+                description=description,
+                status="Open",
+                priority="Medium"
             )
+            db.session.add(ticket)
+            db.session.commit()
 
-        listing_id = notice.get(
-            "listing_id"
-        )
+            flash(f"Support ticket {ticket_num} submitted. Our team will review it shortly.", "success")
+            return redirect(url_for("support"))
 
-    if listing_id:
+        return render_template("support.html", tickets=user_tickets)
 
-        phone = find_listing(
-            listing_id
-        )
+    @app.route("/report/<listing_id>", methods=["POST"])
+    def report_listing(listing_id):
+        user = get_current_user()
+        if not user:
+            flash("Please log in to report a listing.", "error")
+            return redirect(url_for("login"))
 
-        if phone and can_view_listing(
-            phone
-        ):
-
-            return redirect(
-                url_for(
-                    "listing_detail",
-                    listing_id=
-                        listing_id
-                )
-            )
-
-    return redirect(
-        url_for("account")
-    )
-
-
-# =====================================
-# ADMIN LOGIN
-# =====================================
-
-@app.route(
-    "/admin/login",
-    methods=["GET", "POST"]
-)
-def admin_login():
-
-    if request.method == "GET":
-
-        if is_admin():
-
-            return redirect(
-                url_for(
-                    "admin_dashboard"
-                )
-            )
-
-        return render_template(
-            "admin_login.html"
-        )
-
-    if not ADMIN_EMAIL:
-
-        app.logger.error(
-            "ADMIN_EMAIL is not configured."
-        )
-
-        return render_template(
-            "admin_login.html",
-            error=
-                "Admin login is not configured."
-        ), 503
-
-    email = request.form.get(
-        "email",
-        ""
-    ).strip().lower()
-
-    password = request.form.get(
-        "password",
-        ""
-    )
-
-    error = (
-        "Invalid admin email or password."
-    )
-
-    if email != ADMIN_EMAIL:
-
-        return render_template(
-            "admin_login.html",
-            error=error
-        ), 401
-
-    user = next(
-        (
-            item
-            for item in load_users()
-            if str(
-                item.get(
-                    "email",
-                    ""
-                )
-            ).strip().lower()
-            == ADMIN_EMAIL
-        ),
-        None
-    )
-
-    if (
-        user is None
-        or not check_password_hash(
-            user.get(
-                "password",
-                ""
-            ),
-            password
-        )
-    ):
-
-        return render_template(
-            "admin_login.html",
-            error=error
-        ), 401
-
-    session.clear()
-
-    session[
-        "user_id"
-    ] = user["id"]
-
-    session[
-        "user_name"
-    ] = user["name"]
-
-    session[
-        "user_email"
-    ] = user["email"]
-
-    session[
-        "admin_authenticated"
-    ] = True
-
-    return redirect(
-        url_for(
-            "admin_dashboard"
-        )
-    )
-
-
-# =====================================
-# ADMIN LOGOUT
-# =====================================
-
-@app.route(
-    "/admin/logout",
-    methods=["POST"]
-)
-def admin_logout():
-
-    if not is_admin():
-
-        return redirect(
-            url_for("admin_login")
-        )
-
-    session.clear()
-
-    return redirect(
-        url_for("admin_login")
-    )
-
-
-# =====================================
-# ADMIN LISTING STATUS
-# =====================================
-
-@app.route(
-    "/admin/listing/<listing_id>/status",
-    methods=["POST"]
-)
-def admin_listing_status(
-    listing_id
-):
-
-    if not is_admin():
-
-        return redirect(
-            url_for("admin_login")
-        )
-
-    new_status = request.form.get(
-        "status",
-        ""
-    ).strip().lower()
-
-    if new_status not in (
-        "approved",
-        "pending",
-        "hidden"
-    ):
-
-        return (
-            "Invalid listing status.",
-            400
-        )
-
-    with data_lock:
-
-        listings = load_listings()
-
-        phone = next(
-            (
-                item
-                for item in listings
-                if str(
-                    item.get("id")
-                ) == str(listing_id)
-            ),
-            None
-        )
-
-        if phone is None:
+        listing = db.session.get(Listing, listing_id)
+        if not listing:
             abort(404)
 
-        old_status = listing_status(
-            phone
+        report_type = request.form.get("report_type", "Misrepresented Condition").strip()
+        reason = request.form.get("reason", "").strip()
+
+        if not reason:
+            flash("Please specify a reason for reporting this listing.", "error")
+            return redirect(url_for("listing_detail", listing_id=listing_id))
+
+        dispute = ReportDispute(
+            reporter_id=user.id,
+            listing_id=listing_id,
+            report_type=report_type,
+            reason=reason,
+            status="Pending"
+        )
+        db.session.add(dispute)
+        db.session.commit()
+
+        flash("Listing report submitted. Our Trust & Safety team will inspect this device.", "info")
+        return redirect(url_for("listing_detail", listing_id=listing_id))
+
+    # =========================================================================
+    # ADMIN ROUTES
+    # =========================================================================
+    @app.route("/admin/login", methods=["GET", "POST"])
+    def admin_login():
+        if request.method == "GET":
+            if is_admin():
+                return redirect(url_for("admin_dashboard"))
+            return render_template("admin_login.html")
+
+        email = normalize_email(request.form.get("email", ""))
+        password = request.form.get("password", "")
+        admin_cfg_email = app.config.get("ADMIN_EMAIL", "").strip().lower()
+
+        if email != admin_cfg_email:
+            flash("Invalid administrator credentials.", "error")
+            return render_template("admin_login.html"), 401
+
+        user = User.query.filter_by(email=email).first()
+        if not user or not user.check_password(password):
+            flash("Invalid administrator credentials.", "error")
+            return render_template("admin_login.html"), 401
+
+        session.clear()
+        session["user_id"] = user.id
+        session["user_name"] = user.name
+        session["user_email"] = user.email
+        session["user_role"] = "admin"
+        session["admin_authenticated"] = True
+
+        # Audit event
+        audit = AuditEvent(
+            user_id=user.id,
+            action="ADMIN_LOGIN_SUCCESS",
+            ip_address=request.remote_addr,
+            created_at=utc_now()
+        )
+        db.session.add(audit)
+        db.session.commit()
+
+        return redirect(url_for("admin_dashboard"))
+
+    @app.route("/admin/logout", methods=["POST"])
+    def admin_logout():
+        session.clear()
+        return redirect(url_for("admin_login"))
+
+    @app.route("/admin")
+    def admin_dashboard():
+        if not is_admin():
+            return redirect(url_for("admin_login"))
+
+        total_users = User.query.count()
+        total_listings = Listing.query.count()
+        active_listings = Listing.query.filter_by(approval_status="approved", inventory_status="available").count()
+        pending_approvals = Listing.query.filter_by(approval_status="pending").count()
+        
+        total_orders = Order.query.count()
+        delivered_orders = Order.query.filter_by(status="Delivered").count()
+        cancelled_orders = Order.query.filter_by(status="Cancelled").count()
+        
+        open_tickets = SupportTicket.query.filter(SupportTicket.status.in_(["Open", "In Progress"])).count()
+        pending_reports = ReportDispute.query.filter_by(status="Pending").count()
+
+        users_list = User.query.order_by(User.created_at.desc()).limit(20).all()
+        listings_list = Listing.query.order_by(Listing.created_at.desc()).limit(30).all()
+        orders_list = Order.query.order_by(Order.created_at.desc()).limit(20).all()
+        tickets_list = SupportTicket.query.order_by(SupportTicket.created_at.desc()).limit(10).all()
+        reports_list = ReportDispute.query.order_by(ReportDispute.created_at.desc()).limit(10).all()
+        audit_logs = AuditEvent.query.order_by(AuditEvent.created_at.desc()).limit(20).all()
+
+        return render_template(
+            "admin.html",
+            total_users=total_users,
+            total_listings=total_listings,
+            active_listings=active_listings,
+            pending_approvals=pending_approvals,
+            total_orders=total_orders,
+            delivered_orders=delivered_orders,
+            cancelled_orders=cancelled_orders,
+            open_tickets=open_tickets,
+            pending_reports=pending_reports,
+            users=users_list,
+            listings=listings_list,
+            orders=orders_list,
+            tickets=tickets_list,
+            reports=reports_list,
+            audit_logs=audit_logs
         )
 
-        if old_status == new_status:
+    @app.route("/admin/listing/<listing_id>/status", methods=["POST"])
+    def admin_listing_status(listing_id):
+        if not is_admin():
+            abort(403)
 
-            return redirect(
-                url_for(
-                    "admin_dashboard"
-                )
-            )
+        action = request.form.get("status", "").strip().lower()
+        reason = request.form.get("reason", "").strip()
 
-        phone[
-            "approval_status"
-        ] = new_status
-
-        phone[
-            "reviewed_at"
-        ] = current_time()
-
-        save_listings(
-            listings
+        admin_user_id = session.get("user_id")
+        success, msg = moderate_listing(
+            listing_id=listing_id,
+            action=action,
+            admin_id=admin_user_id,
+            reason=reason
         )
 
-        seller_id = phone.get(
-            "seller_id"
-        )
-
-        phone_name = (
-            str(
-                phone.get(
-                    "brand",
-                    ""
-                )
-            )
-            + " "
-            + str(
-                phone.get(
-                    "model",
-                    ""
-                )
-            )
-        ).strip()
-
-        if new_status == "approved":
-
-            title = (
-                "Your phone is Approved!"
-            )
-
-            message = (
-                phone_name
-                + " is now live on iSellora. "
-                + "Buyers can view and order it."
-            )
-
-        elif new_status == "pending":
-
-            title = (
-                "Your phone is Pending"
-            )
-
-            message = (
-                phone_name
-                + " is waiting for admin review. "
-                + "It is not publicly visible."
-            )
-
+        if success:
+            flash(f"Listing moderation updated: {action}.", "success")
         else:
+            flash(msg, "error")
 
-            title = (
-                "Your phone is Hidden"
-            )
+        return redirect(url_for("admin_dashboard"))
 
-            message = (
-                phone_name
-                + " has been hidden by admin. "
-                + "Buyers cannot view it."
-            )
+    # =========================================================================
+    # SYSTEM HEALTH CHECK
+    # =========================================================================
+    @app.route("/health")
+    def health():
+        try:
+            db.session.execute(db.select(1))
+            db_status = "healthy"
+        except Exception:
+            db_status = "degraded"
 
-        if seller_id:
+        return jsonify({
+            "status": "healthy" if db_status == "healthy" else "degraded",
+            "service": "iSellora Marketplace",
+            "database": db_status,
+            "timestamp": utc_now().isoformat()
+        }), 200 if db_status == "healthy" else 503
 
-            try:
-
-                create_notification(
-                    seller_id,
-                    title,
-                    message,
-                    listing_id
-                )
-
-            except OSError:
-
-                app.logger.exception(
-                    "Could not save seller notification"
-                )
-
-    return redirect(
-        url_for(
-            "admin_dashboard"
-        )
-    )
+    return app
 
 
-# =====================================
-# ADMIN DASHBOARD
-# =====================================
-
-@app.route("/admin")
-def admin_dashboard():
-
-    if not is_admin():
-
-        return redirect(
-            url_for("admin_login")
-        )
-
-    all_users = load_users()
-
-    all_listings = load_listings()
-
-    all_orders = load_orders()
-
-    safe_users = [
-
-        {
-            "id":
-                user.get(
-                    "id",
-                    ""
-                ),
-
-            "name":
-                user.get(
-                    "name",
-                    ""
-                ),
-
-            "email":
-                user.get(
-                    "email",
-                    ""
-                ),
-
-            "phone":
-                user.get(
-                    "phone",
-                    ""
-                )
-        }
-
-        for user in all_users
-    ]
-
-    safe_orders = [
-
-        {
-            "order_id":
-                order.get(
-                    "order_id",
-                    ""
-                ),
-
-            "brand":
-                order.get(
-                    "brand",
-                    ""
-                ),
-
-            "model":
-                order.get(
-                    "model",
-                    ""
-                ),
-
-            "price":
-                order.get(
-                    "price",
-                    "0"
-                ),
-
-            "status":
-                order.get(
-                    "status",
-                    "Pending"
-                ),
-
-            "payment_status":
-                order.get(
-                    "payment_status",
-                    "Not collected"
-                ),
-
-            "created_at":
-                order.get(
-                    "created_at",
-                    ""
-                )
-        }
-
-        for order in all_orders
-    ]
-
-    pending_orders = sum(
-        1
-        for order in all_orders
-        if order.get(
-            "status"
-        ) == "Pending"
-    )
-
-    pending_listings = sum(
-        1
-        for phone in all_listings
-        if listing_status(
-            phone
-        ) == "pending"
-    )
-
-    return render_template(
-        "admin.html",
-
-        total_users=
-            len(all_users),
-
-        total_listings=
-            len(all_listings),
-
-        total_orders=
-            len(all_orders),
-
-        pending_orders=
-            pending_orders,
-
-        pending_listings=
-            pending_listings,
-
-        users=
-            safe_users,
-
-        listings=
-            all_listings,
-
-        orders=
-            safe_orders
-    )
-
-
-# =====================================
-# RUN APP
-# =====================================
-
+# Application instance for WSGI servers & runners
+app = create_app()
 
 if __name__ == "__main__":
-    app.run(
-        debug=False,
-        host="127.0.0.1",
-        port=5000
-    )
+    app.run(debug=True, host="127.0.0.1", port=5000)

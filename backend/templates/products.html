@@ -1,880 +1,419 @@
-
 {% extends "base.html" %}
 
-{% block title %}
-iSellora - Products
-{% endblock %}
+{% block title %}Browse Used Smartphones | iSellora{% endblock %}
 
 {% block extra_css %}
 <style>
-    .products-page {
-        padding: 55px 6%;
-        background: #f8f9ff;
-        min-height: 80vh;
+    .catalog-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 32px;
+        align-items: start;
     }
 
-    .products-header {
-        text-align: center;
-        margin-bottom: 35px;
+    /* Filters Sidebar */
+    .filters-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        box-shadow: var(--shadow-sm);
+        position: sticky;
+        top: 96px;
     }
 
-    .products-header h1 {
-        font-size: 38px;
-        color: #111827;
+    .filters-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
     }
 
-    .products-header h1 span {
-        color: #6d28d9;
+    .filters-header h3 {
+        font-size: 18px;
+        font-weight: 800;
     }
 
-    .products-header p {
-        color: #6b7280;
+    .btn-reset {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .filter-group {
+        margin-bottom: 18px;
+    }
+
+    .filter-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 6px;
+    }
+
+    .filter-input, .filter-select {
+        width: 100%;
+        height: 38px;
+        padding: 0 12px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 13px;
+        color: var(--text-main);
+    }
+
+    .filter-input:focus, .filter-select:focus {
+        outline: none;
+        border-color: var(--border-focus);
+        background: white;
+    }
+
+    .price-range-inputs {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .btn-apply-filters {
+        width: 100%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 11px;
+        border-radius: var(--radius-md);
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s;
         margin-top: 10px;
     }
 
-    /* SEARCH AND FILTER */
+    .btn-apply-filters:hover {
+        background: var(--primary-hover);
+    }
 
-    .filter-bar {
-        max-width: 1100px;
-        margin: 0 auto 20px;
-        background: white;
-        padding: 18px;
-        border-radius: 15px;
+    /* Catalog Content Header */
+    .catalog-header {
         display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.06);
-    }
-
-    .filter-bar input,
-    .filter-bar select {
-        padding: 12px 14px;
-        border: 1px solid #e5e7eb;
-        border-radius: 9px;
-        font-size: 14px;
-        outline: none;
-        background: white;
-        color: #111827;
-    }
-
-    .filter-bar input:focus,
-    .filter-bar select:focus {
-        border-color: #6d28d9;
-    }
-
-    .filter-bar input {
-        flex: 1;
-        min-width: 200px;
-    }
-
-    .filter-bar select {
-        flex: 1;
-        min-width: 150px;
-    }
-
-    .clear-btn {
-        padding: 12px 18px;
-        background: #ede9fe;
-        color: #5b21b6;
-        border: none;
-        border-radius: 9px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    .clear-btn:hover {
-        background: #ddd6fe;
-    }
-
-    .results-bar {
-        max-width: 1100px;
-        margin: 0 auto 22px;
-        color: #6b7280;
-        font-size: 14px;
-    }
-
-    /* PRODUCT GRID */
-
-    .product-list {
-        max-width: 1100px;
-        margin: auto;
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 22px;
-    }
-
-    .product-box {
-        background: white;
-        border-radius: 18px;
-        overflow: hidden;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.07);
-        transition: 0.25s ease;
-        min-width: 0;
-    }
-
-    .product-box:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 30px rgba(109,40,217,0.15);
-    }
-
-    .product-image-box {
-        height: 230px;
-        background: #f5f5f5;
-        display: flex;
+        justify-content: space-between;
         align-items: center;
-        justify-content: center;
-        overflow: hidden;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 16px;
     }
 
-    .product-image {
+    .catalog-count {
+        font-size: 15px;
+        color: var(--text-muted);
+    }
+
+    .catalog-count strong {
+        color: var(--text-main);
+    }
+
+    /* Product Cards */
+    .catalog-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 22px;
+        margin-bottom: 40px;
+    }
+
+    .phone-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .phone-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .phone-image-wrapper {
+        position: relative;
+        height: 200px;
+        background: #f1f5f9;
+        display: grid;
+        place-items: center;
+    }
+
+    .phone-image-wrapper img {
         width: 100%;
         height: 100%;
         object-fit: contain;
-        display: block;
-        padding: 8px;
+        padding: 10px;
     }
 
-    .no-image {
-        font-size: 55px;
-    }
-
-    .product-details {
-        padding: 18px;
-    }
-
-    .product-tag {
-        display: inline-block;
-        background: #f3e8ff;
-        color: #6d28d9;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: bold;
-        margin-bottom: 8px;
-    }
-
-    .product-details h3 {
-        font-size: 19px;
-        color: #111827;
-        margin: 8px 0;
-        overflow-wrap: anywhere;
-    }
-
-    .product-details p {
-        color: #6b7280;
-        font-size: 14px;
-        margin: 7px 0;
-    }
-
-    .product-price {
-        color: #6d28d9;
-        font-size: 23px;
-        font-weight: 800;
-        margin: 15px 0;
-    }
-
-    .product-actions {
-        display: flex;
-        gap: 9px;
-    }
-
-    .details-btn,
-    .buy-btn,
-    .sell-btn {
-        display: block;
-        padding: 12px 8px;
-        text-align: center;
-        text-decoration: none;
-        border-radius: 10px;
-        font-weight: bold;
-        font-size: 13px;
-        transition: 0.2s;
-    }
-
-    .details-btn {
-        flex: 1;
-        color: #6d28d9;
-        background: white;
-        border: 1px solid #6d28d9;
-    }
-
-    .buy-btn,
-    .sell-btn {
-        flex: 1;
+    .badge-condition {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(15, 23, 42, 0.85);
         color: white;
-        background: #6d28d9;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: var(--radius-full);
     }
 
-    .buy-btn:hover,
-    .sell-btn:hover {
-        background: #5b21b6;
+    .phone-body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
     }
 
-    .details-btn:hover {
-        background: #f3e8ff;
+    .phone-brand {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
     }
 
-    /* EMPTY STATES */
+    .phone-title {
+        font-size: 16px;
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
 
-    .empty-products {
-        grid-column: 1 / -1;
-        text-align: center;
-        padding: 45px;
+    .phone-specs-pills {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+
+    .spec-pill {
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: var(--radius-sm);
+    }
+
+    .phone-footer {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 12px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .phone-price {
+        font-size: 18px;
+        font-weight: 800;
+    }
+
+    .btn-view {
+        background: var(--primary-light);
+        color: var(--primary);
+        font-weight: 700;
+        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: var(--radius-md);
+    }
+
+    /* Pagination */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+    }
+
+    .page-link {
+        padding: 8px 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
         background: white;
-        border-radius: 18px;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text-main);
     }
 
-    .empty-products p {
-        margin: 15px 0;
+    .page-link.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
     }
 
-    .sell-btn {
-        display: inline-block;
-        padding: 12px 20px;
+    .page-link.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 
-    #noResults {
-        display: none;
-        text-align: center;
-        max-width: 1100px;
-        margin: 30px auto;
-        padding: 35px 15px;
-        background: white;
-        border-radius: 15px;
-        color: #6b7280;
-    }
-
-    #noResults h3 {
-        color: #111827;
-    }
-
-    /* MOBILE DESIGN */
-
-    @media (max-width: 1000px) {
-        .product-list {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+    @media (max-width: 900px) {
+        .catalog-layout {
+            grid-template-columns: 1fr;
         }
-    }
-
-    @media (max-width: 600px) {
-        .products-page {
-            padding: 35px 5%;
-        }
-
-        .products-header h1 {
-            font-size: 30px;
-        }
-
-        .product-list {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .filter-bar {
-            flex-direction: column;
-        }
-
-        .filter-bar input,
-        .filter-bar select,
-        .clear-btn {
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .product-image-box {
-            height: 155px;
-        }
-
-        .product-details {
-            padding: 12px;
-        }
-
-        .product-details h3 {
-            font-size: 15px;
-        }
-
-        .product-details p {
-            font-size: 12px;
-        }
-
-        .product-price {
-            font-size: 19px;
-        }
-
-        .product-actions {
-            flex-direction: column;
+        .filters-card {
+            position: static;
         }
     }
 </style>
 {% endblock %}
 
-
 {% block content %}
+<div class="container">
 
-<section class="products-page">
-
-    <!-- PAGE HEADER -->
-
-    <div class="products-header">
-        <h1>Explore <span>Products</span></h1>
-        <p>Find your perfect smartphone on iSellora.</p>
-    </div>
-
-
-    <!-- SEARCH AND FILTER -->
-
-    <div class="filter-bar">
-
-        <input
-            type="search"
-            id="searchInput"
-            placeholder="Search iPhone, Samsung, model..."
-            aria-label="Search smartphones"
-        >
-
-        <select id="brandFilter" aria-label="Filter by brand">
-            <option value="">All Brands</option>
-            <option value="apple">Apple / iPhone</option>
-            <option value="samsung">Samsung</option>
-            <option value="oneplus">OnePlus</option>
-            <option value="google">Google</option>
-            <option value="xiaomi">Xiaomi / Redmi</option>
-            <option value="vivo">Vivo</option>
-            <option value="oppo">Oppo</option>
-            <option value="realme">Realme</option>
-            <option value="motorola">Motorola</option>
-            <option value="nothing">Nothing</option>
-        </select>
-
-        <select id="priceFilter" aria-label="Filter by price">
-            <option value="">All Prices</option>
-            <option value="under10">Under ₹10,000</option>
-            <option value="10to20">₹10,000 - ₹20,000</option>
-            <option value="20to40">₹20,000 - ₹40,000</option>
-            <option value="40to60">₹40,000 - ₹60,000</option>
-            <option value="above60">Above ₹60,000</option>
-        </select>
-
-        <select id="sortFilter" aria-label="Sort products">
-            <option value="latest">Latest First</option>
-            <option value="low">Price: Low to High</option>
-            <option value="high">Price: High to Low</option>
-            <option value="name">Name: A to Z</option>
-        </select>
-
-        <button
-            type="button"
-            id="clearFilters"
-            class="clear-btn"
-        >
-            Clear Filters
-        </button>
-
-    </div>
-
-
-    <!-- MATCHING PRODUCTS COUNT -->
-
-    <div class="results-bar">
-        <span id="resultCount">
-            {{ phones|length }} phones available
-        </span>
-    </div>
-
-
-    <!-- REAL UPLOADED PHONES -->
-
-    <div class="product-list" id="productList">
-
-        {% for phone in phones %}
-
-        {% set photos = (
-            phone.get('images')
-            or phone.get('photos')
-            or []
-        ) %}
-
-        <div
-            class="product-box"
-            data-brand="{{ phone.get('brand', '')|lower }}"
-            data-model="{{ phone.get('model', '')|lower }}"
-            data-price="{{ phone.get('price', '0') }}"
-            data-order="{{ loop.index0 }}"
-        >
-
-            <!-- PHONE PHOTO -->
-
-            <div class="product-image-box">
-
-                {% if photos %}
-
-                    {% set photo = photos[0] %}
-
-                    {% if photo.startswith('/static/') %}
-
-                        <img
-                            src="{{ photo }}"
-                            class="product-image"
-                            alt="{{ phone.get('brand', '') }} {{ phone.get('model', 'Phone') }}"
-                            loading="lazy"
-                        >
-
-                    {% else %}
-
-                        <img
-                            src="{{ url_for('static', filename='uploads/' ~ photo) }}"
-                            class="product-image"
-                            alt="{{ phone.get('brand', '') }} {{ phone.get('model', 'Phone') }}"
-                            loading="lazy"
-                        >
-
-                    {% endif %}
-
-                {% else %}
-
-                    <div class="no-image">📱</div>
-
-                {% endif %}
-
+    <div class="catalog-layout">
+        <!-- FILTERS SIDEBAR -->
+        <aside class="filters-card">
+            <div class="filters-header">
+                <h3>Filters</h3>
+                <a href="{{ url_for('products') }}" class="btn-reset">Reset All</a>
             </div>
 
-
-            <!-- PHONE INFORMATION -->
-
-            <div class="product-details">
-
-                <span class="product-tag">
-                    {{ phone.get('brand', 'Smartphone') }}
-                </span>
-
-                <h3>
-                    {{ phone.get('brand', '') }}
-                    {{ phone.get('model', 'Phone') }}
-                </h3>
-
-                <p>
-                    Storage:
-                    {{ phone.get('storage', 'N/A') }}
-                </p>
-
-                <p>
-                    Condition:
-                    {{ phone.get('condition', 'Not specified') }}
-                </p>
-
-                {% if phone.get('battery') %}
-
-                    <p>
-                        Battery Health:
-                        {{ phone.get('battery') }}
-                    </p>
-
-                {% endif %}
-
-                <div class="product-price">
-                    ₹{{ phone.get('price', '0') }}
+            <form action="{{ url_for('products') }}" method="GET">
+                <!-- Search term -->
+                <div class="filter-group">
+                    <label class="filter-label" for="searchField">Keywords</label>
+                    <input type="text" id="searchField" name="search" class="filter-input" placeholder="e.g. iPhone 15, Galaxy S23" value="{{ search or '' }}">
                 </div>
 
-
-                <!-- PRODUCT BUTTONS -->
-
-                <div class="product-actions">
-
-                    <a
-                        class="details-btn"
-                        href="{{ url_for('listing_detail', listing_id=phone['id']) }}"
-                    >
-                        View Details
-                    </a>
-
-                    <a
-                        class="buy-btn"
-                        href="{{ url_for('buy_now', listing_id=phone['id']) }}"
-                    >
-                        Buy Now
-                    </a>
-
+                <!-- Brand -->
+                <div class="filter-group">
+                    <label class="filter-label" for="brandSelect">Brand</label>
+                    <select id="brandSelect" name="brand" class="filter-select">
+                        <option value="">All Brands</option>
+                        <option value="Apple" {% if brand|lower == 'apple' %}selected{% endif %}>Apple</option>
+                        <option value="Samsung" {% if brand|lower == 'samsung' %}selected{% endif %}>Samsung</option>
+                        <option value="OnePlus" {% if brand|lower == 'oneplus' %}selected{% endif %}>OnePlus</option>
+                        <option value="Google" {% if brand|lower == 'google' %}selected{% endif %}>Google Pixel</option>
+                        <option value="Xiaomi" {% if brand|lower == 'xiaomi' %}selected{% endif %}>Xiaomi</option>
+                        <option value="Motorola" {% if brand|lower == 'motorola' %}selected{% endif %}>Motorola</option>
+                    </select>
                 </div>
 
+                <!-- Condition -->
+                <div class="filter-group">
+                    <label class="filter-label" for="conditionSelect">Condition Grade</label>
+                    <select id="conditionSelect" name="condition" class="filter-select">
+                        <option value="">All Conditions</option>
+                        <option value="Like New" {% if condition|lower == 'like new' %}selected{% endif %}>Like New (Flawless)</option>
+                        <option value="Excellent" {% if condition|lower == 'excellent' %}selected{% endif %}>Excellent (Micro-scratches)</option>
+                        <option value="Good" {% if condition|lower == 'good' %}selected{% endif %}>Good (Normal Wear)</option>
+                        <option value="Fair" {% if condition|lower == 'fair' %}selected{% endif %}>Fair (Heavy Wear)</option>
+                    </select>
+                </div>
+
+                <!-- Storage -->
+                <div class="filter-group">
+                    <label class="filter-label" for="storageSelect">Storage</label>
+                    <select id="storageSelect" name="storage" class="filter-select">
+                        <option value="">Any Storage</option>
+                        <option value="64GB" {% if storage == '64GB' %}selected{% endif %}>64GB</option>
+                        <option value="128GB" {% if storage == '128GB' %}selected{% endif %}>128GB</option>
+                        <option value="256GB" {% if storage == '256GB' %}selected{% endif %}>256GB</option>
+                        <option value="512GB" {% if storage == '512GB' %}selected{% endif %}>512GB</option>
+                    </select>
+                </div>
+
+                <!-- Price Range -->
+                <div class="filter-group">
+                    <label class="filter-label">Price Range (₹)</label>
+                    <div class="price-range-inputs">
+                        <input type="number" name="min_price" class="filter-input" placeholder="Min" value="{{ min_price if min_price else '' }}" min="0">
+                        <span>—</span>
+                        <input type="number" name="max_price" class="filter-input" placeholder="Max" value="{{ max_price if max_price else '' }}" min="0">
+                    </div>
+                </div>
+
+                <!-- Sort By -->
+                <div class="filter-group">
+                    <label class="filter-label" for="sortSelect">Sort By</label>
+                    <select id="sortSelect" name="sort" class="filter-select">
+                        <option value="latest" {% if sort == 'latest' %}selected{% endif %}>Newest First</option>
+                        <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
+                        <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-apply-filters">Apply Filters</button>
+            </form>
+        </aside>
+
+        <!-- MAIN CATALOG CONTENT -->
+        <main style="padding: 0;">
+            <div class="catalog-header">
+                <div class="catalog-count">
+                    Showing <strong>{{ phones|length }}</strong> of <strong>{{ pagination.total }}</strong> available smartphones
+                </div>
             </div>
 
-        </div>
+            {% if phones %}
+                <div class="catalog-grid">
+                    {% for phone in phones %}
+                        <div class="phone-card">
+                            <div class="phone-image-wrapper">
+                                <span class="badge-condition">
+                                    {{ phone.condition }}
+                                </span>
+                                <img src="{{ phone.primary_image }}" alt="{{ phone.brand }} {{ phone.model }}" loading="lazy">
+                            </div>
+                            <div class="phone-body">
+                                <span class="phone-brand">{{ phone.brand }}</span>
+                                <h4 class="phone-title">{{ phone.model }}</h4>
+                                <div class="phone-specs-pills">
+                                    <span class="spec-pill">{{ phone.storage }}</span>
+                                    {% if phone.battery_health %}
+                                        <span class="spec-pill">🔋 {{ phone.battery_health }}%</span>
+                                    {% endif %}
+                                    {% if phone.ram %}
+                                        <span class="spec-pill">{{ phone.ram }} RAM</span>
+                                    {% endif %}
+                                </div>
+                                <div class="phone-footer">
+                                    <div class="phone-price">{{ phone.formatted_price }}</div>
+                                    <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="btn-view">Inspect</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
 
-        {% else %}
+                <!-- SERVER-SIDE PAGINATION -->
+                {% if pagination.pages > 1 %}
+                    <div class="pagination">
+                        {% if pagination.has_prev %}
+                            <a href="{{ url_for('products', page=pagination.prev_num, search=search, brand=brand, condition=condition, storage=storage, min_price=min_price, max_price=max_price, sort=sort) }}" class="page-link">← Prev</a>
+                        {% else %}
+                            <span class="page-link disabled">← Prev</span>
+                        {% endif %}
 
-            <div class="empty-products">
+                        {% for p in range(1, pagination.pages + 1) %}
+                            <a href="{{ url_for('products', page=p, search=search, brand=brand, condition=condition, storage=storage, min_price=min_price, max_price=max_price, sort=sort) }}" class="page-link {% if p == pagination.page %}active{% endif %}">{{ p }}</a>
+                        {% endfor %}
 
-                <h2>📱 No Products Yet</h2>
+                        {% if pagination.has_next %}
+                            <a href="{{ url_for('products', page=pagination.next_num, search=search, brand=brand, condition=condition, storage=storage, min_price=min_price, max_price=max_price, sort=sort) }}" class="page-link">Next →</a>
+                        {% else %}
+                            <span class="page-link disabled">Next →</span>
+                        {% endif %}
+                    </div>
+                {% endif %}
 
-                <p>
-                    Be the first person to list
-                    a phone on iSellora.
-                </p>
-
-                <a
-                    class="sell-btn"
-                    href="{{ url_for('sell') }}"
-                >
-                    Sell Your Phone
-                </a>
-
-            </div>
-
-        {% endfor %}
-
+            {% else %}
+                <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 56px 20px; text-align: center;">
+                    <div style="font-size: 36px; margin-bottom: 12px;">🔍</div>
+                    <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">No smartphones match your filters</h3>
+                    <p style="color: var(--text-muted); max-width: 460px; margin: 0 auto 24px;">Try loosening your price boundaries, clearing keyword searches, or browsing all brands.</p>
+                    <a href="{{ url_for('products') }}" class="btn-sell">Reset All Filters</a>
+                </div>
+            {% endif %}
+        </main>
     </div>
 
-
-    <!-- NO SEARCH RESULTS -->
-
-    <div id="noResults">
-
-        <h3>🔍 No matching phones found</h3>
-
-        <p>
-            Try another brand, model or price range.
-        </p>
-
-        <button
-            type="button"
-            class="clear-btn"
-            id="resetResults"
-        >
-            Reset Filters
-        </button>
-
-    </div>
-
-</section>
-
-
-<!-- SEARCH, FILTER AND SORT JAVASCRIPT -->
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-
-    const searchInput =
-        document.getElementById("searchInput");
-
-    const brandFilter =
-        document.getElementById("brandFilter");
-
-    const priceFilter =
-        document.getElementById("priceFilter");
-
-    const sortFilter =
-        document.getElementById("sortFilter");
-
-    const clearFilters =
-        document.getElementById("clearFilters");
-
-    const resetResults =
-        document.getElementById("resetResults");
-
-    const productList =
-        document.getElementById("productList");
-
-    const products = Array.from(
-        productList.querySelectorAll(".product-box")
-    );
-
-    const noResults =
-        document.getElementById("noResults");
-
-    const resultCount =
-        document.getElementById("resultCount");
-
-
-    /* HOME PAGE SEARCH CONNECTION */
-
-    const urlParams = new URLSearchParams(
-        window.location.search
-    );
-
-    // Read the search text sent from index.html.
-    searchInput.value =
-        urlParams.get("search") || "";
-
-
-    /* PRICE CONVERSION */
-
-    function getPrice(product) {
-
-        const value = String(
-            product.dataset.price || "0"
-        ).replace(/[₹,\s]/g, "");
-
-        const price = Number(value);
-
-        return Number.isFinite(price)
-            ? price
-            : 0;
-    }
-
-
-    /* BRAND FILTER */
-
-    function matchesBrand(phoneBrand, model, selectedBrand) {
-
-        if (!selectedBrand) {
-            return true;
-        }
-
-        const text = phoneBrand + " " + model;
-
-        if (selectedBrand === "apple") {
-            return (
-                text.includes("apple") ||
-                text.includes("iphone")
-            );
-        }
-
-        if (selectedBrand === "xiaomi") {
-            return (
-                text.includes("xiaomi") ||
-                text.includes("redmi") ||
-                text.includes("poco")
-            );
-        }
-
-        if (selectedBrand === "motorola") {
-            return (
-                text.includes("motorola") ||
-                text.includes("moto")
-            );
-        }
-
-        return text.includes(selectedBrand);
-    }
-
-
-    /* PRICE FILTER */
-
-    function matchesPrice(price, range) {
-
-        if (!range) {
-            return true;
-        }
-
-        if (range === "under10") {
-            return price < 10000;
-        }
-
-        if (range === "10to20") {
-            return price >= 10000 && price < 20000;
-        }
-
-        if (range === "20to40") {
-            return price >= 20000 && price < 40000;
-        }
-
-        if (range === "40to60") {
-            return price >= 40000 && price <= 60000;
-        }
-
-        if (range === "above60") {
-            return price > 60000;
-        }
-
-        return true;
-    }
-
-
-    /* SORT PRODUCTS */
-
-    function sortProducts() {
-
-        const sort = sortFilter.value;
-        const sorted = [...products];
-
-        sorted.sort(function (a, b) {
-
-            if (sort === "low") {
-                return getPrice(a) - getPrice(b);
-            }
-
-            if (sort === "high") {
-                return getPrice(b) - getPrice(a);
-            }
-
-            if (sort === "name") {
-
-                const nameA =
-                    a.dataset.brand + " " + a.dataset.model;
-
-                const nameB =
-                    b.dataset.brand + " " + b.dataset.model;
-
-                return nameA.localeCompare(nameB);
-            }
-
-            // Keep original listing order.
-            return (
-                Number(a.dataset.order) -
-                Number(b.dataset.order)
-            );
-        });
-
-        sorted.forEach(function (product) {
-            productList.appendChild(product);
-        });
-    }
-
-
-    /* SEARCH AND FILTER */
-
-    function filterProducts() {
-
-        const search =
-            searchInput.value.toLowerCase().trim();
-
-        const brand =
-            brandFilter.value;
-
-        const range =
-            priceFilter.value;
-
-        let visible = 0;
-
-        products.forEach(function (product) {
-
-            const phoneBrand =
-                product.dataset.brand || "";
-
-            const model =
-                product.dataset.model || "";
-
-            const price =
-                getPrice(product);
-
-
-            // Search brand or model.
-
-            const searchText =
-                phoneBrand + " " + model;
-
-            const searchMatch =
-                searchText.includes(search);
-
-
-            // Brand filter.
-
-            const brandMatch =
-                matchesBrand(
-                    phoneBrand,
-                    model,
-                    brand
-                );
-
-
-            // Price filter.
-
-            const priceMatch =
-                matchesPrice(price, range);
-
-
-            // Display matching phones.
-
-            const show =
-                searchMatch &&
-                brandMatch &&
-                priceMatch;
-
-            product.style.display =
-                show ? "" : "none";
-
-            if (show) {
-                visible++;
-            }
-        });
-
-
-        /* UPDATE RESULT COUNT */
-
-        resultCount.textContent =
-            visible + (
-                visible === 1
-                    ? " phone found"
-                    : " phones found"
-            );
-
-
-        /* SHOW NO RESULTS MESSAGE */
-
-        noResults.style.display =
-            products.length > 0 && visible === 0
-                ? "block"
-                : "none";
-
-
-        /* APPLY SORTING */
-
-        sortProducts();
-    }
-
-
-    /* CLEAR ALL FILTERS */
-
-    function resetFilters() {
-
-        searchInput.value = "";
-        brandFilter.value = "";
-        priceFilter.value = "";
-        sortFilter.value = "latest";
-
-        // Remove the old Home Page search
-        // from the URL after resetting.
-        if (window.location.search) {
-            window.history.replaceState(
-                {},
-                "",
-                window.location.pathname
-            );
-        }
-
-        filterProducts();
-    }
-
-
-    /* EVENT LISTENERS */
-
-    searchInput.addEventListener(
-        "input",
-        filterProducts
-    );
-
-    brandFilter.addEventListener(
-        "change",
-        filterProducts
-    );
-
-    priceFilter.addEventListener(
-        "change",
-        filterProducts
-    );
-
-    sortFilter.addEventListener(
-        "change",
-        filterProducts
-    );
-
-    clearFilters.addEventListener(
-        "click",
-        resetFilters
-    );
-
-    resetResults.addEventListener(
-        "click",
-        resetFilters
-    );
-
-
-    /* INITIAL DISPLAY */
-
-    // This also applies searches sent from Home Page.
-    filterProducts();
-
-});
-</script>
-
+</div>
 {% endblock %}

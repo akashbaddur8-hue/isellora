@@ -1,211 +1,134 @@
-<!DOCTYPE html>
+{% extends "base.html" %}
 
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block title %}Create an Account | iSellora{% endblock %}
 
-```
-<title>iSellora | Create Account</title>
-
+{% block extra_css %}
 <style>
-    * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-        font-family: Arial, sans-serif;
-    }
-
-    body {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #6a11cb, #2575fc);
-        padding: 20px;
-    }
-
-    .signup-box {
-        width: 100%;
-        max-width: 430px;
+    .auth-card {
+        max-width: 460px;
+        margin: 30px auto 70px;
         background: white;
-        padding: 35px;
-        border-radius: 20px;
-        box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 36px 32px;
+        box-shadow: var(--shadow-sm);
     }
 
-    .logo {
+    .auth-header {
         text-align: center;
-        font-size: 28px;
-        font-weight: bold;
-        color: #6a11cb;
-        margin-bottom: 8px;
+        margin-bottom: 24px;
     }
 
-    h1 {
-        text-align: center;
-        font-size: 25px;
-        margin-bottom: 8px;
+    .auth-header h1 {
+        font-size: 24px;
+        font-weight: 800;
+        margin-bottom: 6px;
     }
 
-    .subtitle {
-        text-align: center;
-        color: #777;
+    .auth-header p {
+        color: var(--text-muted);
         font-size: 14px;
-        margin-bottom: 25px;
     }
 
-    label {
+    .form-group {
+        margin-bottom: 18px;
+    }
+
+    .form-label {
         display: block;
-        font-weight: bold;
-        margin-bottom: 7px;
-        font-size: 14px;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 6px;
     }
 
-    input {
+    .form-input {
         width: 100%;
-        padding: 13px;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        margin-bottom: 16px;
-        font-size: 15px;
+        padding: 10px 14px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        color: var(--text-main);
+    }
+
+    .form-input:focus {
         outline: none;
+        background: white;
+        border-color: var(--border-focus);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
 
-    input:focus {
-        border-color: #6a11cb;
-    }
-
-    .signup-btn {
+    .btn-auth {
         width: 100%;
-        padding: 13px;
-        border: none;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #6a11cb, #2575fc);
+        background: var(--primary);
         color: white;
-        font-size: 16px;
-        font-weight: bold;
+        border: none;
+        padding: 12px;
+        border-radius: var(--radius-md);
+        font-size: 15px;
+        font-weight: 800;
         cursor: pointer;
+        transition: background 0.2s;
     }
 
-    .signup-btn:hover {
-        opacity: 0.9;
+    .btn-auth:hover {
+        background: var(--primary-hover);
     }
 
-    .login-link {
+    .auth-footer {
         text-align: center;
-        margin-top: 20px;
-        font-size: 14px;
+        margin-top: 24px;
+        font-size: 13px;
+        color: var(--text-muted);
     }
 
-    .login-link a {
-        color: #6a11cb;
-        font-weight: bold;
-        text-decoration: none;
-    }
-
-    .home-link {
-        display: block;
-        text-align: center;
-        margin-top: 15px;
-        color: #777;
-        text-decoration: none;
-        font-size: 14px;
+    .auth-footer a {
+        color: var(--primary);
+        font-weight: 700;
     }
 </style>
-```
+{% endblock %}
 
-</head>
+{% block content %}
+<div class="container">
 
-<body>
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>Create your Account</h1>
+            <p>Join iSellora to buy, sell, and reserve smartphones</p>
+        </div>
 
-```
-<div class="signup-box">
+        <form action="{{ url_for('signup') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <div class="logo">
-        📱 iSellora
+            <div class="form-group">
+                <label class="form-label" for="name">Full Name *</label>
+                <input type="text" id="name" name="name" class="form-input" placeholder="e.g. Rahul Sharma" required minlength="2" maxlength="100">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address *</label>
+                <input type="email" id="email" name="email" class="form-input" placeholder="name@example.com" required autocomplete="email">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="phone">10-Digit Mobile Number *</label>
+                <input type="tel" id="phone" name="phone" class="form-input" placeholder="e.g. 9876543210" required pattern="[6-9][0-9]{9}">
+                <small style="color: var(--text-muted); font-size: 12px;">Used for order delivery & buyer/seller coordination.</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password *</label>
+                <input type="password" id="password" name="password" class="form-input" placeholder="At least 8 characters (letters + numbers)" required minlength="8" autocomplete="new-password">
+            </div>
+
+            <button type="submit" class="btn-auth">Register Account</button>
+        </form>
+
+        <div class="auth-footer">
+            Already have an account? <a href="{{ url_for('login') }}">Sign in here</a>
+        </div>
     </div>
-
-    <h1>Create Account</h1>
-
-    <p class="subtitle">
-        Create your iSellora account
-    </p>
-
-    <form action="/signup" method="POST">
-
-        <label>
-            Full Name
-        </label>
-
-        <input
-            type="text"
-            name="name"
-            placeholder="Enter your name"
-            required
-        >
-
-        <label>
-            Email
-        </label>
-
-        <input
-            type="email"
-            name="email"
-            placeholder="Enter your email"
-            required
-        >
-
-        <label>
-            Phone Number
-        </label>
-
-        <input
-            type="tel"
-            name="phone"
-            placeholder="10-digit phone number"
-            pattern="[0-9]{10}"
-            maxlength="10"
-            required
-        >
-
-        <label>
-            Password
-        </label>
-
-        <input
-            type="password"
-            name="password"
-            placeholder="Create password"
-            minlength="6"
-            required
-        >
-
-        <button
-            type="submit"
-            class="signup-btn"
-        >
-            Create Account
-        </button>
-
-    </form>
-
-    <div class="login-link">
-        Already have an account?
-        <a href="/login">
-            Login
-        </a>
-    </div>
-
-    <a
-        href="/"
-        class="home-link"
-    >
-        ← Back to Home
-    </a>
 
 </div>
-```
-
-</body>
-</html>
+{% endblock %}

@@ -1,1029 +1,314 @@
-
 {% extends "base.html" %}
 
-{% block title %}Sell Your Phone | iSellora{% endblock %}
+{% block title %}Sell Your Smartphone | iSellora{% endblock %}
 
 {% block extra_css %}
 <style>
-    .sell-page {
-        background: #f6f7fb;
-        color: #222;
-        padding-bottom: 45px;
-    }
-
-    .sell-hero {
-        text-align: center;
-        padding: 48px 20px 35px;
-        background: linear-gradient(135deg, #ede9fe, #dbeafe);
-    }
-
-    .sell-hero h1 {
-        font-size: 38px;
-        margin-bottom: 10px;
-    }
-
-    .sell-hero h1 span {
-        color: #6d28d9;
-    }
-
-    .sell-hero p {
-        color: #555;
-        font-size: 14px;
-    }
-
     .sell-container {
-        max-width: 850px;
-        margin: 35px auto;
-        padding: 0 18px;
+        max-width: 760px;
+        margin: 20px auto 60px;
     }
 
     .sell-card {
         background: white;
-        padding: 32px;
-        border-radius: 18px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.07);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 36px;
+        box-shadow: var(--shadow-sm);
     }
 
-    .sell-section {
-        margin-bottom: 34px;
+    .sell-header {
+        margin-bottom: 28px;
+        text-align: center;
     }
 
-    .sell-section h2 {
-        color: #6d28d9;
-        font-size: 21px;
-        padding-bottom: 12px;
-        margin-bottom: 20px;
-        border-bottom: 1px solid #eee;
+    .sell-header h1 {
+        font-size: 28px;
+        font-weight: 800;
+        margin-bottom: 6px;
     }
 
-    .sell-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
+    .sell-header p {
+        color: var(--text-muted);
+        font-size: 15px;
     }
 
-    .sell-field {
+    .form-section {
+        margin-bottom: 28px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .form-section h3 {
+        font-size: 16px;
+        font-weight: 800;
+        margin-bottom: 16px;
         display: flex;
-        flex-direction: column;
-        min-width: 0;
+        align-items: center;
+        gap: 8px;
     }
 
-    .sell-full {
-        grid-column: 1 / -1;
-    }
-
-    .sell-field label {
-        font-size: 14px;
-        font-weight: bold;
-        margin-bottom: 8px;
-    }
-
-    .sell-field input,
-    .sell-field select,
-    .sell-field textarea {
-        width: 100%;
-        padding: 13px;
-        border: 1px solid #d5d5dd;
-        border-radius: 10px;
-        font: inherit;
-        font-size: 14px;
-        background: white;
-        color: #222;
-    }
-
-    .sell-field input:focus,
-    .sell-field select:focus,
-    .sell-field textarea:focus {
-        outline: 2px solid #ddd6fe;
-        border-color: #6d28d9;
-    }
-
-    .sell-field textarea {
-        min-height: 110px;
-        resize: vertical;
-    }
-
-    .sell-required {
-        color: #dc2626;
-    }
-
-    .sell-hint {
-        font-size: 12px;
-        color: #6b7280;
-        margin-top: 7px;
-        line-height: 1.5;
-    }
-
-    .sell-upload {
-        background: #faf8ff;
-        border: 2px dashed #b9a5e8;
-        padding: 24px;
-        border-radius: 14px;
-        text-align: center;
-    }
-
-    .sell-upload-icon {
-        font-size: 42px;
-        margin-bottom: 8px;
-    }
-
-    .sell-upload p {
-        color: #6b7280;
-        font-size: 13px;
-        line-height: 1.6;
-        margin-bottom: 15px;
-    }
-
-    .sell-upload input {
-        max-width: 100%;
-    }
-
-    .sell-photo-preview {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 12px;
-        margin-top: 20px;
-    }
-
-    .sell-preview-box {
-        min-width: 0;
-        text-align: center;
-    }
-
-    .sell-preview-box img {
-        display: block;
-        width: 100%;
-        height: 100px;
-        object-fit: cover;
-        border-radius: 10px;
-    }
-
-    .sell-preview-box span {
-        display: block;
-        font-size: 12px;
-        color: #666;
-        margin-top: 5px;
-    }
-
-    .sell-photo-count {
-        margin-top: 14px;
-        color: #6d28d9;
-        font-weight: bold;
-        font-size: 13px;
-    }
-
-    .sell-plans {
+    .form-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 18px;
+        gap: 16px;
+        margin-bottom: 16px;
     }
 
-    .sell-plan {
-        border: 2px solid #6d28d9;
-        border-radius: 14px;
-        padding: 20px;
-        background: #faf7ff;
+    .form-group {
+        margin-bottom: 16px;
     }
 
-    .sell-plan.disabled {
-        border-color: #ddd;
-        background: #f9fafb;
-        opacity: 0.75;
-    }
-
-    .sell-plan input {
-        width: auto;
-        margin-right: 7px;
-        accent-color: #6d28d9;
-    }
-
-    .sell-plan h3 {
-        font-size: 17px;
-        margin: 12px 0 8px;
-    }
-
-    .sell-plan .price {
-        font-size: 25px;
-        font-weight: bold;
-        color: #6d28d9;
-        margin-bottom: 8px;
-    }
-
-    .sell-plan p {
-        font-size: 13px;
-        color: #666;
-        line-height: 1.6;
-    }
-
-    .sell-badge {
-        display: inline-block;
-        padding: 5px 10px;
-        border-radius: 20px;
-        background: #ede9fe;
-        color: #5b21b6;
-        font-size: 12px;
-        font-weight: bold;
-    }
-
-    .sell-warning {
-        margin-top: 18px;
-        padding: 14px;
-        border-radius: 10px;
-        background: #fff7ed;
-        color: #9a3412;
-        font-size: 13px;
-        line-height: 1.6;
-    }
-
-    .sell-error {
-        display: none;
-        background: #fef2f2;
-        color: #991b1b;
-        border: 1px solid #fecaca;
-        padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        font-size: 14px;
-        line-height: 1.6;
-    }
-
-    .sell-error.visible {
+    .form-label {
         display: block;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 6px;
     }
 
-    .sell-submit {
-        display: block;
+    .form-input, .form-select, .form-textarea {
         width: 100%;
-        padding: 16px;
-        border: none;
-        border-radius: 10px;
-        background: #6d28d9;
-        color: white;
-        font-size: 17px;
-        font-weight: bold;
+        padding: 10px 14px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        color: var(--text-main);
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+        outline: none;
+        background: white;
+        border-color: var(--border-focus);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .file-dropzone {
+        border: 2px dashed var(--border);
+        border-radius: var(--radius-md);
+        padding: 24px;
+        text-align: center;
+        background: #f8fafc;
         cursor: pointer;
+        transition: border-color 0.2s;
     }
 
-    .sell-submit:hover {
-        background: #5b21b6;
+    .file-dropzone:hover {
+        border-color: var(--primary);
     }
 
-    .sell-submit:disabled {
-        background: #9ca3af;
-        cursor: not-allowed;
+    .btn-submit-listing {
+        width: 100%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: var(--radius-md);
+        font-size: 16px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background 0.2s;
     }
 
-    .sell-back {
-        display: block;
-        text-align: center;
-        margin-top: 15px;
-        padding: 13px;
-        border: 1px solid #6d28d9;
-        border-radius: 10px;
-        color: #6d28d9;
-        text-decoration: none;
-        font-weight: bold;
-    }
-
-    .sell-note {
-        color: #777;
-        font-size: 12px;
-        text-align: center;
-        margin-top: 15px;
-        line-height: 1.6;
+    .btn-submit-listing:hover {
+        background: var(--primary-hover);
     }
 
     @media (max-width: 650px) {
-        .sell-grid,
-        .sell-plans {
+        .form-row {
             grid-template-columns: 1fr;
         }
-
-        .sell-full {
-            grid-column: auto;
-        }
-
         .sell-card {
-            padding: 20px;
-        }
-
-        .sell-hero h1 {
-            font-size: 30px;
-        }
-
-        .sell-photo-preview {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            padding: 24px 18px;
         }
     }
 </style>
 {% endblock %}
 
-
 {% block content %}
-<div class="sell-page">
-
-    <section class="sell-hero">
-        <h1>Sell Your <span>Phone</span></h1>
-        <p>List your smartphone and connect with buyers.</p>
-    </section>
-
-    <div class="sell-container">
-        <div class="sell-card">
-
-            <div
-                class="sell-error"
-                id="sellError"
-                role="alert"
-                aria-live="assertive"
-            ></div>
-
-            <form
-                id="sellForm"
-                action="{{ url_for('sell') }}"
-                method="POST"
-                enctype="multipart/form-data"
-                novalidate
-            >
-
-                <!-- PHONE INFORMATION -->
-
-                <section class="sell-section">
-                    <h2>📱 Phone Information</h2>
-
-                    <div class="sell-grid">
-
-                        <div class="sell-field">
-                            <label for="brand">
-                                Brand <span class="sell-required">*</span>
-                            </label>
-
-                            <select id="brand" name="brand" required>
-                                <option value="">Select Brand</option>
-                                <option value="Apple">Apple</option>
-                                <option value="Samsung">Samsung</option>
-                                <option value="OnePlus">OnePlus</option>
-                                <option value="Google">Google</option>
-                                <option value="Xiaomi">Xiaomi</option>
-                                <option value="Vivo">Vivo</option>
-                                <option value="Oppo">Oppo</option>
-                                <option value="Realme">Realme</option>
-                                <option value="Motorola">Motorola</option>
-                                <option value="Nothing">Nothing</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-
-                        <div class="sell-field">
-                            <label for="model">
-                                Model <span class="sell-required">*</span>
-                            </label>
-
-                            <input
-                                id="model"
-                                name="model"
-                                type="text"
-                                placeholder="Example: iPhone 15"
-                                maxlength="80"
-                                required
-                            >
-                        </div>
-
-                        <div class="sell-field">
-                            <label for="price">
-                                Selling Price (₹)
-                                <span class="sell-required">*</span>
-                            </label>
-
-                            <input
-                                id="price"
-                                name="price"
-                                type="number"
-                                min="1"
-                                max="100000000"
-                                step="1"
-                                placeholder="Example: 45000"
-                                required
-                            >
-                        </div>
-
-                        <div class="sell-field">
-                            <label for="storage">
-                                Storage <span class="sell-required">*</span>
-                            </label>
-
-                            <select id="storage" name="storage" required>
-                                <option value="">Select Storage</option>
-                                <option value="32GB">32GB</option>
-                                <option value="64GB">64GB</option>
-                                <option value="128GB">128GB</option>
-                                <option value="256GB">256GB</option>
-                                <option value="512GB">512GB</option>
-                                <option value="1TB">1TB</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-
-                        <div class="sell-field">
-                            <label for="battery">Battery Health (%)</label>
-
-                            <input
-                                id="battery"
-                                name="battery"
-                                type="number"
-                                min="1"
-                                max="100"
-                                placeholder="Example: 90"
-                            >
-
-                            <span class="sell-hint">
-                                Optional if battery health is unavailable.
-                            </span>
-                        </div>
-
-                        <div class="sell-field">
-                            <label for="condition">
-                                Overall Condition
-                                <span class="sell-required">*</span>
-                            </label>
-
-                            <select
-                                id="condition"
-                                name="condition"
-                                required
-                            >
-                                <option value="">Select Condition</option>
-                                <option value="Like New">Like New</option>
-                                <option value="Excellent">Excellent</option>
-                                <option value="Good">Good</option>
-                                <option value="Fair">Fair</option>
-                                <option value="Damaged">Damaged</option>
-                                <option value="For Parts">For Parts</option>
-                            </select>
-                        </div>
-
-                    </div>
-                </section>
-
-
-                <!-- DAMAGE INFORMATION -->
-
-                <section class="sell-section">
-                    <h2>🔍 Damage & Repair Details</h2>
-
-                    <div class="sell-grid">
-
-                        <div class="sell-field">
-                            <label for="screen_damage">
-                                Screen Damage
-                                <span class="sell-required">*</span>
-                            </label>
-
-                            <select
-                                id="screen_damage"
-                                name="screen_damage"
-                                required
-                            >
-                                <option value="">Select Screen Condition</option>
-                                <option value="No Damage">No Damage</option>
-                                <option value="Minor Scratches">Minor Scratches</option>
-                                <option value="Deep Scratches">Deep Scratches</option>
-                                <option value="Cracked Screen">Cracked Screen</option>
-                                <option value="Display Not Working">Display Not Working</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-
-                        <div class="sell-field">
-                            <label for="body_damage">
-                                Body Damage
-                                <span class="sell-required">*</span>
-                            </label>
-
-                            <select
-                                id="body_damage"
-                                name="body_damage"
-                                required
-                            >
-                                <option value="">Select Body Condition</option>
-                                <option value="No Damage">No Damage</option>
-                                <option value="Minor Scratches">Minor Scratches</option>
-                                <option value="Deep Scratches">Deep Scratches</option>
-                                <option value="Dents">Dents</option>
-                                <option value="Back Glass Cracked">Back Glass Cracked</option>
-                                <option value="Major Damage">Major Damage</option>
-                            </select>
-                        </div>
-
-                        <div class="sell-field">
-                            <label for="repair_history">
-                                Repair History
-                                <span class="sell-required">*</span>
-                            </label>
-
-                            <select
-                                id="repair_history"
-                                name="repair_history"
-                                required
-                            >
-                                <option value="">Select Repair History</option>
-                                <option value="Never Repaired">Never Repaired</option>
-                                <option value="Screen Replaced">Screen Replaced</option>
-                                <option value="Battery Replaced">Battery Replaced</option>
-                                <option value="Screen and Battery Replaced">
-                                    Screen and Battery Replaced
-                                </option>
-                                <option value="Other Repairs">Other Repairs</option>
-                                <option value="Unknown">Unknown</option>
-                            </select>
-                        </div>
-
-                        <div class="sell-field">
-                            <label for="original_display">
-                                Original Display
-                                <span class="sell-required">*</span>
-                            </label>
-
-                            <select
-                                id="original_display"
-                                name="original_display"
-                                required
-                            >
-                                <option value="">Select Display Type</option>
-                                <option value="Yes">Yes, Original</option>
-                                <option value="No">No, Replaced</option>
-                                <option value="Not Sure">Not Sure</option>
-                            </select>
-                        </div>
-
-                        <div class="sell-field sell-full">
-                            <label for="accessories">
-                                Box & Accessories
-                                <span class="sell-required">*</span>
-                            </label>
-
-                            <select
-                                id="accessories"
-                                name="accessories"
-                                required
-                            >
-                                <option value="">Select Accessories</option>
-                                <option value="Box and Charger">Box and Charger</option>
-                                <option value="Only Box">Only Box</option>
-                                <option value="Only Charger">Only Charger</option>
-                                <option value="Box and Cable">Box and Cable</option>
-                                <option value="Only Cable">Only Cable</option>
-                                <option value="Phone Only">Phone Only</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-
-                        <div class="sell-field sell-full">
-                            <label for="description">
-                                Phone Description
-                                <span class="sell-required">*</span>
-                            </label>
-
-                            <textarea
-                                id="description"
-                                name="description"
-                                maxlength="1000"
-                                placeholder="Describe the phone, battery, scratches, repairs and any known problems..."
-                                required
-                            ></textarea>
-                        </div>
-
-                    </div>
-
-                    <div class="sell-warning">
-                        ⚠️ Mention all known damage and repairs.
-                        Buyers should inspect the phone before purchasing.
-                    </div>
-                </section>
-
-
-                <!-- PHOTOS -->
-
-                <section class="sell-section">
-                    <h2>📸 Phone Photos</h2>
-
-                    <div class="sell-upload">
-
-                        <div class="sell-upload-icon">📷</div>
-
-                        <p>
-                            Upload 1–10 clear phone photos.
-                            JPG, PNG or WEBP only.
-                        </p>
-
-                        <input
-                            type="file"
-                            id="photoInput"
-                            name="photos"
-                            accept="image/jpeg,image/png,image/webp"
-                            multiple
-                            required
-                        >
-
-                        <div
-                            class="sell-photo-count"
-                            id="photoCount"
-                            aria-live="polite"
-                        ></div>
-
-                        <div
-                            class="sell-photo-preview"
-                            id="photoPreview"
-                        ></div>
-
-                    </div>
-                </section>
-
-
-                <!-- LISTING TYPE -->
-
-                <section class="sell-section">
-                    <h2>⭐ Choose Listing Type</h2>
-
-                    <div class="sell-plans">
-
-                        <label class="sell-plan">
-
-                            <input
-                                type="radio"
-                                name="listing_type"
-                                value="free"
-                                checked
-                            >
-
-                            <h3>🆓 Free Listing</h3>
-
-                            <div class="price">₹0</div>
-
-                            <p>
-                                Post your phone on iSellora
-                                without any listing fee.
-                            </p>
-
-                        </label>
-
-                        <div class="sell-plan disabled">
-
-                            <span class="sell-badge">
-                                Coming Soon
-                            </span>
-
-                            <h3>⭐ Featured Listing</h3>
-
-                            <div class="price">₹49</div>
-
-                            <p>
-                                Featured listings will be available
-                                after payment integration.
-                            </p>
-
-                        </div>
-
-                    </div>
-                </section>
-
-
-                <!-- SELLER INFORMATION -->
-
-                <section class="sell-section">
-                    <h2>👤 Seller Information</h2>
-
-                    <div class="sell-grid">
-
-                        <div class="sell-field">
-                            <label for="seller_name">
-                                Your Name
-                                <span class="sell-required">*</span>
-                            </label>
-
-                            <input
-                                type="text"
-                                id="seller_name"
-                                name="seller_name"
-                                maxlength="80"
-                                placeholder="Enter your name"
-                                value="{{ session.get('user_name', '') }}"
-                                required
-                            >
-                        </div>
-
-                        <div class="sell-field">
-                            <label for="seller_phone">
-                                Mobile Number
-                                <span class="sell-required">*</span>
-                            </label>
-
-                            <input
-                                type="tel"
-                                id="seller_phone"
-                                name="seller_phone"
-                                pattern="[0-9]{10}"
-                                minlength="10"
-                                maxlength="10"
-                                inputmode="numeric"
-                                placeholder="10-digit number"
-                                required
-                            >
-
-                            <span class="sell-hint">
-                                Buyers may be able to contact
-                                you using this number.
-                            </span>
-                        </div>
-
-                    </div>
-                </section>
-
-
-                <!-- SUBMIT -->
-
-                <button
-                    type="submit"
-                    id="submitButton"
-                    class="sell-submit"
-                >
-                    🚀 Post My Phone
-                </button>
-
-                <a
-                    href="{{ url_for('home') }}"
-                    class="sell-back"
-                >
-                    ← Back to Home
-                </a>
-
-                <p class="sell-note">
-                    By posting, you confirm that your listing
-                    information and photos are accurate.
-                </p>
-
-            </form>
-
+<div class="container sell-container">
+
+    <div class="sell-card">
+        <div class="sell-header">
+            <h1>List Your Smartphone for Sale</h1>
+            <p>Accurate condition disclosure builds buyer trust and ensures rapid, dispute-free sales.</p>
         </div>
+
+        <form action="{{ url_for('sell') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- 1. DEVICE HARDWARE -->
+            <div class="form-section">
+                <h3>📱 1. Device Information</h3>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="brand">Brand *</label>
+                        <select id="brand" name="brand" class="form-select" required>
+                            <option value="">Select Brand</option>
+                            <option value="Apple">Apple</option>
+                            <option value="Samsung">Samsung</option>
+                            <option value="OnePlus">OnePlus</option>
+                            <option value="Google">Google Pixel</option>
+                            <option value="Xiaomi">Xiaomi</option>
+                            <option value="Motorola">Motorola</option>
+                            <option value="Realme">Realme</option>
+                            <option value="Vivo">Vivo</option>
+                            <option value="Oppo">Oppo</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="model">Model Name *</label>
+                        <input type="text" id="model" name="model" class="form-input" placeholder="e.g. iPhone 15 Pro, Galaxy S23" required maxlength="80">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="storage">Storage Capacity *</label>
+                        <select id="storage" name="storage" class="form-select" required>
+                            <option value="64GB">64GB</option>
+                            <option value="128GB" selected>128GB</option>
+                            <option value="256GB">256GB</option>
+                            <option value="512GB">512GB</option>
+                            <option value="1TB">1TB</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="ram">RAM (Optional)</label>
+                        <input type="text" id="ram" name="ram" class="form-input" placeholder="e.g. 8GB, 12GB">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="color">Device Color</label>
+                        <input type="text" id="color" name="color" class="form-input" placeholder="e.g. Midnight Black, Titanium Blue">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="battery">Battery Health % (1-100)</label>
+                        <input type="number" id="battery" name="battery" class="form-input" placeholder="e.g. 88 (Leave blank if unknown)" min="1" max="100">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. CONDITION & DISCLOSURE -->
+            <div class="form-section">
+                <h3>🛡️ 2. Accurate Condition & Damage Disclosures</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="condition">Overall Condition Grade *</label>
+                        <select id="condition" name="condition" class="form-select" required>
+                            <option value="Like New">Like New (Flawless, no visible marks)</option>
+                            <option value="Excellent" selected>Excellent (Micro-scratches barely visible)</option>
+                            <option value="Good">Good (Minor normal signs of use)</option>
+                            <option value="Fair">Fair (Noticeable dents, heavy scratches)</option>
+                            <option value="For Parts">For Parts / Spares</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="screen_damage">Screen Damage *</label>
+                        <select id="screen_damage" name="screen_damage" class="form-select" required>
+                            <option value="No Damage">No Damage / Pristine</option>
+                            <option value="Minor Scratches">Minor Scratches</option>
+                            <option value="Cracked Glass">Cracked Glass</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="body_damage">Body / Frame Damage *</label>
+                        <select id="body_damage" name="body_damage" class="form-select" required>
+                            <option value="No Damage">No Damage</option>
+                            <option value="Minor Scuffs">Minor Scuffs / Rub marks</option>
+                            <option value="Dents on Edges">Dents on Edges</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="repair_history">Repair History *</label>
+                        <select id="repair_history" name="repair_history" class="form-select" required>
+                            <option value="Never Repaired">Never Repaired (All Original)</option>
+                            <option value="Authorized Service Repair">Authorized Brand Service Repair</option>
+                            <option value="Screen Replaced">Screen Replaced</option>
+                            <option value="Battery Replaced">Battery Replaced</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="original_display">Original Display *</label>
+                        <select id="original_display" name="original_display" class="form-select" required>
+                            <option value="Yes">Yes (Factory Display)</option>
+                            <option value="No">No (Third-party Screen)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="accessories">Included Accessories *</label>
+                        <select id="accessories" name="accessories" class="form-select" required>
+                            <option value="Original Box & Charger">Original Box & Charger</option>
+                            <option value="Only Box">Only Box</option>
+                            <option value="Only Charger">Only Charger</option>
+                            <option value="Phone Only">Phone Only</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. PRICING & PHOTOS -->
+            <div class="form-section">
+                <h3>💰 3. Pricing, Description & Photos</h3>
+
+                <div class="form-group">
+                    <label class="form-label" for="price">Selling Price in Rupees (₹) *</label>
+                    <input type="number" id="price" name="price" class="form-input" placeholder="e.g. 45000" required min="500" max="500000">
+                    <small style="color: var(--text-muted); font-size: 12px;">This is the exact amount the buyer will pay on delivery.</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="description">Detailed Description *</label>
+                    <textarea id="description" name="description" class="form-textarea" rows="4" placeholder="Detail purchase age, warranty status, reason for selling, and any included covers." required maxlength="1000"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Upload Product Photos (1 to 10 images) *</label>
+                    <div class="file-dropzone" onclick="document.getElementById('photos').click()">
+                        <div style="font-size: 28px; margin-bottom: 6px;">📷</div>
+                        <strong>Click to select images</strong>
+                        <p style="font-size: 12px; color: var(--text-muted);">Supports JPG, PNG, WEBP (Max 10MB per file)</p>
+                    </div>
+                    <input type="file" id="photos" name="photos" multiple accept="image/jpeg,image/png,image/webp" style="display: none;" required onchange="showFileCount(this)">
+                    <small id="fileCountMsg" style="display: block; margin-top: 6px; font-weight: 600; color: var(--primary);"></small>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit-listing">Submit Listing for Moderation</button>
+        </form>
     </div>
+
 </div>
 {% endblock %}
 
-
 {% block extra_js %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-
-    const form = document.getElementById("sellForm");
-    const photoInput = document.getElementById("photoInput");
-    const photoPreview = document.getElementById("photoPreview");
-    const photoCount = document.getElementById("photoCount");
-    const submitButton = document.getElementById("submitButton");
-    const errorBox = document.getElementById("sellError");
-    const sellerPhone = document.getElementById("seller_phone");
-
-    const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/webp"
-    ];
-
-
-    function showError(message, field) {
-        errorBox.textContent = message;
-        errorBox.classList.add("visible");
-
-        if (field) {
-            field.focus();
+    function showFileCount(input) {
+        const count = input.files.length;
+        const msg = document.getElementById('fileCountMsg');
+        if (count > 0) {
+            msg.textContent = `${count} image(s) selected for upload.`;
+        } else {
+            msg.textContent = '';
         }
-
-        errorBox.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-        });
     }
-
-
-    function clearError() {
-        errorBox.textContent = "";
-        errorBox.classList.remove("visible");
-    }
-
-
-    // PHONE NUMBER
-
-    sellerPhone.addEventListener("input", function () {
-        sellerPhone.value = sellerPhone.value
-            .replace(/\D/g, "")
-            .slice(0, 10);
-    });
-
-
-    // PHOTO PREVIEW
-
-    photoInput.addEventListener("change", function () {
-
-        clearError();
-
-        photoPreview.innerHTML = "";
-        photoCount.textContent = "";
-
-        const files = Array.from(photoInput.files);
-
-        if (files.length > 10) {
-            photoInput.value = "";
-
-            showError(
-                "Maximum 10 photos are allowed.",
-                photoInput
-            );
-
-            return;
-        }
-
-        const invalidFile = files.find(function (file) {
-            return !allowedTypes.includes(file.type);
-        });
-
-        if (invalidFile) {
-            photoInput.value = "";
-
-            showError(
-                "Only JPG, PNG and WEBP photos are allowed.",
-                photoInput
-            );
-
-            return;
-        }
-
-        if (files.length === 0) {
-            return;
-        }
-
-        photoCount.textContent =
-            files.length + " / 10 photos selected";
-
-        files.forEach(function (file, index) {
-
-            const reader = new FileReader();
-
-            reader.onload = function (event) {
-
-                const box = document.createElement("div");
-                box.className = "sell-preview-box";
-
-                const img = document.createElement("img");
-                img.src = event.target.result;
-                img.alt = "Phone photo " + (index + 1);
-
-                const number = document.createElement("span");
-                number.textContent = "Photo " + (index + 1);
-
-                box.appendChild(img);
-                box.appendChild(number);
-
-                photoPreview.appendChild(box);
-            };
-
-            reader.readAsDataURL(file);
-        });
-    });
-
-
-    // FORM VALIDATION
-
-    form.addEventListener("submit", function (event) {
-
-        clearError();
-
-        const requiredFields = [
-            ["brand", "Brand"],
-            ["model", "Model"],
-            ["price", "Selling Price"],
-            ["storage", "Storage"],
-            ["condition", "Overall Condition"],
-            ["screen_damage", "Screen Damage"],
-            ["body_damage", "Body Damage"],
-            ["repair_history", "Repair History"],
-            ["original_display", "Original Display"],
-            ["accessories", "Box & Accessories"],
-            ["description", "Phone Description"],
-            ["seller_name", "Seller Name"],
-            ["seller_phone", "Mobile Number"]
-        ];
-
-        for (const item of requiredFields) {
-
-            const field = document.getElementById(item[0]);
-            const label = item[1];
-
-            if (!field.value.trim()) {
-                event.preventDefault();
-
-                showError(
-                    "Please fill: " + label,
-                    field
-                );
-
-                return;
-            }
-
-            if (!field.checkValidity()) {
-                event.preventDefault();
-
-                showError(
-                    "Please enter a valid value for: " + label,
-                    field
-                );
-
-                return;
-            }
-        }
-
-
-        // OPTIONAL BATTERY VALIDATION
-
-        const battery = document.getElementById("battery");
-
-        if (battery.value && !battery.checkValidity()) {
-            event.preventDefault();
-
-            showError(
-                "Battery Health must be between 1 and 100.",
-                battery
-            );
-
-            return;
-        }
-
-
-        // PHOTO VALIDATION
-
-        const files = Array.from(photoInput.files);
-
-        if (files.length < 1 || files.length > 10) {
-            event.preventDefault();
-
-            showError(
-                "Please upload between 1 and 10 phone photos.",
-                photoInput
-            );
-
-            return;
-        }
-
-        const invalidFile = files.find(function (file) {
-            return !allowedTypes.includes(file.type);
-        });
-
-        if (invalidFile) {
-            event.preventDefault();
-
-            showError(
-                "Only JPG, PNG and WEBP photos are allowed.",
-                photoInput
-            );
-
-            return;
-        }
-
-
-        // VALIDATE REMAINING FORM CONSTRAINTS
-
-        if (!form.checkValidity()) {
-            event.preventDefault();
-
-            const invalidField =
-                form.querySelector(":invalid");
-
-            showError(
-                "Please check the highlighted required field.",
-                invalidField
-            );
-
-            return;
-        }
-
-
-        // PREVENT DOUBLE SUBMISSION
-
-        if (submitButton.disabled) {
-            event.preventDefault();
-            return;
-        }
-
-        submitButton.disabled = true;
-        submitButton.textContent =
-            "Posting your phone... Please wait";
-    });
-
-
-    // RESET BUTTON WHEN RETURNING USING BROWSER BACK
-
-    window.addEventListener("pageshow", function () {
-        submitButton.disabled = false;
-        submitButton.textContent = "🚀 Post My Phone";
-    });
-
-});
 </script>
 {% endblock %}

@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Help, Support & Trust Policies | iSellora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .support-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 36px;
+        margin-bottom: 50px;
+    }
+
+    .support-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 30px;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 24px;
+    }
+
+    .support-card h3 {
+        font-size: 18px;
+        font-weight: 800;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 10px;
+    }
+
+    .faq-item {
+        margin-bottom: 16px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .faq-item h5 {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 4px;
+        color: var(--text-main);
+    }
+
+    .faq-item p {
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .form-input, .form-textarea {
+        width: 100%;
+        padding: 10px 14px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+    }
+
+    .form-input:focus, .form-textarea:focus {
+        outline: none;
+        background: white;
+        border-color: var(--border-focus);
+    }
+
+    .btn-submit-ticket {
+        width: 100%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: var(--radius-md);
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    .ticket-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+    }
+
+    .ticket-row:last-child {
+        border-bottom: none;
+    }
+
+    .badge-pill {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: var(--radius-full);
+    }
+    .badge-open { background: #fef3c7; color: #92400e; }
+    .badge-resolved { background: var(--success-light); color: #065f46; }
+
+    @media (max-width: 800px) {
+        .support-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div style="margin-bottom: 28px;">
+        <h1 style="font-size: 28px; font-weight: 800; margin-bottom: 6px;">Customer Support & Trust Policies</h1>
+        <p style="color: var(--text-muted); font-size: 15px;">Clear standards, direct assistance, and dispute mediation.</p>
+    </div>
+
+    <div class="support-grid">
+        <!-- LEFT: FAQ & POLICIES -->
+        <div>
+            <div class="support-card">
+                <h3>🛡️ Marketplace Standards & Policies</h3>
+                
+                <div class="faq-item">
+                    <h5>How does payment work?</h5>
+                    <p>Online payment gateways are intentionally deferred in this phase. Payment is completed directly upon delivery or pickup handover (Cash on Delivery / Direct Handover) after you inspect the device.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h5>What if a phone is misrepresented?</h5>
+                    <p>Every seller is required to disclose scratches, battery health, and repair history. If a device has undisclosed defects upon arrival, you have the right to refuse the delivery or reject the pickup handover without obligation.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h5>How does order reservation work?</h5>
+                    <p>When you place an order, our database locks the single-unit listing into a reserved status. No other buyer can purchase it while your order is active.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h5>Can I cancel my order?</h5>
+                    <p>Yes. Buyers can cancel pending orders directly from the "My Orders" page prior to dispatch. When cancelled, the reservation is released back to the marketplace immediately.</p>
+                </div>
+            </div>
+
+            <!-- MY PREVIOUS TICKETS -->
+            {% if session.get('user_id') %}
+                <div class="support-card">
+                    <h3>📋 My Support Inquiries</h3>
+                    {% if tickets %}
+                        {% for tkt in tickets %}
+                            <div class="ticket-row">
+                                <div>
+                                    <strong>{{ tkt.ticket_number }}</strong>: {{ tkt.subject }}
+                                    <small style="display: block; color: var(--text-muted);">{{ tkt.created_at.strftime('%d %b %Y') if tkt.created_at else '' }}</small>
+                                </div>
+                                <span class="badge-pill badge-{{ 'resolved' if tkt.status == 'Resolved' else 'open' }}">{{ tkt.status }}</span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="font-size: 13px; color: var(--text-muted);">You have no submitted tickets.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- RIGHT: CONTACT / TICKET FORM -->
+        <div>
+            <div class="support-card">
+                <h3>💬 Open a Support Ticket</h3>
+                {% if session.get('user_id') %}
+                    <form action="{{ url_for('support') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="form-group">
+                            <label class="form-label" for="subject">Subject / Issue Type *</label>
+                            <input type="text" id="subject" name="subject" class="form-input" placeholder="e.g. Delivery coordination issue, Seller dispute" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="order_id">Related Order ID (Optional)</label>
+                            <input type="text" id="order_id" name="order_id" class="form-input" placeholder="e.g. 937f007c-3f03...">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="description">Detailed Description *</label>
+                            <textarea id="description" name="description" class="form-textarea" rows="5" placeholder="Explain the situation in detail so our support team can assist you." required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-submit-ticket">Submit Support Ticket</button>
+                    </form>
+                {% else %}
+                    <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">Please sign in to submit a support inquiry linked to your account.</p>
+                    <a href="{{ url_for('login', next=request.path) }}" class="btn-submit-ticket" style="display: block; text-align: center; text-decoration: none;">Sign In to Open Ticket</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

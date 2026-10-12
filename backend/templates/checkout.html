@@ -1,254 +1,329 @@
+{% extends "base.html" %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout | iSellora</title>
+{% block title %}Checkout & Reservation | {{ phone.brand }} {{ phone.model }}{% endblock %}
 
-    <style>
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            padding: 24px 14px;
-            background: #f4f6fb;
-            color: #202438;
-            font-family: Arial, sans-serif;
-        }
-
-        .container {
-            max-width: 850px;
-            margin: auto;
-        }
-
-        .card {
-            background: white;
-            padding: 24px;
-            margin-bottom: 20px;
-            border-radius: 16px;
-            box-shadow: 0 5px 22px rgba(0,0,0,.06);
-        }
-
-        h1, h2 { margin-top: 0; }
-        h1 { font-size: 27px; }
-        h2 { font-size: 20px; }
-
-        .product {
-            background: #f8f9ff;
-            padding: 18px;
-            border-radius: 12px;
-            margin-bottom: 18px;
-        }
-
-        .price {
-            color: #5b45d6;
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        label {
-            display: block;
-            margin: 15px 0 7px;
-            font-weight: 600;
-        }
-
-        input, textarea, select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #d6d9e4;
-            border-radius: 9px;
-            font-size: 15px;
-        }
-
-        textarea {
-            min-height: 95px;
-            resize: vertical;
-        }
-
-        .payment {
-            border: 1px solid #ddd7ff;
-            background: #faf9ff;
-            padding: 18px;
-            border-radius: 12px;
-        }
-
-        .notice {
-            background: #fff6df;
-            padding: 12px;
-            border-radius: 8px;
-            line-height: 1.5;
-        }
-
-        .qr {
-            display: block;
-            width: 200px;
-            max-width: 100%;
-            height: auto;
-            margin: 16px auto;
-            border-radius: 10px;
-        }
-
-        .button {
-            display: block;
-            width: 100%;
-            border: 0;
-            padding: 15px;
-            margin-top: 22px;
-            border-radius: 10px;
-            background: #5b45d6;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .button:hover { background: #4632b6; }
-
-        .back {
-            color: #5b45d6;
-            text-decoration: none;
-        }
-
-        .muted {
-            color: #646b7e;
-            line-height: 1.6;
-        }
-
-        [hidden] { display: none !important; }
-    </style>
-</head>
-
-<body>
-<div class="container">
-
-    <p><a class="back" href="{{ url_for('products') }}">← Back to products</a></p>
-
-    <div class="card">
-        <h1>Checkout</h1>
-        <p class="muted">Confirm your details before placing your order.</p>
-
-        <div class="product">
-            <h2>{{ phone.get('brand', 'Phone') }} {{ phone.get('model', '') }}</h2>
-            <p class="price">
-                ₹{{ "%.2f"|format(phone.get('price', 0)|float) }}
-            </p>
-        </div>
-
-        <form method="POST">
-            <h2>Buyer Details</h2>
-
-            <label for="buyer_name">Full Name</label>
-            <input
-                id="buyer_name"
-                name="buyer_name"
-                type="text"
-                minlength="2"
-                maxlength="100"
-                required
-                autocomplete="name"
-                placeholder="Enter your full name"
-            >
-
-            <label for="buyer_phone">Mobile Number</label>
-            <input
-                id="buyer_phone"
-                name="buyer_phone"
-                type="tel"
-                inputmode="numeric"
-                pattern="[0-9]{10}"
-                maxlength="10"
-                required
-                autocomplete="tel"
-                placeholder="10-digit mobile number"
-            >
-
-            <h2 style="margin-top:28px;">Delivery Method</h2>
-
-            <label for="delivery_method">Choose delivery method</label>
-            <select id="delivery_method" name="delivery_method" required>
-                <option value="shipping">Home Delivery</option>
-                <option value="pickup">Local Pickup</option>
-            </select>
-
-            <div id="shipping_fields">
-                <label for="address">Complete Delivery Address</label>
-                <textarea
-                    id="address"
-                    name="address"
-                    minlength="10"
-                    maxlength="500"
-                    placeholder="House number, street, area, city"
-                ></textarea>
-
-                <label for="pincode">PIN Code</label>
-                <input
-                    id="pincode"
-                    name="pincode"
-                    type="text"
-                    inputmode="numeric"
-                    pattern="[0-9]{6}"
-                    maxlength="6"
-                    placeholder="6-digit PIN code"
-                >
-            </div>
-
-            <h2 style="margin-top:28px;">Payment Method</h2>
-
-            <div class="payment">
-                <h3>UPI QR / UPI App</h3>
-
-                <p class="muted">
-                    Place your order first. After the order is created,
-                    use the payment instructions and submit your UPI
-                    transaction reference on the order confirmation page.
-                </p>
-
-                <p>
-                    <strong>UPI ID:</strong>
-                    YOUR-UPI-ID@bank
-                </p>
-
-                <p class="notice">
-                    <strong>Important:</strong>
-                    The UPI ID above is a placeholder. Replace it with
-                    your real business UPI ID before accepting payments.
-                    Add your genuine QR image as
-                    <code>backend/static/uploads/upi-qr.png</code>
-                    before displaying it to customers.
-                </p>
-
-                <p class="muted">
-                    Payment status remains pending until the administrator
-                    checks the actual transaction and verifies it.
-                    Submitting an order or reference does not automatically
-                    mark the payment as Paid.
-                </p>
-            </div>
-
-            <button class="button" type="submit">
-                Place Order
-            </button>
-        </form>
-    </div>
-</div>
-
-<script>
-    const deliveryMethod = document.getElementById("delivery_method");
-    const shippingFields = document.getElementById("shipping_fields");
-    const addressField = document.getElementById("address");
-    const pincodeField = document.getElementById("pincode");
-
-    function updateDeliveryFields() {
-        const shipping = deliveryMethod.value === "shipping";
-
-        shippingFields.hidden = !shipping;
-        addressField.required = shipping;
-        pincodeField.required = shipping;
+{% block extra_css %}
+<style>
+    .checkout-layout {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 36px;
+        align-items: start;
+        margin: 20px 0 50px;
     }
 
-    deliveryMethod.addEventListener("change", updateDeliveryFields);
-    updateDeliveryFields();
+    .checkout-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .checkout-card h2 {
+        font-size: 22px;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+    .checkout-card p.subtitle {
+        color: var(--text-muted);
+        font-size: 14px;
+        margin-bottom: 24px;
+    }
+
+    .form-group {
+        margin-bottom: 18px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: var(--text-main);
+    }
+
+    .form-input, .form-textarea, .form-select {
+        width: 100%;
+        padding: 10px 14px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        color: var(--text-main);
+    }
+
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+        outline: none;
+        background: white;
+        border-color: var(--border-focus);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .delivery-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .delivery-option-box {
+        border: 2px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .delivery-option-box input {
+        margin-bottom: 4px;
+    }
+
+    .delivery-option-box.active {
+        border-color: var(--primary);
+        background: var(--primary-light);
+    }
+
+    .delivery-option-box strong {
+        font-size: 14px;
+    }
+
+    .delivery-option-box small {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    .payment-notice-box {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: var(--radius-md);
+        padding: 18px;
+        margin-bottom: 24px;
+        font-size: 13px;
+        color: #166534;
+        line-height: 1.5;
+    }
+
+    .payment-notice-box h4 {
+        font-size: 14px;
+        font-weight: 800;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-place-order {
+        width: 100%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: var(--radius-md);
+        font-size: 16px;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+        transition: background 0.2s;
+    }
+
+    .btn-place-order:hover {
+        background: var(--primary-hover);
+    }
+
+    /* Summary Card */
+    .summary-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        position: sticky;
+        top: 96px;
+    }
+
+    .summary-item-header {
+        display: flex;
+        gap: 16px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 18px;
+    }
+
+    .summary-thumb {
+        width: 70px;
+        height: 70px;
+        background: #f1f5f9;
+        border-radius: var(--radius-md);
+        object-fit: contain;
+        padding: 4px;
+    }
+
+    .summary-breakdown {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        font-size: 14px;
+        margin-bottom: 18px;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        color: var(--text-muted);
+    }
+
+    .summary-row.total {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--text-main);
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 850px) {
+        .checkout-layout {
+            grid-template-columns: 1fr;
+        }
+        .summary-card {
+            position: static;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="checkout-layout">
+        <!-- FORM COLUMN -->
+        <div class="checkout-card">
+            <h2>Order & Reserve Smartphone</h2>
+            <p class="subtitle">Complete your delivery details to lock in your reservation. Concurrency controls ensure this device cannot be purchased by anyone else.</p>
+
+            <form action="{{ url_for('buy_now', listing_id=phone.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="checkout_token" value="{{ checkout_token }}">
+
+                <!-- Full Name -->
+                <div class="form-group">
+                    <label class="form-label" for="buyer_name">Full Name *</label>
+                    <input type="text" id="buyer_name" name="buyer_name" class="form-input" placeholder="Your full name" value="{{ current_user.name if current_user else '' }}" required minlength="2" maxlength="100">
+                </div>
+
+                <!-- Phone -->
+                <div class="form-group">
+                    <label class="form-label" for="buyer_phone">10-Digit Mobile Number *</label>
+                    <input type="tel" id="buyer_phone" name="buyer_phone" class="form-input" placeholder="e.g. 9876543210" value="{{ current_user.phone if current_user else '' }}" required pattern="[6-9][0-9]{9}">
+                </div>
+
+                <!-- Delivery Method Selector -->
+                <div class="form-group">
+                    <label class="form-label">Delivery Arrangement *</label>
+                    <div class="delivery-options">
+                        <label class="delivery-option-box active" id="optPickup">
+                            <input type="radio" name="delivery_method" value="pickup" checked onchange="toggleDeliveryMode(this.value)">
+                            <strong>Local Pickup (Free)</strong>
+                            <small>Coordinate meeting directly with seller</small>
+                        </label>
+                        <label class="delivery-option-box" id="optShipping">
+                            <input type="radio" name="delivery_method" value="shipping" onchange="toggleDeliveryMode(this.value)">
+                            <strong>Insured Courier (₹150)</strong>
+                            <small>Tracked shipment to your doorstep</small>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Shipping Address Section (toggled) -->
+                <div id="shippingFields" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label" for="address">Delivery Address *</label>
+                        <textarea id="address" name="address" class="form-textarea" rows="3" placeholder="Full street address, building, landmark, and city"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="pincode">6-Digit PIN Code *</label>
+                        <input type="text" id="pincode" name="pincode" class="form-input" placeholder="e.g. 560001" maxlength="6">
+                    </div>
+                </div>
+
+                <!-- Honest Payment Notice -->
+                <div class="payment-notice-box">
+                    <h4>🛡️ Safe Direct Settlement</h4>
+                    <p>
+                        <strong>No online payment gateway is activated in this phase.</strong>
+                        Your order will be marked <em>"Not collected"</em>. You will verify device condition firsthand and settle payment directly upon delivery or pickup handover.
+                    </p>
+                </div>
+
+                <button type="submit" class="btn-place-order">Confirm Order & Reserve Phone</button>
+            </form>
+        </div>
+
+        <!-- SUMMARY COLUMN -->
+        <aside class="summary-card">
+            <h3 style="font-size: 18px; font-weight: 800; margin-bottom: 16px;">Reservation Summary</h3>
+            <div class="summary-item-header">
+                <img src="{{ phone.primary_image }}" alt="Phone Preview" class="summary-thumb">
+                <div>
+                    <h4 style="font-size: 15px; font-weight: 800;">{{ phone.brand }} {{ phone.model }}</h4>
+                    <span style="font-size: 12px; color: var(--text-muted);">{{ phone.storage }} · {{ phone.condition }}</span>
+                </div>
+            </div>
+
+            <div class="summary-breakdown">
+                <div class="summary-row">
+                    <span>Phone Price</span>
+                    <strong style="color: var(--text-main);">{{ phone.formatted_price }}</strong>
+                </div>
+                <div class="summary-row">
+                    <span>Delivery Charge</span>
+                    <strong id="summaryDeliveryFee" style="color: var(--text-main);">₹0 (Pickup)</strong>
+                </div>
+                <div class="summary-row total">
+                    <span>Total Amount</span>
+                    <span id="summaryTotal">{{ phone.formatted_price }}</span>
+                </div>
+            </div>
+
+            <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                ✓ Single-unit inventory reserved immediately upon submission.<br>
+                ✓ Cancel anytime prior to dispatch without cancellation penalties.
+            </div>
+        </aside>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const phoneBasePrice = {{ phone.price_rupees }};
+
+    function toggleDeliveryMode(method) {
+        const shippingFields = document.getElementById('shippingFields');
+        const optPickup = document.getElementById('optPickup');
+        const optShipping = document.getElementById('optShipping');
+        const summaryDeliveryFee = document.getElementById('summaryDeliveryFee');
+        const summaryTotal = document.getElementById('summaryTotal');
+
+        if (method === 'shipping') {
+            shippingFields.style.display = 'block';
+            optShipping.classList.add('active');
+            optPickup.classList.remove('active');
+            summaryDeliveryFee.textContent = '₹150';
+            const total = phoneBasePrice + 150;
+            summaryTotal.textContent = '₹' + total.toLocaleString('en-IN');
+        } else {
+            shippingFields.style.display = 'none';
+            optPickup.classList.add('active');
+            optShipping.classList.remove('active');
+            summaryDeliveryFee.textContent = '₹0 (Pickup)';
+            summaryTotal.textContent = '₹' + phoneBasePrice.toLocaleString('en-IN');
+        }
+    }
 </script>
-</body>
-</html>
+{% endblock %}

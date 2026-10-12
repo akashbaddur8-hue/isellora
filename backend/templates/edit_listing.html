@@ -1,0 +1,1019 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Edit {{ phone.brand }} {{ phone.model }} | iSellora
+    </title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f6f7fb;
+            color: #222;
+        }
+
+        header {
+            background: white;
+            padding: 20px 8%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #6d28d9;
+            text-decoration: none;
+        }
+
+        header .back-link {
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .box {
+            background: white;
+            padding: 35px;
+            border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            color: #6d28d9;
+            margin-bottom: 12px;
+            font-size: 30px;
+        }
+
+        .subtitle {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .current-info {
+            background: #faf8ff;
+            border: 1px solid #e6dcff;
+            padding: 18px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            line-height: 1.8;
+            overflow-wrap: anywhere;
+        }
+
+        .current-info strong {
+            color: #6d28d9;
+        }
+
+        .section {
+            margin-bottom: 35px;
+        }
+
+        .section-title {
+            font-size: 21px;
+            color: #6d28d9;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 12px;
+            margin-bottom: 22px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .field {
+            margin-bottom: 18px;
+            min-width: 0;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 15px;
+            background: white;
+            color: #222;
+        }
+
+        textarea {
+            min-height: 130px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #6d28d9;
+            box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.08);
+        }
+
+        .hint {
+            color: #777;
+            font-size: 12px;
+            margin-top: 7px;
+            line-height: 1.5;
+        }
+
+        .warning {
+            background: #fff7ed;
+            color: #9a3412;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-top: 12px;
+        }
+
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .photo-card {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fafafa;
+        }
+
+        .photo-card img {
+            width: 100%;
+            height: 115px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .photo-card p {
+            text-align: center;
+            padding: 8px 4px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .readonly-note {
+            background: #f3f4f6;
+            border-radius: 10px;
+            padding: 14px;
+            color: #555;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-top: 15px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 22px;
+            border: none;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 15px;
+            text-align: center;
+        }
+
+        .save {
+            background: #6d28d9;
+            color: white;
+            flex: 1;
+        }
+
+        .save:hover {
+            background: #5b21b6;
+        }
+
+        .save:disabled {
+            background: #a78bfa;
+            cursor: not-allowed;
+        }
+
+        .cancel {
+            background: #eee;
+            color: #333;
+        }
+
+        @media (max-width: 650px) {
+            header {
+                padding: 18px 5%;
+            }
+
+            .logo {
+                font-size: 24px;
+            }
+
+            .container {
+                margin: 20px auto;
+                padding: 0 12px;
+            }
+
+            .box {
+                padding: 22px;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .full-width {
+                grid-column: auto;
+            }
+
+            .photos-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+
+    <header>
+        <a
+            href="{{ url_for('home') }}"
+            class="logo"
+        >
+            iSellora
+        </a>
+
+        <a
+            href="{{ url_for('products') }}"
+            class="back-link"
+        >
+            ← Products
+        </a>
+    </header>
+
+
+    <main class="container">
+
+        <div class="box">
+
+            <h1>✏️ Edit Your Listing</h1>
+
+            <p class="subtitle">
+                Update your phone details so buyers
+                can see accurate information.
+            </p>
+
+
+            <!-- CURRENT LISTING -->
+
+            <div class="current-info">
+
+                <p>
+                    <strong>Listing ID:</strong>
+                    {{ phone.get('id', '') }}
+                </p>
+
+                <p>
+                    <strong>Current Product:</strong>
+                    {{ phone.get('brand', '') }}
+                    {{ phone.get('model', '') }}
+                </p>
+
+            </div>
+
+
+            <!-- EDIT FORM -->
+
+            <form
+                id="editForm"
+                action="{{ url_for('edit_listing', listing_id=phone.get('id')) }}"
+                method="POST"
+            >
+
+
+                <!-- PHONE INFORMATION -->
+
+                <section class="section">
+
+                    <h2 class="section-title">
+                        📱 Phone Information
+                    </h2>
+
+                    <div class="form-grid">
+
+
+                        <!-- BRAND -->
+
+                        <div class="field">
+
+                            <label for="brand">
+                                Brand *
+                            </label>
+
+                            <select
+                                name="brand"
+                                id="brand"
+                                required
+                            >
+
+                                {% set brands = [
+                                    'Apple',
+                                    'Samsung',
+                                    'OnePlus',
+                                    'Google',
+                                    'Xiaomi',
+                                    'Vivo',
+                                    'Oppo',
+                                    'Realme',
+                                    'Motorola',
+                                    'Nothing',
+                                    'Other'
+                                ] %}
+
+                                {% for brand in brands %}
+
+                                <option
+                                    value="{{ brand }}"
+                                    {% if phone.get('brand') == brand %}
+                                    selected
+                                    {% endif %}
+                                >
+                                    {{ brand }}
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- MODEL -->
+
+                        <div class="field">
+
+                            <label for="model">
+                                Model *
+                            </label>
+
+                            <input
+                                type="text"
+                                name="model"
+                                id="model"
+                                value="{{ phone.get('model', '') }}"
+                                maxlength="80"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- PRICE -->
+
+                        <div class="field">
+
+                            <label for="price">
+                                Selling Price (₹) *
+                            </label>
+
+                            <input
+                                type="number"
+                                name="price"
+                                id="price"
+                                value="{{ phone.get('price', '') }}"
+                                min="1"
+                                max="100000000"
+                                step="1"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- STORAGE -->
+
+                        <div class="field">
+
+                            <label for="storage">
+                                Storage *
+                            </label>
+
+                            <select
+                                name="storage"
+                                id="storage"
+                                required
+                            >
+
+                                {% set storage_options = [
+                                    '32GB',
+                                    '64GB',
+                                    '128GB',
+                                    '256GB',
+                                    '512GB',
+                                    '1TB',
+                                    'Other'
+                                ] %}
+
+                                {% for storage in storage_options %}
+
+                                <option
+                                    value="{{ storage }}"
+                                    {% if phone.get('storage') == storage %}
+                                    selected
+                                    {% endif %}
+                                >
+                                    {{ storage }}
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- BATTERY -->
+
+                        <div class="field">
+
+                            <label for="battery">
+                                Battery Health (%)
+                            </label>
+
+                            <input
+                                type="number"
+                                name="battery"
+                                id="battery"
+                                value="{{ phone.get('battery', '') }}"
+                                min="1"
+                                max="100"
+                                placeholder="Example: 90"
+                            >
+
+                            <p class="hint">
+                                Optional if your phone does not
+                                show battery health.
+                            </p>
+
+                        </div>
+
+
+                        <!-- CONDITION -->
+
+                        <div class="field">
+
+                            <label for="condition">
+                                Overall Condition *
+                            </label>
+
+                            <select
+                                name="condition"
+                                id="condition"
+                                required
+                            >
+
+                                {% set conditions = [
+                                    'Like New',
+                                    'Excellent',
+                                    'Good',
+                                    'Fair',
+                                    'Damaged',
+                                    'For Parts'
+                                ] %}
+
+                                {% for condition in conditions %}
+
+                                <option
+                                    value="{{ condition }}"
+                                    {% if phone.get('condition') == condition %}
+                                    selected
+                                    {% endif %}
+                                >
+                                    {{ condition }}
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- DAMAGE AND REPAIR DETAILS -->
+
+                <section class="section">
+
+                    <h2 class="section-title">
+                        🔍 Damage & Repair Details
+                    </h2>
+
+                    <div class="form-grid">
+
+
+                        <!-- SCREEN DAMAGE -->
+
+                        <div class="field">
+
+                            <label for="screen_damage">
+                                Screen Damage *
+                            </label>
+
+                            <select
+                                name="screen_damage"
+                                id="screen_damage"
+                                required
+                            >
+
+                                <option value="">
+                                    Select Screen Condition
+                                </option>
+
+                                {% set screen_options = [
+                                    'No Damage',
+                                    'Minor Scratches',
+                                    'Deep Scratches',
+                                    'Cracked Screen',
+                                    'Display Not Working',
+                                    'Other'
+                                ] %}
+
+                                {% for option in screen_options %}
+
+                                <option
+                                    value="{{ option }}"
+                                    {% if phone.get('screen_damage') == option %}
+                                    selected
+                                    {% endif %}
+                                >
+                                    {{ option }}
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- BODY DAMAGE -->
+
+                        <div class="field">
+
+                            <label for="body_damage">
+                                Body Damage *
+                            </label>
+
+                            <select
+                                name="body_damage"
+                                id="body_damage"
+                                required
+                            >
+
+                                <option value="">
+                                    Select Body Condition
+                                </option>
+
+                                {% set body_options = [
+                                    'No Damage',
+                                    'Minor Scratches',
+                                    'Deep Scratches',
+                                    'Dents',
+                                    'Back Glass Cracked',
+                                    'Major Damage'
+                                ] %}
+
+                                {% for option in body_options %}
+
+                                <option
+                                    value="{{ option }}"
+                                    {% if phone.get('body_damage') == option %}
+                                    selected
+                                    {% endif %}
+                                >
+                                    {{ option }}
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- REPAIR HISTORY -->
+
+                        <div class="field">
+
+                            <label for="repair_history">
+                                Repair History *
+                            </label>
+
+                            <select
+                                name="repair_history"
+                                id="repair_history"
+                                required
+                            >
+
+                                <option value="">
+                                    Select Repair History
+                                </option>
+
+                                {% set repair_options = [
+                                    'Never Repaired',
+                                    'Screen Replaced',
+                                    'Battery Replaced',
+                                    'Screen and Battery Replaced',
+                                    'Other Repairs',
+                                    'Unknown'
+                                ] %}
+
+                                {% for option in repair_options %}
+
+                                <option
+                                    value="{{ option }}"
+                                    {% if phone.get('repair_history') == option %}
+                                    selected
+                                    {% endif %}
+                                >
+                                    {{ option }}
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- ORIGINAL DISPLAY -->
+
+                        <div class="field">
+
+                            <label for="original_display">
+                                Original Display *
+                            </label>
+
+                            <select
+                                name="original_display"
+                                id="original_display"
+                                required
+                            >
+
+                                <option value="">
+                                    Select Display Type
+                                </option>
+
+                                {% set display_options = [
+                                    'Yes',
+                                    'No',
+                                    'Not Sure'
+                                ] %}
+
+                                {% for option in display_options %}
+
+                                <option
+                                    value="{{ option }}"
+                                    {% if phone.get('original_display') == option %}
+                                    selected
+                                    {% endif %}
+                                >
+
+                                    {% if option == 'Yes' %}
+                                        Yes, Original
+                                    {% elif option == 'No' %}
+                                        No, Replaced
+                                    {% else %}
+                                        Not Sure
+                                    {% endif %}
+
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- ACCESSORIES -->
+
+                        <div class="field full-width">
+
+                            <label for="accessories">
+                                Box & Accessories *
+                            </label>
+
+                            <select
+                                name="accessories"
+                                id="accessories"
+                                required
+                            >
+
+                                <option value="">
+                                    Select Accessories
+                                </option>
+
+                                {% set accessory_options = [
+                                    'Box and Charger',
+                                    'Only Box',
+                                    'Only Charger',
+                                    'Box and Cable',
+                                    'Only Cable',
+                                    'Phone Only',
+                                    'Other'
+                                ] %}
+
+                                {% for option in accessory_options %}
+
+                                <option
+                                    value="{{ option }}"
+                                    {% if phone.get('accessories') == option %}
+                                    selected
+                                    {% endif %}
+                                >
+                                    {{ option }}
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="warning">
+                        ⚠️ Update all known damage and repairs
+                        honestly. Incorrect information can
+                        lead to buyer disputes.
+                    </div>
+
+                </section>
+
+
+                <!-- DESCRIPTION -->
+
+                <section class="section">
+
+                    <h2 class="section-title">
+                        📝 Phone Description
+                    </h2>
+
+                    <div class="field">
+
+                        <label for="description">
+                            Description *
+                        </label>
+
+                        <textarea
+                            name="description"
+                            id="description"
+                            maxlength="1000"
+                            required
+                        >{{ phone.get('description', '') }}</textarea>
+
+                        <p class="hint">
+                            Mention scratches, repairs,
+                            battery performance and other
+                            important information.
+                        </p>
+
+                    </div>
+
+                </section>
+
+
+                <!-- EXISTING PHOTOS -->
+
+                <section class="section">
+
+                    <h2 class="section-title">
+                        📸 Current Phone Photos
+                    </h2>
+
+                    {% set images = (
+                        phone.get('images')
+                        or phone.get('photos')
+                        or []
+                    ) %}
+
+                    {% if images %}
+
+                    <div class="photos-grid">
+
+                        {% for image in images %}
+
+                        <div class="photo-card">
+
+                            <img
+                                src="{% if image.startswith('/static/') %}{{ image }}{% else %}{{ url_for('static', filename='uploads/' ~ image) }}{% endif %}"
+                                alt="Phone photo {{ loop.index }}"
+                                loading="lazy"
+                            >
+
+                            <p>
+                                Photo {{ loop.index }}
+                            </p>
+
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                    {% else %}
+
+                    <p class="hint">
+                        No photos found for this listing.
+                    </p>
+
+                    {% endif %}
+
+                    <div class="readonly-note">
+                        Your existing photos will remain
+                        unchanged. Photo replacement is
+                        not available in this edit form yet.
+                    </div>
+
+                </section>
+
+
+                <!-- SELLER INFORMATION -->
+
+                <section class="section">
+
+                    <h2 class="section-title">
+                        👤 Seller Information
+                    </h2>
+
+                    <div class="form-grid">
+
+
+                        <!-- SELLER NAME -->
+
+                        <div class="field">
+
+                            <label>
+                                Seller Name
+                            </label>
+
+                            <input
+                                type="text"
+                                value="{{ phone.get('seller_name', '') }}"
+                                readonly
+                            >
+
+                        </div>
+
+
+                        <!-- SELLER PHONE -->
+
+                        <div class="field">
+
+                            <label>
+                                Seller Phone
+                            </label>
+
+                            <input
+                                type="tel"
+                                value="{{ phone.get('seller_phone') or phone.get('phone', '') }}"
+                                readonly
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <p class="hint">
+                        Seller contact details cannot
+                        be changed using the current
+                        edit backend.
+                    </p>
+
+                </section>
+
+
+                <!-- BUTTONS -->
+
+                <div class="buttons">
+
+                    <button
+                        type="submit"
+                        id="saveButton"
+                        class="btn save"
+                    >
+                        💾 Save Changes
+                    </button>
+
+                    <a
+                        href="{{ url_for('listing_detail', listing_id=phone.get('id')) }}"
+                        class="btn cancel"
+                    >
+                        Cancel
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </main>
+
+
+    <!-- JAVASCRIPT -->
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                const form =
+                    document.getElementById("editForm");
+
+                const saveButton =
+                    document.getElementById("saveButton");
+
+                form.addEventListener(
+                    "submit",
+                    function () {
+
+                        if (!form.checkValidity()) {
+                            return;
+                        }
+
+                        saveButton.disabled = true;
+
+                        saveButton.textContent =
+                            "Saving Changes...";
+
+                    }
+                );
+
+            }
+        );
+    </script>
+
+</body>
+</html>

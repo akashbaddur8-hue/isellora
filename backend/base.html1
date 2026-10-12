@@ -1,0 +1,591 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="iSellora - Buy, sell and upgrade smartphones.">
+    <title>{% block title %}iSellora - Buy. Sell. Upgrade.{% endblock %}</title>
+
+    <style>
+        :root {
+            --primary: #6d28d9;
+            --text: #1f2937;
+            --background: #f6f7fb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            width: 100%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            padding: 13px 5%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo {
+            color: white;
+            text-decoration: none;
+            font-size: 26px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .logo span {
+            color: #ddd6fe;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .nav-links > a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .nav-links > a:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .sell-btn {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .signup-btn {
+            background: white;
+            color: #5b21b6 !important;
+        }
+
+        .logout-btn {
+            background: #dc2626;
+        }
+
+        .welcome-name {
+            color: #f3e8ff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 8px;
+        }
+
+        /* NOTIFICATION */
+
+        .notification-wrapper {
+            position: relative;
+        }
+
+        .notification-bell {
+            position: relative;
+            width: 43px;
+            height: 43px;
+            background: rgba(255, 255, 255, 0.17);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 12px;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        .notification-count {
+            position: absolute;
+            top: -5px;
+            right: -6px;
+            background: #ef4444;
+            color: white;
+            border-radius: 20px;
+            padding: 3px 6px;
+            font-size: 10px;
+        }
+
+        .notification-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 13px);
+            right: 0;
+            width: 350px;
+            max-width: calc(100vw - 28px);
+            max-height: 440px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.2);
+            border: 1px solid #e5e7eb;
+            z-index: 2000;
+        }
+
+        .notification-dropdown.open {
+            display: block;
+        }
+
+        .notification-header {
+            padding: 17px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .notification-header h3 {
+            font-size: 16px;
+        }
+
+        .notification-header span {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .notification-form {
+            width: 100%;
+            margin: 0;
+        }
+
+        .notification-item {
+            display: block;
+            width: 100%;
+            padding: 15px 17px;
+            text-align: left;
+            border: none;
+            border-bottom: 1px solid #f1f5f9;
+            background: white;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .notification-item.unread {
+            background: #f5f3ff;
+            border-left: 4px solid #7c3aed;
+        }
+
+        .notification-item h4 {
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .notification-item p {
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .notification-time {
+            display: block;
+            margin-top: 7px;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        .notification-empty {
+            padding: 35px 20px;
+            text-align: center;
+            color: #6b7280;
+        }
+
+        .notification-footer {
+            padding: 13px;
+            text-align: center;
+            background: #f8fafc;
+        }
+
+        .notification-footer a {
+            color: #6d28d9;
+            text-decoration: none;
+        }
+
+        /* MOBILE MENU */
+
+        .menu-toggle {
+            display: none;
+            width: 42px;
+            height: 42px;
+            border: 1px solid white;
+            border-radius: 10px;
+            background: transparent;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .main-content {
+            width: 100%;
+            flex: 1;
+            min-height: 60vh;
+        }
+
+        /* FOOTER */
+
+        .footer {
+            margin-top: 45px;
+            background: #111827;
+            color: #d1d5db;
+            text-align: center;
+            padding: 35px 20px;
+        }
+
+        .footer-logo {
+            color: white;
+            font-size: 23px;
+            font-weight: 800;
+        }
+
+        .footer-tagline {
+            color: #c4b5fd;
+            margin-top: 9px;
+        }
+
+        .footer p {
+            font-size: 13px;
+            margin: 9px 0;
+        }
+
+        .footer-links {
+            margin: 18px auto;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 18px;
+        }
+
+        .footer-links a {
+            color: #c4b5fd;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        @media (max-width: 1050px) {
+            .navbar {
+                flex-wrap: wrap;
+            }
+
+            .menu-toggle {
+                display: block;
+                margin-left: auto;
+            }
+
+            .nav-links {
+                display: none;
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .nav-links.open {
+                display: flex;
+            }
+
+            .nav-links > a {
+                padding: 13px 14px;
+            }
+
+            .notification-wrapper {
+                width: 100%;
+            }
+
+            .notification-bell {
+                width: 100%;
+                text-align: left;
+                padding-left: 14px;
+            }
+
+            .notification-dropdown {
+                position: static;
+                width: 100%;
+                max-width: 100%;
+                margin-top: 8px;
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <a href="{{ url_for('home') }}" class="logo">
+            iSellora<span>™</span>
+        </a>
+
+        <button
+            class="menu-toggle"
+            type="button"
+            id="menuToggle"
+            aria-expanded="false"
+        >☰</button>
+
+        <div class="nav-links" id="navLinks">
+
+            <a href="{{ url_for('home') }}">Home</a>
+
+            <a href="{{ url_for('products') }}">
+                📱 Products
+            </a>
+
+            <a href="{{ url_for('sell') }}" class="sell-btn">
+                ➕ Sell Phone
+            </a>
+
+            {% if session.get('user_id') %}
+
+                <span class="welcome-name">
+                    Hi, {{ session.get('user_name', 'User') }}
+                </span>
+
+                <!-- NOTIFICATION BELL -->
+
+                <div class="notification-wrapper" id="notificationWrapper">
+
+                    <button
+                        type="button"
+                        class="notification-bell"
+                        id="notificationBell"
+                        aria-label="Notifications"
+                        aria-expanded="false"
+                    >
+                        🔔
+
+                        {% if unread_notification_count | default(0) > 0 %}
+                            <span class="notification-count">
+                                {{ unread_notification_count }}
+                            </span>
+                        {% endif %}
+                    </button>
+
+                    <div
+                        class="notification-dropdown"
+                        id="notificationDropdown"
+                    >
+
+                        <div class="notification-header">
+                            <h3>🔔 Notifications</h3>
+                            <span>
+                                {{ unread_notification_count | default(0) }}
+                                unread
+                            </span>
+                        </div>
+
+                        {% set recent_notifications = notifications | default([]) %}
+
+                        {% if recent_notifications %}
+
+                            {% for notice in recent_notifications %}
+
+                                <form
+                                    class="notification-form"
+                                    method="POST"
+                                    action="{{ url_for('read_notification', notification_id=notice.get('id')) }}"
+                                >
+
+                                    <button
+                                        type="submit"
+                                        class="notification-item {% if not notice.get('read', False) %}unread{% endif %}"
+                                    >
+
+                                        <h4>
+                                            {{ notice.get('title', 'Notification') }}
+                                        </h4>
+
+                                        <p>
+                                            {{ notice.get('message', '') }}
+                                        </p>
+
+                                        <span class="notification-time">
+                                            {{ notice.get('created_at', '')[:16].replace('T', ' ') }}
+                                            UTC
+                                        </span>
+
+                                    </button>
+
+                                </form>
+
+                            {% endfor %}
+
+                        {% else %}
+
+                            <div class="notification-empty">
+                                🔕<br>
+                                No notifications yet.
+                            </div>
+
+                        {% endif %}
+
+                        <div class="notification-footer">
+                            <a href="{{ url_for('account') }}">
+                                Go to My Account →
+                            </a>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <a href="{{ url_for('orders') }}">
+                    🛒 My Orders
+                </a>
+
+                <a href="{{ url_for('sales') }}">
+                    💰 My Sales
+                </a>
+
+                <a href="{{ url_for('seller_dashboard') }}">
+                    📊 Dashboard
+                </a>
+
+                <a href="{{ url_for('account') }}">
+                    👤 My Account
+                </a>
+
+                <a href="{{ url_for('logout') }}" class="logout-btn">
+                    Logout
+                </a>
+
+            {% else %}
+
+                <a href="{{ url_for('login') }}">
+                    Login
+                </a>
+
+                <a href="{{ url_for('signup') }}" class="signup-btn">
+                    Sign Up
+                </a>
+
+            {% endif %}
+
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+
+        <div class="footer-logo">
+            iSellora™
+        </div>
+
+        <p class="footer-tagline">
+            Buy. Sell. Upgrade.
+        </p>
+
+        <p>
+            A marketplace for buying and selling smartphones.
+        </p>
+
+        <div class="footer-links">
+
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('products') }}">Products</a>
+            <a href="{{ url_for('sell') }}">Sell Phone</a>
+
+            {% if session.get('user_id') %}
+
+                <a href="{{ url_for('orders') }}">My Orders</a>
+                <a href="{{ url_for('sales') }}">My Sales</a>
+                <a href="{{ url_for('seller_dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('account') }}">My Account</a>
+
+            {% else %}
+
+                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('signup') }}">Sign Up</a>
+
+            {% endif %}
+
+        </div>
+
+        <p>© 2026 iSellora. All rights reserved.</p>
+
+    </footer>
+
+    <script>
+        const menuToggle = document.getElementById("menuToggle");
+        const navLinks = document.getElementById("navLinks");
+
+        const notificationBell =
+            document.getElementById("notificationBell");
+
+        const notificationDropdown =
+            document.getElementById("notificationDropdown");
+
+        const notificationWrapper =
+            document.getElementById("notificationWrapper");
+
+        menuToggle.addEventListener("click", function () {
+            const isOpen = navLinks.classList.toggle("open");
+
+            menuToggle.setAttribute(
+                "aria-expanded",
+                String(isOpen)
+            );
+
+            menuToggle.textContent = isOpen ? "✕" : "☰";
+        });
+
+        if (notificationBell && notificationDropdown) {
+
+            notificationBell.addEventListener("click", function () {
+
+                const isOpen =
+                    notificationDropdown.classList.toggle("open");
+
+                notificationBell.setAttribute(
+                    "aria-expanded",
+                    String(isOpen)
+                );
+
+            });
+
+            document.addEventListener("click", function (event) {
+
+                if (!notificationWrapper.contains(event.target)) {
+                    notificationDropdown.classList.remove("open");
+                }
+
+            });
+
+        }
+
+        document.addEventListener("keydown", function (event) {
+
+            if (event.key === "Escape") {
+                navLinks.classList.remove("open");
+
+                if (notificationDropdown) {
+                    notificationDropdown.classList.remove("open");
+                }
+            }
+
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+
+</body>
+</html>

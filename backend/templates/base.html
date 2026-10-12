@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="description" content="iSellora - Buy, sell and upgrade smartphones.">
+
+    <title>{% block title %}iSellora - Buy. Sell. Upgrade.{% endblock %}</title>
+
+    <style>
+        :root {
+            --primary: #6d28d9;
+            --primary-dark: #5420b5;
+            --text: #211d35;
+            --muted: #77758b;
+            --background: #f7f7fc;
+            --border: #eae8f3;
+            --white: #ffffff;
+            --shadow: 0 8px 28px rgba(39,30,90,.07);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont,
+                "Segoe UI", Arial, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.6;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button, input {
+            font: inherit;
+        }
+
+        button, a {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* ================= NAVBAR ================= */
+
+        .navbar {
+            width: 100%;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 12px 3%;
+            background: rgba(255,255,255,.97);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 4px 22px rgba(31,25,70,.05);
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            flex-shrink: 0;
+            color: var(--primary);
+            font-size: 27px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            white-space: nowrap;
+        }
+
+        .logo-symbol {
+            width: 43px;
+            height: 43px;
+            display: grid;
+            place-items: center;
+            border-radius: 14px;
+            color: white;
+            background: linear-gradient(135deg,#8d5cf6,#347cf4);
+            box-shadow: 0 6px 18px rgba(109,40,217,.2);
+            font-size: 24px;
+        }
+
+        .logo-name {
+            line-height: 1.15;
+        }
+
+        .logo-tagline {
+            display: block;
+            margin-top: 4px;
+            color: #8a849f;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 1.7px;
+        }
+
+        /* ================= SEARCH ================= */
+
+        .nav-search {
+            flex: 1;
+            max-width: 420px;
+            min-width: 100px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 auto;
+            padding: 0 13px;
+            border: 1px solid #e7e2f2;
+            border-radius: 13px;
+            background: #f9f8fd;
+        }
+
+        .nav-search:focus-within {
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 3px rgba(109,40,217,.08);
+        }
+
+        .nav-search input {
+            width: 100%;
+            min-width: 0;
+            height: 43px;
+            border: 0;
+            outline: 0;
+            color: var(--text);
+            background: transparent;
+            font-size: 13px;
+        }
+
+        .search-icon {
+            color: #8171ad;
+            font-size: 20px;
+        }
+
+        .nav-search button {
+            border: 0;
+            background: transparent;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        /* ================= NAV LINKS ================= */
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .nav-links > a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 9px 10px;
+            border-radius: 10px;
+            color: #4b465e;
+            font-size: 12px;
+            font-weight: 750;
+            white-space: nowrap;
+            transition: .2s;
+        }
+
+        .nav-links > a:hover {
+            color: var(--primary);
+            background: #f2edff;
+        }
+
+        .nav-links > .sell-btn {
+            color: white;
+            background: linear-gradient(135deg,#7958e9,#5274ef);
+            box-shadow: 0 4px 12px rgba(109,40,217,.15);
+        }
+
+        .nav-links > .sell-btn:hover {
+            color: white;
+            background: linear-gradient(135deg,#6840d5,#4168de);
+        }
+
+        .nav-links > .signup-btn {
+            color: var(--primary) !important;
+            background: #f0eaff;
+            border: 1px solid #e2d8ff;
+        }
+
+        .nav-links > .logout-btn {
+            color: #b91c1c;
+            background: #fee2e2;
+        }
+
+        /* ================= USER PROFILE / DP ================= */
+
+        .profile-menu {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .profile-trigger {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 5px 10px 5px 5px;
+            border: 1px solid #e6defb;
+            border-radius: 30px;
+            background: white;
+            color: #29213e;
+            cursor: pointer;
+            text-align: left;
+            transition: .2s;
+        }
+
+        .profile-trigger:hover,
+        .profile-trigger[aria-expanded="true"] {
+            border-color: #b9a2fa;
+            background: #f8f5ff;
+            box-shadow: 0 5px 16px rgba(109,40,217,.10);
+        }
+
+        .profile-avatar {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            border: 2px solid white;
+            border-radius: 50%;
+            background: linear-gradient(135deg,#8b5cf6,#4f46e5);
+            box-shadow: 0 2px 8px rgba(109,40,217,.22);
+            color: white;
+            font-size: 17px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .profile-trigger-info {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.35;
+        }
+
+        .profile-trigger-info strong {
+            max-width: 110px;
+            overflow: hidden;
+            color: #30234b;
+            font-size: 12px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .profile-trigger-info small {
+            color: #8a849f;
+            font-size: 10px;
+        }
+
+        .profile-chevron {
+            color: #7c3aed;
+            font-size: 18px;
+            transition: transform .2s;
+        }
+
+        .profile-trigger[aria-expanded="true"] .profile-chevron {
+            transform: rotate(180deg);
+        }
+
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 0;
+            z-index: 3000;
+            width: 270px;
+            padding: 8px;
+            border: 1px solid #eee8fa;
+            border-radius: 17px;
+            background: white;
+            box-shadow: 0 18px 48px rgba(36,20,70,.16);
+        }
+
+        .profile-dropdown.open {
+            display: block;
+            animation: profileDropIn .18s ease-out;
+        }
+
+        .profile-dropdown-heading {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 12px 10px 15px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #eeeaf5;
+        }
+
+        .profile-avatar-large {
+            width: 46px;
+            height: 46px;
+            font-size: 20px;
+        }
+
+        .profile-dropdown-heading strong,
+        .profile-dropdown-heading small {
+            display: block;
+            overflow-wrap: anywhere;
+        }
+
+        .profile-dropdown-heading strong {
+            color: #30234b;
+            font-size: 13px;
+        }
+
+        .profile-dropdown-heading small {
+            margin-top: 3px;
+            color: #8a849f;
+            font-size: 11px;
+        }
+
+        .profile-dropdown > a {
+            display: block;
+            padding: 11px 12px;
+            border-radius: 10px;
+            color: #4b465e;
+            font-size: 12px;
+            font-weight: 700;
+            transition: .18s;
+        }
+
+        .profile-dropdown > a:hover {
+            color: #6d28d9;
+            background: #f4efff;
+        }
+
+        .profile-dropdown > .profile-dropdown-logout {
+            margin-top: 5px;
+            border-top: 1px solid #f0edf7;
+            border-radius: 0 0 10px 10px;
+            color: #dc2626;
+        }
+
+        @keyframes profileDropIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ================= MOBILE MENU ================= */
+
+        .menu-toggle {
+            display: none;
+            width: 42px;
+            height: 42px;
+            flex-shrink: 0;
+            border: 1px solid #e3d9ff;
+            border-radius: 12px;
+            color: var(--primary);
+            background: #f8f5ff;
+            font-size: 23px;
+            cursor: pointer;
+        }
+
+        /* ================= PHONE BRANDS ================= */
+
+        .brand-strip {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 12px 3%;
+            background: white;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand-strip a {
+            padding: 7px 14px;
+            border: 1px solid #eeeaf8;
+            border-radius: 22px;
+            background: #faf9fe;
+            color: #454158;
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+            transition: .2s;
+        }
+
+        .brand-strip a:hover {
+            color: var(--primary);
+            background: #eee7ff;
+            border-color: #d8ccff;
+            transform: translateY(-2px);
+        }
+
+        /* ================= NOTIFICATIONS ================= */
+
+        .notification-wrapper {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .notification-bell {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border: 1px solid #e3d9ff;
+            border-radius: 12px;
+            color: var(--primary);
+            background: #f5f0ff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .notification-count {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            min-width: 18px;
+            padding: 2px 5px;
+            border: 2px solid white;
+            border-radius: 20px;
+            color: white;
+            background: #ef4444;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .notification-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 0;
+            z-index: 2000;
+            width: 350px;
+            max-width: calc(100vw - 28px);
+            max-height: 440px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            background: white;
+            box-shadow: 0 15px 45px rgba(0,0,0,.16);
+        }
+
+        .notification-dropdown.open {
+            display: block;
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .notification-header h3 {
+            font-size: 15px;
+        }
+
+        .notification-header span {
+            color: #6b7280;
+            font-size: 11px;
+        }
+
+        .notification-form {
+            width: 100%;
+            margin: 0;
+        }
+
+        .notification-item {
+            display: block;
+            width: 100%;
+            padding: 14px 16px;
+            border: 0;
+            border-bottom: 1px solid #f1f5f9;
+            background: white;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .notification-item.unread {
+            border-left: 4px solid #7c3aed;
+            background: #f5f3ff;
+        }
+
+        .notification-item h4 {
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+
+        .notification-item p {
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .notification-time {
+            display: block;
+            margin-top: 7px;
+            color: #94a3b8;
+            font-size: 10px;
+        }
+
+        .notification-empty {
+            padding: 30px 18px;
+            color: #6b7280;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .notification-footer {
+            padding: 13px;
+            background: #f8fafc;
+            text-align: center;
+        }
+
+        .notification-footer a {
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        /* ================= PAGE CONTENT ================= */
+
+        .main-content {
+            width: 100%;
+            flex: 1;
+            min-height: 60vh;
+        }
+
+        /* ================= FOOTER ================= */
+
+        .footer {
+            margin-top: 45px;
+            padding: 38px 20px 22px;
+            color: #d1d5db;
+            background: #19172b;
+            text-align: center;
+        }
+
+        .footer-logo {
+            color: white;
+            font-size: 25px;
+            font-weight: 900;
+        }
+
+        .footer-tagline {
+            margin-top: 6px;
+            color: #c4b5fd;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .footer p {
+            margin: 10px 0;
+            font-size: 12px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin: 18px auto;
+        }
+
+        .footer-links a {
+            color: #c4b5fd;
+            font-size: 12px;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,.1);
+            color: #aaa6bc;
+            font-size: 11px;
+        }
+
+        /* ================= TABLET ================= */
+
+        @media (max-width: 1250px) {
+            .navbar {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .nav-search {
+                order: 3;
+                flex: 1 1 100%;
+                max-width: none;
+            }
+
+            .nav-links {
+                margin-left: auto;
+            }
+        }
+
+        /* ================= MOBILE ================= */
+
+        @media (max-width: 1050px) {
+            .navbar {
+                padding: 10px 4%;
+            }
+
+            .menu-toggle {
+                display: block;
+                margin-left: auto;
+            }
+
+            .nav-search {
+                order: 4;
+            }
+
+            .nav-links {
+                display: none;
+                order: 5;
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 5px;
+                padding-top: 10px;
+                border-top: 1px solid #f0edf7;
+            }
+
+            .nav-links.open {
+                display: flex;
+            }
+
+            .nav-links > a {
+                justify-content: flex-start;
+                padding: 12px;
+                font-size: 13px;
+            }
+
+            .profile-menu {
+                width: 100%;
+            }
+
+            .profile-trigger {
+                width: 100%;
+                border-radius: 13px;
+                padding: 8px;
+            }
+
+            .profile-trigger-info strong {
+                max-width: 220px;
+            }
+
+            .profile-dropdown {
+                position: static;
+                width: 100%;
+                margin-top: 8px;
+                box-shadow: 0 8px 25px rgba(36,20,70,.08);
+            }
+
+            .notification-wrapper {
+                width: 100%;
+            }
+
+            .notification-bell {
+                width: 100%;
+                text-align: left;
+                padding-left: 14px;
+            }
+
+            .notification-dropdown {
+                position: static;
+                width: 100%;
+                max-width: 100%;
+                margin-top: 8px;
+            }
+
+            .brand-strip {
+                justify-content: flex-start;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding: 12px 4%;
+            }
+
+            .brand-strip a {
+                flex-shrink: 0;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .logo {
+                font-size: 23px;
+            }
+
+            .logo-symbol {
+                width: 38px;
+                height: 38px;
+                font-size: 21px;
+            }
+
+            .logo-tagline {
+                font-size: 8px;
+                letter-spacing: 1.2px;
+            }
+
+            .nav-search input {
+                font-size: 12px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                scroll-behavior: auto !important;
+                animation-duration: .01ms !important;
+                transition-duration: .01ms !important;
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+    <!-- ================= NAVBAR ================= -->
+
+    <nav class="navbar">
+
+        <a href="{{ url_for('home') }}" class="logo" aria-label="iSellora Home">
+            <span class="logo-symbol">✦</span>
+            <span class="logo-name">
+                iSellora<span>™</span>
+                <span class="logo-tagline">BUY. SELL. UPGRADE.</span>
+            </span>
+        </a>
+
+        <!-- SEARCH -->
+
+        <form class="nav-search"
+              action="{{ url_for('products') }}"
+              method="GET"
+              role="search">
+
+            <span class="search-icon" aria-hidden="true">⌕</span>
+
+            <input
+                type="search"
+                name="search"
+                placeholder="Search iPhone, Samsung, OnePlus..."
+                aria-label="Search phones"
+            >
+
+            <button type="submit">Search</button>
+        </form>
+
+        <!-- MOBILE MENU BUTTON -->
+
+        <button
+            class="menu-toggle"
+            type="button"
+            id="menuToggle"
+            aria-label="Toggle navigation"
+            aria-expanded="false"
+        >☰</button>
+
+        <!-- NAVIGATION LINKS -->
+
+        <div class="nav-links" id="navLinks">
+
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('products') }}">📱 Products</a>
+            <a href="{{ url_for('sell') }}" class="sell-btn">＋ Sell Phone</a>
+
+            {% if session.get('user_id') %}
+
+                <!-- USER PROFILE DROPDOWN -->
+
+                <div class="profile-menu" id="profileMenu">
+
+                    <button
+                        type="button"
+                        class="profile-trigger"
+                        id="profileTrigger"
+                        aria-expanded="false"
+                        aria-label="Open profile menu"
+                    >
+                        <span class="profile-avatar">
+                            {{ (session.get('user_name') or 'U')[0] | upper }}
+                        </span>
+
+                        <span class="profile-trigger-info">
+                            <strong>
+                                {{ session.get('user_name', 'User') }}
+                            </strong>
+                            <small>My Account</small>
+                        </span>
+
+                        <span class="profile-chevron">⌄</span>
+                    </button>
+
+                    <div class="profile-dropdown" id="profileDropdown">
+
+                        <div class="profile-dropdown-heading">
+
+                            <span class="profile-avatar profile-avatar-large">
+                                {{ (session.get('user_name') or 'U')[0] | upper }}
+                            </span>
+
+                            <div>
+                                <strong>
+                                    {{ session.get('user_name', 'User') }}
+                                </strong>
+                                <small>Welcome to iSellora</small>
+                            </div>
+
+                        </div>
+
+                        <a href="{{ url_for('account') }}">👤 My Profile</a>
+                        <a href="{{ url_for('orders') }}">🛒 My Orders</a>
+                        <a href="{{ url_for('sales') }}">💰 My Sales</a>
+                        <a href="{{ url_for('seller_dashboard') }}">📊 My Dashboard</a>
+                        <a href="{{ url_for('logout') }}"
+                           class="profile-dropdown-logout">↪ Logout</a>
+
+                    </div>
+                </div>
+
+                <!-- NOTIFICATIONS -->
+
+                <div class="notification-wrapper" id="notificationWrapper">
+
+                    <button
+                        type="button"
+                        class="notification-bell"
+                        id="notificationBell"
+                        aria-label="Notifications"
+                        aria-expanded="false"
+                    >
+                        🔔
+
+                        {% if unread_notification_count | default(0) > 0 %}
+                            <span class="notification-count">
+                                {{ unread_notification_count }}
+                            </span>
+                        {% endif %}
+                    </button>
+
+                    <div class="notification-dropdown" id="notificationDropdown">
+
+                        <div class="notification-header">
+                            <h3>🔔 Notifications</h3>
+                            <span>
+                                {{ unread_notification_count | default(0) }} unread
+                            </span>
+                        </div>
+
+                        {% set recent_notifications = notifications | default([]) %}
+
+                        {% if recent_notifications %}
+
+                            {% for notice in recent_notifications %}
+
+                                <form
+                                    class="notification-form"
+                                    method="POST"
+                                    action="{{ url_for('read_notification', notification_id=notice.get('id')) }}"
+                                >
+                                    <button
+                                        type="submit"
+                                        class="notification-item {% if not notice.get('read', False) %}unread{% endif %}"
+                                    >
+                                        <h4>
+                                            {{ notice.get('title', 'Notification') }}
+                                        </h4>
+
+                                        <p>{{ notice.get('message', '') }}</p>
+
+                                        <span class="notification-time">
+                                            {{ notice.get('created_at', '')[:16].replace('T', ' ') }} UTC
+                                        </span>
+                                    </button>
+                                </form>
+
+                            {% endfor %}
+
+                        {% else %}
+
+                            <div class="notification-empty">
+                                🔕<br>No notifications yet.
+                            </div>
+
+                        {% endif %}
+
+                        <div class="notification-footer">
+                            <a href="{{ url_for('account') }}">Go to Profile →</a>
+                        </div>
+
+                    </div>
+                </div>
+
+            {% else %}
+
+                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('signup') }}" class="signup-btn">Create Account</a>
+
+            {% endif %}
+
+        </div>
+    </nav>
+
+    <!-- ================= PHONE BRANDS ================= -->
+
+    <div class="brand-strip" aria-label="Browse phone brands">
+        <a href="{{ url_for('products', search='iPhone') }}">Apple</a>
+        <a href="{{ url_for('products', search='Samsung') }}">Samsung</a>
+        <a href="{{ url_for('products', search='OnePlus') }}">OnePlus</a>
+        <a href="{{ url_for('products', search='Vivo') }}">Vivo</a>
+        <a href="{{ url_for('products', search='Oppo') }}">OPPO</a>
+        <a href="{{ url_for('products', search='Realme') }}">realme</a>
+        <a href="{{ url_for('products', search='Xiaomi') }}">Xiaomi</a>
+        <a href="{{ url_for('products', search='Google Pixel') }}">Google Pixel</a>
+    </div>
+
+    <!-- ================= MAIN CONTENT ================= -->
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ================= FOOTER ================= -->
+
+    <footer class="footer">
+
+        <div class="footer-logo">iSellora™</div>
+        <p class="footer-tagline">BUY. SELL. UPGRADE.</p>
+        <p>A marketplace for buying and selling smartphones.</p>
+
+        <div class="footer-links">
+
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('products') }}">Products</a>
+            <a href="{{ url_for('sell') }}">Sell Phone</a>
+
+            {% if session.get('user_id') %}
+
+                <a href="{{ url_for('orders') }}">My Orders</a>
+                <a href="{{ url_for('sales') }}">My Sales</a>
+                <a href="{{ url_for('seller_dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('account') }}">Profile</a>
+
+            {% else %}
+
+                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('signup') }}">Create Account</a>
+
+            {% endif %}
+
+        </div>
+
+        <div class="footer-bottom">
+            © 2026 iSellora. All rights reserved. | Buy. Sell. Upgrade.
+        </div>
+
+    </footer>
+
+    <!-- ================= JAVASCRIPT ================= -->
+
+    <script>
+        // MOBILE NAVIGATION
+
+        const menuToggle = document.getElementById("menuToggle");
+        const navLinks = document.getElementById("navLinks");
+
+        if (menuToggle && navLinks) {
+            menuToggle.addEventListener("click", function () {
+                const isOpen = navLinks.classList.toggle("open");
+
+                menuToggle.setAttribute("aria-expanded", String(isOpen));
+                menuToggle.textContent = isOpen ? "✕" : "☰";
+            });
+        }
+
+        // USER PROFILE DROPDOWN
+
+        const profileMenu = document.getElementById("profileMenu");
+        const profileTrigger = document.getElementById("profileTrigger");
+        const profileDropdown = document.getElementById("profileDropdown");
+
+        function closeProfileDropdown() {
+            if (profileDropdown && profileTrigger) {
+                profileDropdown.classList.remove("open");
+                profileTrigger.setAttribute("aria-expanded", "false");
+            }
+        }
+
+        if (profileMenu && profileTrigger && profileDropdown) {
+
+            profileTrigger.addEventListener("click", function (event) {
+                event.stopPropagation();
+
+                const isOpen = profileDropdown.classList.toggle("open");
+
+                profileTrigger.setAttribute("aria-expanded", String(isOpen));
+            });
+
+            profileDropdown.addEventListener("click", function (event) {
+                event.stopPropagation();
+            });
+
+            document.addEventListener("click", function (event) {
+                if (!profileMenu.contains(event.target)) {
+                    closeProfileDropdown();
+                }
+            });
+        }
+
+        // NOTIFICATION DROPDOWN
+
+        const notificationBell = document.getElementById("notificationBell");
+        const notificationDropdown = document.getElementById("notificationDropdown");
+        const notificationWrapper = document.getElementById("notificationWrapper");
+
+        if (notificationBell && notificationDropdown && notificationWrapper) {
+
+            notificationBell.addEventListener("click", function (event) {
+                event.stopPropagation();
+
+                const isOpen = notificationDropdown.classList.toggle("open");
+
+                notificationBell.setAttribute("aria-expanded", String(isOpen));
+            });
+
+            notificationDropdown.addEventListener("click", function (event) {
+                event.stopPropagation();
+            });
+
+            document.addEventListener("click", function (event) {
+                if (!notificationWrapper.contains(event.target)) {
+                    notificationDropdown.classList.remove("open");
+                    notificationBell.setAttribute("aria-expanded", "false");
+                }
+            });
+        }
+
+        // CLOSE MENUS WITH ESCAPE
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape") {
+
+                if (navLinks) {
+                    navLinks.classList.remove("open");
+                }
+
+                if (menuToggle) {
+                    menuToggle.setAttribute("aria-expanded", "false");
+                    menuToggle.textContent = "☰";
+                }
+
+                closeProfileDropdown();
+
+                if (notificationDropdown) {
+                    notificationDropdown.classList.remove("open");
+                }
+
+                if (notificationBell) {
+                    notificationBell.setAttribute("aria-expanded", "false");
+                }
+            }
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+
+</body>
+</html>

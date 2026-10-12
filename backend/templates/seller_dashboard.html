@@ -1,0 +1,1137 @@
+
+{% extends "base.html" %}
+
+{% block title %}
+Seller Dashboard | iSellora
+{% endblock %}
+
+{% block content %}
+
+<style>
+    .dashboard,
+    .dashboard * {
+        box-sizing: border-box;
+    }
+
+    .dashboard {
+        max-width: 1200px;
+        margin: 35px auto 60px;
+        padding: 0 20px;
+        color: #222;
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 30px;
+    }
+
+    .dashboard-header h1 {
+        font-size: 32px;
+        margin-bottom: 8px;
+    }
+
+    .dashboard-header p {
+        color: #666;
+        line-height: 1.5;
+    }
+
+    .primary-btn {
+        display: inline-block;
+        padding: 13px 20px;
+        background: #6d28d9;
+        color: white;
+        border-radius: 11px;
+        text-decoration: none;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+    }
+
+    .primary-btn:hover {
+        background: #5b21b6;
+    }
+
+    /* STATISTICS */
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
+        margin-bottom: 35px;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 24px;
+        border-radius: 18px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+        border: 1px solid #eee;
+    }
+
+    .stat-icon {
+        font-size: 30px;
+        margin-bottom: 12px;
+    }
+
+    .stat-card h3 {
+        font-size: 27px;
+        margin-bottom: 7px;
+        overflow-wrap: anywhere;
+    }
+
+    .stat-card p {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .stat-note {
+        margin-top: 9px;
+        font-size: 12px;
+        color: #888;
+        line-height: 1.4;
+    }
+
+    /* QUICK ACTIONS */
+
+    .dashboard-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-bottom: 35px;
+    }
+
+    .action-card {
+        display: block;
+        text-decoration: none;
+        color: #222;
+        background: white;
+        border: 1px solid #eee;
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+        transition: 0.2s;
+    }
+
+    .action-card:hover {
+        transform: translateY(-3px);
+        border-color: #c4b5fd;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.09);
+    }
+
+    .action-card .icon {
+        font-size: 30px;
+        margin-bottom: 12px;
+    }
+
+    .action-card h3 {
+        margin-bottom: 8px;
+        font-size: 18px;
+    }
+
+    .action-card p {
+        color: #666;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    /* SECTIONS */
+
+    .dashboard-section {
+        background: white;
+        border-radius: 18px;
+        padding: 26px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+        border: 1px solid #eee;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+    }
+
+    .section-header h2 {
+        font-size: 23px;
+    }
+
+    .section-header p {
+        margin-top: 6px;
+        color: #777;
+        font-size: 13px;
+    }
+
+    .section-link {
+        text-decoration: none;
+        color: #6d28d9;
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    /* LISTINGS */
+
+    .listing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+    }
+
+    .listing-card {
+        border: 1px solid #e8e8ee;
+        border-radius: 16px;
+        overflow: hidden;
+        background: white;
+        min-width: 0;
+    }
+
+    .listing-image {
+        width: 100%;
+        height: 200px;
+        object-fit: contain;
+        background: #f5f5f8;
+        display: block;
+    }
+
+    .no-image {
+        height: 200px;
+        background: #f5f5f8;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 50px;
+    }
+
+    .listing-content {
+        padding: 18px;
+    }
+
+    .listing-title {
+        font-size: 19px;
+        margin-bottom: 10px;
+        overflow-wrap: anywhere;
+    }
+
+    .listing-price {
+        color: #6d28d9;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 12px;
+    }
+
+    .listing-info {
+        display: grid;
+        gap: 8px;
+        font-size: 13px;
+        color: #555;
+        margin-bottom: 18px;
+    }
+
+    .listing-info div {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .listing-info strong {
+        color: #222;
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+    .condition-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        background: #f3e8ff;
+        color: #6d28d9;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .listing-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 9px;
+    }
+
+    .listing-buttons a,
+    .listing-buttons button {
+        text-align: center;
+        text-decoration: none;
+        border-radius: 9px;
+        padding: 11px 8px;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .view-btn {
+        background: #f3f4f6;
+        color: #222;
+        border: 1px solid #e5e7eb;
+    }
+
+    .edit-btn {
+        background: #6d28d9;
+        color: white;
+        border: 1px solid #6d28d9;
+    }
+
+    .delete-btn {
+        background: #fff1f2;
+        color: #be123c;
+        border: 1px solid #fecdd3;
+        grid-column: 1 / -1;
+    }
+
+    .delete-btn:hover {
+        background: #ffe4e6;
+    }
+
+    /* ORDERS */
+
+    .order-list {
+        display: grid;
+        gap: 15px;
+    }
+
+    .order-card {
+        border: 1px solid #e8e8ee;
+        border-radius: 14px;
+        padding: 20px;
+    }
+
+    .order-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .order-top h3 {
+        font-size: 18px;
+        margin-bottom: 7px;
+    }
+
+    .order-top p {
+        color: #777;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
+
+    .order-price {
+        color: #6d28d9;
+        font-weight: bold;
+        font-size: 21px;
+    }
+
+    .order-details {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    .order-detail {
+        font-size: 14px;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .order-detail span {
+        display: block;
+        color: #777;
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    .status {
+        display: inline-block;
+        border-radius: 20px;
+        padding: 7px 12px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .status-pending {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-confirmed {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .status-shipped {
+        background: #e0e7ff;
+        color: #4338ca;
+    }
+
+    .status-delivered {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-cancelled {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .order-footer {
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .order-footer p {
+        color: #666;
+        font-size: 13px;
+    }
+
+    /* EMPTY STATES */
+
+    .empty {
+        text-align: center;
+        padding: 45px 20px;
+        color: #777;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+
+    .empty h3 {
+        color: #222;
+        margin-bottom: 10px;
+    }
+
+    .empty p {
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
+
+    /* MOBILE */
+
+    @media (max-width: 1000px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .dashboard-actions,
+        .listing-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 650px) {
+        .dashboard {
+            margin: 25px auto;
+            padding: 0 12px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 26px;
+        }
+
+        .dashboard-header .primary-btn {
+            width: 100%;
+            text-align: center;
+        }
+
+        .stats-grid {
+            gap: 10px;
+        }
+
+        .stat-card {
+            padding: 17px;
+        }
+
+        .stat-card h3 {
+            font-size: 22px;
+        }
+
+        .dashboard-actions,
+        .listing-grid,
+        .order-details {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-section {
+            padding: 18px;
+        }
+
+        .listing-image,
+        .no-image {
+            height: 230px;
+        }
+
+        .order-card {
+            padding: 15px;
+        }
+    }
+</style>
+
+
+<div class="dashboard">
+
+    <!-- DASHBOARD HEADER -->
+
+    <div class="dashboard-header">
+
+        <div>
+            <h1>📊 Seller Dashboard</h1>
+
+            <p>
+                Manage your listings, sales and
+                buyer orders in one place.
+            </p>
+        </div>
+
+        <a
+            href="{{ url_for('sell') }}"
+            class="primary-btn"
+        >
+            ➕ Sell New Phone
+        </a>
+
+    </div>
+
+
+    <!-- STATISTICS -->
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+
+            <div class="stat-icon">💰</div>
+
+            <h3>
+                ₹{{ total_sales }}
+            </h3>
+
+            <p>Total Order Value</p>
+
+            <div class="stat-note">
+                Includes orders not yet paid or completed.
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-icon">📱</div>
+
+            <h3>
+                {{ total_listings }}
+            </h3>
+
+            <p>My Listings</p>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-icon">🛒</div>
+
+            <h3>
+                {{ total_orders }}
+            </h3>
+
+            <p>Total Orders</p>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-icon">⏳</div>
+
+            <h3>
+                {{ pending_orders }}
+            </h3>
+
+            <p>Pending Orders</p>
+
+        </div>
+
+    </div>
+
+
+    <!-- QUICK ACTIONS -->
+
+    <div class="dashboard-actions">
+
+        <a
+            href="{{ url_for('sell') }}"
+            class="action-card"
+        >
+            <div class="icon">➕</div>
+
+            <h3>Sell New Phone</h3>
+
+            <p>
+                Create a new smartphone listing
+                with up to 10 photos.
+            </p>
+        </a>
+
+
+        <a
+            href="{{ url_for('sales') }}"
+            class="action-card"
+        >
+            <div class="icon">💰</div>
+
+            <h3>My Sales</h3>
+
+            <p>
+                Manage buyer orders, delivery
+                and tracking details.
+            </p>
+        </a>
+
+
+        <a
+            href="{{ url_for('orders') }}"
+            class="action-card"
+        >
+            <div class="icon">🛒</div>
+
+            <h3>My Orders</h3>
+
+            <p>
+                View phones you have ordered
+                from other sellers.
+            </p>
+        </a>
+
+
+        <a
+            href="{{ url_for('account') }}"
+            class="action-card"
+        >
+            <div class="icon">👤</div>
+
+            <h3>My Account</h3>
+
+            <p>
+                View your account and
+                personal listings.
+            </p>
+        </a>
+
+
+        <a
+            href="{{ url_for('products') }}"
+            class="action-card"
+        >
+            <div class="icon">📱</div>
+
+            <h3>Browse Products</h3>
+
+            <p>
+                Explore available phones
+                on iSellora.
+            </p>
+        </a>
+
+
+        <a
+            href="{{ url_for('home') }}"
+            class="action-card"
+        >
+            <div class="icon">🏠</div>
+
+            <h3>Home</h3>
+
+            <p>
+                Return to the
+                iSellora homepage.
+            </p>
+        </a>
+
+    </div>
+
+
+    <!-- MY LISTINGS -->
+
+    <section class="dashboard-section">
+
+        <div class="section-header">
+
+            <div>
+                <h2>📱 My Listed Phones</h2>
+
+                <p>
+                    View, edit or delete
+                    your phone listings.
+                </p>
+            </div>
+
+            <a
+                href="{{ url_for('sell') }}"
+                class="section-link"
+            >
+                + Add Phone
+            </a>
+
+        </div>
+
+
+        {% if my_listings %}
+
+        <div class="listing-grid">
+
+            {% for phone in my_listings %}
+
+            {% set images = (
+                phone.get('images')
+                or phone.get('photos')
+                or []
+            ) %}
+
+            <article class="listing-card">
+
+
+                <!-- PHONE IMAGE -->
+
+                {% if images %}
+
+                    {% set first_image = images[0] %}
+
+                    {% if first_image.startswith('/static/') %}
+
+                    <img
+                        src="{{ first_image }}"
+                        alt="{{ phone.get('brand', '') }} {{ phone.get('model', '') }}"
+                        class="listing-image"
+                        loading="lazy"
+                    >
+
+                    {% else %}
+
+                    <img
+                        src="{{ url_for('static', filename='uploads/' ~ first_image) }}"
+                        alt="{{ phone.get('brand', '') }} {{ phone.get('model', '') }}"
+                        class="listing-image"
+                        loading="lazy"
+                    >
+
+                    {% endif %}
+
+                {% else %}
+
+                <div class="no-image">
+                    📱
+                </div>
+
+                {% endif %}
+
+
+                <!-- PHONE DETAILS -->
+
+                <div class="listing-content">
+
+                    <h3 class="listing-title">
+                        {{ phone.get('brand', '') }}
+                        {{ phone.get('model', '') }}
+                    </h3>
+
+
+                    <div class="listing-price">
+                        ₹{{ phone.get('price', '0') }}
+                    </div>
+
+
+                    <div style="margin-bottom:15px;">
+
+                        <span class="condition-badge">
+                            {{ phone.get('condition') or 'Not specified' }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="listing-info">
+
+                        <div>
+                            <span>Storage</span>
+
+                            <strong>
+                                {{ phone.get('storage') or 'N/A' }}
+                            </strong>
+                        </div>
+
+
+                        <div>
+                            <span>Battery</span>
+
+                            <strong>
+                                {% if phone.get('battery') %}
+                                    {{ phone.get('battery') }}%
+                                {% else %}
+                                    Not specified
+                                {% endif %}
+                            </strong>
+                        </div>
+
+
+                        <div>
+                            <span>Screen</span>
+
+                            <strong>
+                                {{ phone.get('screen_damage') or 'Not specified' }}
+                            </strong>
+                        </div>
+
+
+                        <div>
+                            <span>Body</span>
+
+                            <strong>
+                                {{ phone.get('body_damage') or 'Not specified' }}
+                            </strong>
+                        </div>
+
+
+                        <div>
+                            <span>Repair History</span>
+
+                            <strong>
+                                {{ phone.get('repair_history') or 'Not specified' }}
+                            </strong>
+                        </div>
+
+                    </div>
+
+
+                    <!-- ACTION BUTTONS -->
+
+                    <div class="listing-buttons">
+
+                        <a
+                            href="{{ url_for('listing_detail', listing_id=phone.get('id')) }}"
+                            class="view-btn"
+                        >
+                            👁 View
+                        </a>
+
+
+                        <a
+                            href="{{ url_for('edit_listing', listing_id=phone.get('id')) }}"
+                            class="edit-btn"
+                        >
+                            ✏️ Edit
+                        </a>
+
+
+                        <form
+                            action="{{ url_for('delete_listing', listing_id=phone.get('id')) }}"
+                            method="POST"
+                            class="delete-form"
+                            style="grid-column:1 / -1;"
+                        >
+
+                            <button
+                                type="submit"
+                                class="delete-btn"
+                                style="width:100%;"
+                            >
+                                🗑 Delete Listing
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+            {% endfor %}
+
+        </div>
+
+
+        {% else %}
+
+        <div class="empty">
+
+            <div class="empty-icon">
+                📱
+            </div>
+
+            <h3>No Listings Yet</h3>
+
+            <p>
+                Start selling your first
+                phone on iSellora.
+            </p>
+
+            <a
+                href="{{ url_for('sell') }}"
+                class="primary-btn"
+            >
+                ➕ Sell Your Phone
+            </a>
+
+        </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- RECENT SALES -->
+
+    <section class="dashboard-section">
+
+        <div class="section-header">
+
+            <div>
+
+                <h2>🛒 Recent Buyer Orders</h2>
+
+                <p>
+                    Your latest received orders.
+                </p>
+
+            </div>
+
+            <a
+                href="{{ url_for('sales') }}"
+                class="section-link"
+            >
+                View All Sales →
+            </a>
+
+        </div>
+
+
+        {% if my_sales %}
+
+        <div class="order-list">
+
+            {% for order in my_sales[:5] %}
+
+            {% set status = order.get('status', 'Pending') %}
+
+            <article class="order-card">
+
+                <div class="order-top">
+
+                    <div>
+
+                        <h3>
+                            {{ order.get('brand', '') }}
+                            {{ order.get('model', '') }}
+                        </h3>
+
+                        <p>
+                            Order ID:
+                            {{ order.get('order_id', '') }}
+                        </p>
+
+                    </div>
+
+
+                    <div class="order-price">
+                        ₹{{ order.get('price', '0') }}
+                    </div>
+
+                </div>
+
+
+                <div class="order-details">
+
+                    <div class="order-detail">
+
+                        <span>Buyer Name</span>
+
+                        <strong>
+                            {{ order.get('buyer_name') or 'N/A' }}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="order-detail">
+
+                        <span>Buyer Phone</span>
+
+                        <strong>
+                            {{ order.get('buyer_phone') or 'N/A' }}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="order-detail">
+
+                        <span>Delivery Method</span>
+
+                        <strong>
+                            {% if order.get('delivery_method') == 'shipping' %}
+                                Home Delivery
+                            {% else %}
+                                Local Pickup
+                            {% endif %}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="order-detail">
+
+                        <span>Payment Status</span>
+
+                        <strong>
+                            {{ order.get('payment_status') or 'Not collected' }}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="order-footer">
+
+                    <div>
+
+                        <span class="
+                            status
+                            {% if status == 'Pending' %}
+                                status-pending
+                            {% elif status == 'Confirmed' %}
+                                status-confirmed
+                            {% elif status == 'Shipped' %}
+                                status-shipped
+                            {% elif status == 'Delivered' %}
+                                status-delivered
+                            {% elif status == 'Cancelled' %}
+                                status-cancelled
+                            {% endif %}
+                        ">
+                            {{ status }}
+                        </span>
+
+                    </div>
+
+
+                    <a
+                        href="{{ url_for('sales') }}"
+                        class="section-link"
+                    >
+                        Manage Order →
+                    </a>
+
+                </div>
+
+
+                {% if order.get('tracking_number') %}
+
+                <p style="
+                    margin-top:14px;
+                    color:#666;
+                    font-size:13px;
+                    overflow-wrap:anywhere;
+                ">
+
+                    🚚
+                    {{ order.get('courier_name') or 'Courier' }}
+
+                    —
+                    {{ order.get('tracking_number') }}
+
+                </p>
+
+                {% endif %}
+
+            </article>
+
+            {% endfor %}
+
+        </div>
+
+
+        {% else %}
+
+        <div class="empty">
+
+            <div class="empty-icon">
+                📦
+            </div>
+
+            <h3>No Buyer Orders Yet</h3>
+
+            <p>
+                When someone places an order
+                for your phone, it will appear here.
+            </p>
+
+        </div>
+
+        {% endif %}
+
+    </section>
+
+</div>
+
+
+<!-- DELETE CONFIRMATION -->
+
+<script>
+    document.addEventListener(
+        "DOMContentLoaded",
+        function () {
+
+            const deleteForms =
+                document.querySelectorAll(
+                    ".delete-form"
+                );
+
+            deleteForms.forEach(
+                function (form) {
+
+                    form.addEventListener(
+                        "submit",
+                        function (event) {
+
+                            const confirmed =
+                                window.confirm(
+                                    "Are you sure you want to delete this phone listing? This action cannot be undone."
+                                );
+
+                            if (!confirmed) {
+                                event.preventDefault();
+                            }
+
+                        }
+                    );
+
+                }
+            );
+
+        }
+    );
+</script>
+
+{% endblock %}

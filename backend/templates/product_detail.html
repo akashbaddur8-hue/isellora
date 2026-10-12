@@ -1,0 +1,1001 @@
+
+{% extends "base.html" %}
+
+{% block title %}
+{{ phone.get('brand', 'Phone') }} {{ phone.get('model', '') }} - iSellora
+{% endblock %}
+
+{% block extra_css %}
+<style>
+* {
+    box-sizing: border-box;
+}
+
+.detail-page {
+    padding: 45px 5%;
+    background: #f8f9ff;
+    min-height: 80vh;
+}
+
+.detail-container {
+    max-width: 1200px;
+    margin: auto;
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .08);
+}
+
+.detail-images,
+.detail-info {
+    min-width: 0;
+}
+
+/* PHOTO GALLERY */
+
+.main-image-box {
+    height: 460px;
+    background: #f5f5f7;
+    border-radius: 16px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.main-product-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    cursor: zoom-in;
+}
+
+.no-image {
+    font-size: 75px;
+}
+
+.gallery-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: white;
+    color: #111827;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 3px 12px #0002;
+}
+
+.prev-btn {
+    left: 12px;
+}
+
+.next-btn {
+    right: 12px;
+}
+
+.image-count {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    background: #111827;
+    color: white;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+.thumbnail-gallery {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 15px 0;
+}
+
+.thumbnail {
+    width: 75px;
+    height: 75px;
+    flex-shrink: 0;
+    object-fit: contain;
+    padding: 4px;
+    background: #f5f5f7;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.thumbnail.active {
+    border-color: #6d28d9;
+}
+
+.gallery-hint {
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+    margin: 5px 0 20px;
+}
+
+/* PRODUCT INFO */
+
+.brand-name {
+    color: #6d28d9;
+    font-size: 19px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.detail-info h1 {
+    font-size: 36px;
+    color: #111827;
+    margin: 0 0 15px;
+    overflow-wrap: anywhere;
+}
+
+.detail-price {
+    color: #6d28d9;
+    font-size: 35px;
+    font-weight: 800;
+    margin-bottom: 25px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 13px;
+    margin-bottom: 28px;
+}
+
+.info-card {
+    padding: 18px;
+    background: #f7f7f9;
+    border-radius: 13px;
+}
+
+.info-card strong {
+    display: block;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.info-card span {
+    color: #4b5563;
+    overflow-wrap: anywhere;
+}
+
+/* DETAILS SECTIONS */
+
+.description-section,
+.condition-section {
+    margin-bottom: 28px;
+}
+
+.description-section h2,
+.condition-section h2,
+.seller-box h2 {
+    font-size: 21px;
+    color: #111827;
+    margin: 0 0 12px;
+}
+
+.description-section p,
+.condition-section p {
+    color: #4b5563;
+    line-height: 1.8;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.condition-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 13px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.condition-row strong {
+    color: #374151;
+}
+
+.condition-row span {
+    color: #4b5563;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.condition-note {
+    padding: 13px;
+    background: #fff7ed;
+    color: #9a3412;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-top: 15px;
+}
+
+/* SELLER */
+
+.seller-box {
+    background: #f7f7f9;
+    padding: 22px;
+    border-radius: 15px;
+    margin-bottom: 28px;
+}
+
+.seller-box p {
+    margin: 9px 0;
+    color: #374151;
+}
+
+/* BUTTONS */
+
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 13px;
+}
+
+.contact-btn,
+.buy-btn,
+.back-btn {
+    display: inline-block;
+    padding: 15px 24px;
+    border-radius: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
+}
+
+.contact-btn {
+    background: #111827;
+    color: white;
+}
+
+.buy-btn {
+    background: #6d28d9;
+    color: white;
+}
+
+.back-btn {
+    margin-top: 20px;
+    background: #eeeeee;
+    color: #111827;
+}
+
+.contact-btn:hover {
+    background: #374151;
+}
+
+.buy-btn:hover {
+    background: #5b21b6;
+}
+
+/* PHOTO ZOOM */
+
+.zoom-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, .94);
+    align-items: center;
+    justify-content: center;
+    padding: 55px 15px;
+}
+
+.zoom-modal.open {
+    display: flex;
+}
+
+.zoom-image {
+    max-width: 95%;
+    max-height: 90%;
+    object-fit: contain;
+}
+
+.zoom-close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    color: white;
+    background: transparent;
+    border: none;
+    font-size: 35px;
+    cursor: pointer;
+}
+
+.zoom-navigation {
+    position: absolute;
+    bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    color: white;
+}
+
+.zoom-navigation button {
+    background: #6d28d9;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 900px) {
+    .detail-container {
+        grid-template-columns: 1fr;
+        gap: 28px;
+    }
+
+    .main-image-box {
+        height: 400px;
+    }
+}
+
+@media (max-width: 600px) {
+    .detail-page {
+        padding: 20px 3%;
+    }
+
+    .detail-container {
+        padding: 16px;
+    }
+
+    .main-image-box {
+        height: 310px;
+    }
+
+    .detail-info h1 {
+        font-size: 28px;
+    }
+
+    .detail-price {
+        font-size: 29px;
+    }
+
+    .info-grid {
+        gap: 10px;
+    }
+
+    .info-card {
+        padding: 13px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .condition-row {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .condition-row span {
+        text-align: left;
+    }
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<section class="detail-page">
+
+    <div class="detail-container">
+
+        <!-- PHOTO GALLERY -->
+
+        <div class="detail-images">
+
+            {% set photos = phone.get('images') or phone.get('photos') or [] %}
+            {% set gallery = namespace(urls=[]) %}
+
+            {% for photo in photos[:10] %}
+
+                {% if photo %}
+
+                    {% if photo.startswith('/static/') %}
+                        {% set image_url = photo %}
+                    {% else %}
+                        {% set image_url = url_for(
+                            'static',
+                            filename='uploads/' ~ photo
+                        ) %}
+                    {% endif %}
+
+                    {% set gallery.urls = gallery.urls + [image_url] %}
+
+                {% endif %}
+
+            {% endfor %}
+
+
+            <div class="main-image-box">
+
+                {% if gallery.urls %}
+
+                    <img
+                        id="mainImage"
+                        class="main-product-image"
+                        src="{{ gallery.urls[0] }}"
+                        alt="{{ phone.get('brand', '') }} {{ phone.get('model', 'Phone') }}"
+                        title="Click to zoom"
+                    >
+
+                    {% if gallery.urls|length > 1 %}
+
+                        <button
+                            type="button"
+                            id="prevPhoto"
+                            class="gallery-btn prev-btn"
+                            aria-label="Previous photo"
+                        >
+                            &#10094;
+                        </button>
+
+                        <button
+                            type="button"
+                            id="nextPhoto"
+                            class="gallery-btn next-btn"
+                            aria-label="Next photo"
+                        >
+                            &#10095;
+                        </button>
+
+                    {% endif %}
+
+                    <span id="imageCount" class="image-count">
+                        1 / {{ gallery.urls|length }}
+                    </span>
+
+                {% else %}
+
+                    <div class="no-image">📱</div>
+
+                {% endif %}
+
+            </div>
+
+
+            {% if gallery.urls|length > 1 %}
+
+                <div
+                    id="thumbnailGallery"
+                    class="thumbnail-gallery"
+                >
+
+                    {% for image_url in gallery.urls %}
+
+                        <img
+                            src="{{ image_url }}"
+                            class="thumbnail {% if loop.first %}active{% endif %}"
+                            alt="Phone photo {{ loop.index }}"
+                            data-index="{{ loop.index0 }}"
+                            loading="lazy"
+                            tabindex="0"
+                            role="button"
+                        >
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+
+            {% if gallery.urls %}
+
+                <p class="gallery-hint">
+                    🔍 Click the main photo to zoom
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- PRODUCT DETAILS -->
+
+        <div class="detail-info">
+
+            <div class="brand-name">
+                {{ phone.get('brand') or 'Smartphone' }}
+            </div>
+
+            <h1>
+                {{ phone.get('model') or 'Phone' }}
+            </h1>
+
+            <div class="detail-price">
+                ₹{{ phone.get('price') or '0' }}
+            </div>
+
+
+            <!-- SPECIFICATIONS -->
+
+            <div class="info-grid">
+
+                <div class="info-card">
+
+                    <strong>💾 Storage</strong>
+
+                    <span>
+                        {{ phone.get('storage') or 'Not specified' }}
+                    </span>
+
+                </div>
+
+
+                <div class="info-card">
+
+                    <strong>🔋 Battery Health</strong>
+
+                    <span>
+
+                        {% set battery = phone.get('battery') %}
+
+                        {% if battery %}
+
+                            {{ battery }}
+
+                            {% if '%' not in (battery|string) %}
+                                %
+                            {% endif %}
+
+                        {% else %}
+
+                            Not specified
+
+                        {% endif %}
+
+                    </span>
+
+                </div>
+
+
+                <div class="info-card">
+
+                    <strong>📱 Condition</strong>
+
+                    <span>
+                        {{ phone.get('condition') or 'Not specified' }}
+                    </span>
+
+                </div>
+
+
+                <div class="info-card">
+
+                    <strong>🏷️ Listing Type</strong>
+
+                    <span>
+                        {{ (phone.get('listing_type') or 'free')|title }}
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- DAMAGE AND REPAIR DETAILS -->
+
+            <div class="condition-section">
+
+                <h2>🔎 Phone Condition Details</h2>
+
+                <div class="condition-row">
+
+                    <strong>Screen Damage</strong>
+
+                    <span>
+                        {{ phone.get('screen_damage') or 'Not specified' }}
+                    </span>
+
+                </div>
+
+
+                <div class="condition-row">
+
+                    <strong>Body / Scratches</strong>
+
+                    <span>
+                        {{ phone.get('body_damage') or 'Not specified' }}
+                    </span>
+
+                </div>
+
+
+                <div class="condition-row">
+
+                    <strong>Repair History</strong>
+
+                    <span>
+                        {{ phone.get('repair_history') or 'Not specified' }}
+                    </span>
+
+                </div>
+
+
+                <div class="condition-row">
+
+                    <strong>Original Display</strong>
+
+                    <span>
+                        {{ phone.get('original_display') or 'Not specified' }}
+                    </span>
+
+                </div>
+
+
+                <div class="condition-row">
+
+                    <strong>Box / Charger</strong>
+
+                    <span>
+                        {{ phone.get('accessories') or 'Not specified' }}
+                    </span>
+
+                </div>
+
+
+                <p class="condition-note">
+                    ⚠️ These details are provided by the seller.
+                    Check the phone's condition before completing
+                    your purchase.
+                </p>
+
+            </div>
+
+
+            <!-- DESCRIPTION -->
+
+            <div class="description-section">
+
+                <h2>📝 Phone Description</h2>
+
+                <p>{{ phone.get('description') or 'No description available.' }}</p>
+
+            </div>
+
+
+            <!-- SELLER INFORMATION -->
+
+            <div class="seller-box">
+
+                <h2>👤 Seller Information</h2>
+
+                <p>
+                    <strong>Name:</strong>
+                    {{ phone.get('seller_name') or 'Seller' }}
+                </p>
+
+                {% set seller_phone =
+                    phone.get('seller_phone')
+                    or phone.get('phone')
+                    or ''
+                %}
+
+                <p>
+                    <strong>Contact:</strong>
+
+                    {% if seller_phone %}
+                        Available by phone
+                    {% else %}
+                        Not provided
+                    {% endif %}
+
+                </p>
+
+            </div>
+
+
+            <!-- ACTION BUTTONS -->
+
+            <div class="action-buttons">
+
+                {% if seller_phone %}
+
+                    <a
+                        href="tel:{{ seller_phone }}"
+                        class="contact-btn"
+                    >
+                        📞 Contact Seller
+                    </a>
+
+                {% endif %}
+
+
+                <a
+                    href="{{ url_for('buy_now', listing_id=phone.get('id')) }}"
+                    class="buy-btn"
+                >
+                    🛒 Buy Now
+                </a>
+
+            </div>
+
+
+            <a
+                href="{{ url_for('products') }}"
+                class="back-btn"
+            >
+                ← Back to Products
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ZOOM MODAL -->
+
+{% if gallery.urls %}
+
+<div
+    id="zoomModal"
+    class="zoom-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Phone photo viewer"
+>
+
+    <button
+        type="button"
+        id="zoomClose"
+        class="zoom-close"
+        aria-label="Close photo"
+    >
+        &times;
+    </button>
+
+    <img
+        id="zoomImage"
+        class="zoom-image"
+        src="{{ gallery.urls[0] }}"
+        alt="Enlarged phone photo"
+    >
+
+    {% if gallery.urls|length > 1 %}
+
+        <div class="zoom-navigation">
+
+            <button type="button" id="zoomPrev">
+                ❮
+            </button>
+
+            <span id="zoomCount">
+                1 / {{ gallery.urls|length }}
+            </span>
+
+            <button type="button" id="zoomNext">
+                ❯
+            </button>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endif %}
+
+
+<!-- GALLERY DATA -->
+
+<div id="galleryData" hidden>
+
+    {% for image_url in gallery.urls %}
+
+        <span data-photo="{{ image_url }}"></span>
+
+    {% endfor %}
+
+</div>
+
+
+<!-- GALLERY JAVASCRIPT -->
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const galleryImages = Array.from(
+        document.querySelectorAll("#galleryData [data-photo]")
+    ).map(function (item) {
+        return item.dataset.photo;
+    });
+
+    const mainImage = document.getElementById("mainImage");
+    const imageCount = document.getElementById("imageCount");
+
+    const thumbnails = document.querySelectorAll(
+        "#thumbnailGallery .thumbnail"
+    );
+
+    const prevButton = document.getElementById("prevPhoto");
+    const nextButton = document.getElementById("nextPhoto");
+
+    const zoomModal = document.getElementById("zoomModal");
+    const zoomImage = document.getElementById("zoomImage");
+    const zoomClose = document.getElementById("zoomClose");
+    const zoomPrev = document.getElementById("zoomPrev");
+    const zoomNext = document.getElementById("zoomNext");
+    const zoomCount = document.getElementById("zoomCount");
+
+    let currentImage = 0;
+
+
+    function showImage(index) {
+
+        if (!galleryImages.length || !mainImage) {
+            return;
+        }
+
+        currentImage =
+            (index + galleryImages.length) % galleryImages.length;
+
+        mainImage.src = galleryImages[currentImage];
+
+        if (imageCount) {
+            imageCount.textContent =
+                (currentImage + 1) + " / " + galleryImages.length;
+        }
+
+        if (zoomImage) {
+            zoomImage.src = galleryImages[currentImage];
+        }
+
+        if (zoomCount) {
+            zoomCount.textContent =
+                (currentImage + 1) + " / " + galleryImages.length;
+        }
+
+        thumbnails.forEach(function (thumbnail, index) {
+
+            thumbnail.classList.toggle(
+                "active",
+                index === currentImage
+            );
+
+        });
+    }
+
+
+    function changeImage(direction) {
+        showImage(currentImage + direction);
+    }
+
+
+    /* THUMBNAIL CLICK */
+
+    thumbnails.forEach(function (thumbnail) {
+
+        function selectPhoto() {
+            showImage(Number(thumbnail.dataset.index));
+        }
+
+        thumbnail.addEventListener("click", selectPhoto);
+
+        thumbnail.addEventListener("keydown", function (event) {
+
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                selectPhoto();
+            }
+
+        });
+
+    });
+
+
+    /* MAIN GALLERY BUTTONS */
+
+    if (prevButton) {
+        prevButton.addEventListener("click", function () {
+            changeImage(-1);
+        });
+    }
+
+    if (nextButton) {
+        nextButton.addEventListener("click", function () {
+            changeImage(1);
+        });
+    }
+
+
+    /* PHOTO ZOOM */
+
+    if (mainImage && zoomModal) {
+
+        mainImage.addEventListener("click", function () {
+
+            zoomModal.classList.add("open");
+
+            showImage(currentImage);
+
+            if (zoomClose) {
+                zoomClose.focus();
+            }
+
+        });
+    }
+
+
+    function closeZoom() {
+
+        if (zoomModal) {
+            zoomModal.classList.remove("open");
+        }
+
+        if (mainImage) {
+            mainImage.focus();
+        }
+    }
+
+
+    if (zoomClose) {
+        zoomClose.addEventListener("click", closeZoom);
+    }
+
+    if (zoomPrev) {
+        zoomPrev.addEventListener("click", function () {
+            changeImage(-1);
+        });
+    }
+
+    if (zoomNext) {
+        zoomNext.addEventListener("click", function () {
+            changeImage(1);
+        });
+    }
+
+    if (zoomModal) {
+
+        zoomModal.addEventListener("click", function (event) {
+
+            if (event.target === zoomModal) {
+                closeZoom();
+            }
+
+        });
+    }
+
+
+    /* KEYBOARD CONTROLS */
+
+    document.addEventListener("keydown", function (event) {
+
+        if (!zoomModal || !zoomModal.classList.contains("open")) {
+            return;
+        }
+
+        if (event.key === "Escape") {
+            closeZoom();
+        }
+
+        if (event.key === "ArrowLeft") {
+            changeImage(-1);
+        }
+
+        if (event.key === "ArrowRight") {
+            changeImage(1);
+        }
+
+    });
+
+});
+</script>
+
+{% endblock %}

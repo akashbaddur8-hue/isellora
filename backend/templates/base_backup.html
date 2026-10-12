@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>
+        {% block title %}
+        iSellora - Buy. Sell. Upgrade.
+        {% endblock %}
+    </title>
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f6f7fb;
+            color: #1f2937;
+            min-height: 100vh;
+        }
+
+
+        /* ================= NAVBAR ================= */
+
+        .navbar {
+            width: 100%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            padding: 14px 6%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+
+        /* ================= LOGO ================= */
+
+        .logo {
+            color: white;
+            text-decoration: none;
+            font-size: 25px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .logo span {
+            color: #ddd6fe;
+        }
+
+
+        /* ================= NAV LINKS ================= */
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 9px 13px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+
+        /* ================= ACCOUNT BUTTON ================= */
+
+        .account-btn {
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+
+        /* ================= MY ORDERS / MY SALES BUTTONS ================= */
+
+        .orders-btn {
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        .orders-btn:hover {
+            background: rgba(255, 255, 255, 0.28) !important;
+        }
+
+
+        /* ================= SIGNUP ================= */
+
+        .signup-btn {
+            background: white !important;
+            color: #5b21b6 !important;
+        }
+
+
+        /* ================= LOGOUT ================= */
+
+        .logout-btn {
+            background: #dc2626 !important;
+            color: white !important;
+        }
+
+
+        /* ================= MAIN ================= */
+
+        .main-content {
+            width: 100%;
+            min-height: calc(100vh - 160px);
+        }
+
+
+        /* ================= FOOTER ================= */
+
+        .footer {
+            margin-top: 50px;
+            background: #111827;
+            color: #d1d5db;
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .footer-logo {
+            color: white;
+            font-size: 21px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .footer p {
+            font-size: 13px;
+            margin: 5px 0;
+        }
+
+        .footer-links {
+            margin-top: 12px;
+        }
+
+        .footer-links a {
+            color: #c4b5fd;
+            text-decoration: none;
+            margin: 0 8px;
+            font-size: 13px;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+
+        /* ================= TABLET ================= */
+
+        @media (max-width: 768px) {
+
+            .navbar {
+                padding: 12px 4%;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .logo {
+                text-align: center;
+            }
+
+            .nav-links {
+                justify-content: center;
+                gap: 5px;
+            }
+
+            .nav-links a {
+                font-size: 12px;
+                padding: 8px 9px;
+            }
+
+        }
+
+
+        /* ================= MOBILE ================= */
+
+        @media (max-width: 480px) {
+
+            .nav-links a {
+                font-size: 11px;
+                padding: 7px 8px;
+            }
+
+            .logo {
+                font-size: 22px;
+            }
+
+        }
+
+    </style>
+
+
+    {% block extra_css %}
+    {% endblock %}
+
+</head>
+
+
+<body>
+
+
+    <!-- ================= NAVBAR ================= -->
+
+    <nav class="navbar">
+
+
+        <!-- LOGO -->
+
+        <a href="{{ url_for('home') }}" class="logo">
+
+            iSellora<span>™</span>
+
+        </a>
+
+
+        <!-- NAVIGATION -->
+
+        <div class="nav-links">
+
+
+            <!-- HOME -->
+
+            <a href="{{ url_for('home') }}">
+                Home
+            </a>
+
+
+            <!-- PRODUCTS -->
+
+            <a href="{{ url_for('products') }}">
+                Products
+            </a>
+
+
+            <!-- SELL PHONE -->
+
+            <a href="{{ url_for('sell') }}">
+                Sell Phone
+            </a>
+
+
+            {% if session.get("user_id") %}
+
+
+                <!-- MY ORDERS -->
+
+                <a
+                    href="{{ url_for('orders') }}"
+                    class="orders-btn"
+                >
+                    🛒 My Orders
+                </a>
+
+
+                <!-- MY SALES -->
+
+                <a
+                    href="{{ url_for('sales') }}"
+                    class="orders-btn"
+                >
+                    💰 My Sales
+                </a>
+
+
+                <!-- MY ACCOUNT -->
+
+                <a
+                    href="{{ url_for('account') }}"
+                    class="account-btn"
+                >
+                    👤 My Account
+                </a>
+
+
+                <!-- LOGOUT -->
+
+                <a
+                    href="{{ url_for('logout') }}"
+                    class="logout-btn"
+                >
+                    Logout
+                </a>
+
+
+            {% else %}
+
+
+                <!-- LOGIN -->
+
+                <a href="{{ url_for('login') }}">
+                    Login
+                </a>
+
+
+                <!-- SIGN UP -->
+
+                <a
+                    href="{{ url_for('signup') }}"
+                    class="signup-btn"
+                >
+                    Sign Up
+                </a>
+
+
+            {% endif %}
+
+
+        </div>
+
+    </nav>
+
+
+
+    <!-- ================= MAIN CONTENT ================= -->
+
+    <main class="main-content">
+
+        {% block content %}
+        {% endblock %}
+
+    </main>
+
+
+
+    <!-- ================= FOOTER ================= -->
+
+    <footer class="footer">
+
+
+        <div class="footer-logo">
+            iSellora™
+        </div>
+
+
+        <p>
+            Buy. Sell. Upgrade.
+        </p>
+
+
+        <p>
+            A simple marketplace for buying and selling smartphones.
+        </p>
+
+
+        <div class="footer-links">
+
+
+            <a href="{{ url_for('home') }}">
+                Home
+            </a>
+
+
+            <a href="{{ url_for('products') }}">
+                Products
+            </a>
+
+
+            <a href="{{ url_for('sell') }}">
+                Sell Phone
+            </a>
+
+
+            {% if session.get("user_id") %}
+
+                <a href="{{ url_for('orders') }}">
+                    🛒 My Orders
+                </a>
+
+                <a href="{{ url_for('sales') }}">
+                    💰 My Sales
+                </a>
+
+            {% endif %}
+
+
+        </div>
+
+
+        <p style="margin-top: 15px;">
+            © 2026 iSellora. All rights reserved.
+        </p>
+
+
+    </footer>
+
+
+
+    <!-- ================= JAVASCRIPT BLOCK ================= -->
+
+    {% block extra_js %}
+    {% endblock %}
+
+
+</body>
+</html>

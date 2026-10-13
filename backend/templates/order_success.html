@@ -171,6 +171,7 @@
 
         <div class="success-actions">
             <a href="{{ url_for('orders') }}" class="btn-action-primary">View My Orders</a>
+            <a href="{{ url_for('order_invoice', order_id=order.id) }}" target="_blank" class="btn-action-secondary">🖨️ Print Certificate & Invoice</a>
             <a href="{{ url_for('products') }}" class="btn-action-secondary">Continue Browsing</a>
         </div>
     </div>

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}{{ error_title or "System Notice" }} ({{ status_code or 404 }}) | iSellora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .error-container {
+        max-width: 680px;
+        margin: 60px auto 80px;
+        padding: 0 20px;
+        text-align: center;
+    }
+
+    .error-card {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 48px 32px;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .error-badge {
+        display: inline-block;
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 6px 14px;
+        border-radius: var(--radius-full);
+        margin-bottom: 20px;
+    }
+    .badge-404 { background: #e0f2fe; color: #0369a1; }
+    .badge-403 { background: #fef3c7; color: #b45309; }
+    .badge-500 { background: #fee2e2; color: #b91c1c; }
+    .badge-400 { background: #f3e8ff; color: #7e22ce; }
+
+    .error-icon {
+        font-size: 54px;
+        margin-bottom: 16px;
+        line-height: 1;
+    }
+
+    .error-card h1 {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--text-main);
+        margin-bottom: 12px;
+        letter-spacing: -0.5px;
+    }
+
+    .error-card p {
+        font-size: 15px;
+        color: var(--text-muted);
+        line-height: 1.6;
+        max-width: 500px;
+        margin: 0 auto 28px;
+    }
+
+    .error-search-box {
+        max-width: 440px;
+        margin: 0 auto 32px;
+    }
+
+    .error-search-form {
+        display: flex;
+        gap: 8px;
+    }
+
+    .error-search-input {
+        flex: 1;
+        height: 42px;
+        padding: 0 16px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        color: var(--text-main);
+    }
+
+    .error-search-input:focus {
+        outline: none;
+        background: #ffffff;
+        border-color: var(--border-focus);
+    }
+
+    .error-actions {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .btn-error-primary {
+        background: var(--primary);
+        color: white;
+        font-weight: 700;
+        font-size: 14px;
+        padding: 10px 22px;
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+    .btn-error-primary:hover {
+        background: var(--primary-hover);
+        color: white;
+    }
+
+    .btn-error-secondary {
+        background: #f8fafc;
+        color: var(--text-main);
+        border: 1px solid var(--border);
+        font-weight: 700;
+        font-size: 14px;
+        padding: 10px 20px;
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .btn-error-secondary:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-card">
+        <div class="error-icon">
+            {% if status_code == 404 %}🔍
+            {% elif status_code == 403 %}🔒
+            {% elif status_code == 500 %}🛠️
+            {% else %}🛡️{% endif %}
+        </div>
+
+        <span class="error-badge badge-{{ status_code if status_code in [404, 403, 500, 400] else '400' }}">
+            HTTP {{ status_code or 404 }} Error
+        </span>
+
+        <h1>{{ error_title or "Page Not Found" }}</h1>
+        <p>{{ error_message or "The page, device listing, or resource you requested could not be located or has been moved." }}</p>
+
+        <!-- Quick Catalog Search -->
+        <div class="error-search-box">
+            <form class="error-search-form" action="{{ url_for('products') }}" method="GET">
+                <input type="text" name="search" class="error-search-input" placeholder="Search iPhone, Galaxy, Pixel...">
+                <button type="submit" class="btn-error-primary">Search</button>
+            </form>
+        </div>
+
+        <!-- Navigation Shortcuts -->
+        <div class="error-actions">
+            <a href="{{ url_for('products') }}" class="btn-error-primary">Browse All Phones</a>
+            <a href="{{ url_for('home') }}" class="btn-error-secondary">Home</a>
+            <a href="{{ url_for('support') }}" class="btn-error-secondary">Help & Support</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

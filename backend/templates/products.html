@@ -406,10 +406,19 @@
 
             {% else %}
                 <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 56px 20px; text-align: center;">
-                    <div style="font-size: 36px; margin-bottom: 12px;">🔍</div>
-                    <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">No smartphones match your filters</h3>
-                    <p style="color: var(--text-muted); max-width: 460px; margin: 0 auto 24px;">Try loosening your price boundaries, clearing keyword searches, or browsing all brands.</p>
-                    <a href="{{ url_for('products') }}" class="btn-sell">Reset All Filters</a>
+                    <div style="font-size: 36px; margin-bottom: 12px;">📱</div>
+                    {% if brand %}
+                        <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">No approved {{ brand }} phones currently listed</h3>
+                        <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto 24px;">Community sellers haven't listed any verified {{ brand }} devices yet. Have a {{ brand }} phone to sell? List it now to reach verified buyers!</p>
+                        <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                            <a href="{{ url_for('sell') }}" class="btn-sell">+ Sell Your {{ brand }} Phone</a>
+                            <a href="{{ url_for('products') }}" class="btn-view" style="padding: 10px 18px; border: 1px solid var(--border); background: white; color: var(--text-main);">Browse All Brands</a>
+                        </div>
+                    {% else %}
+                        <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">No smartphones match your filters</h3>
+                        <p style="color: var(--text-muted); max-width: 460px; margin: 0 auto 24px;">Try loosening your price boundaries, clearing keyword searches, or browsing all brands.</p>
+                        <a href="{{ url_for('products') }}" class="btn-sell">Reset All Filters</a>
+                    {% endif %}
                 </div>
             {% endif %}
         </main>

@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: isellora_marketplace
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-isellora-production-secure-key-replace-in-env!!}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@isellora.com}
+      - DATABASE_URL=sqlite:////app/data/isellora.db
+    volumes:
+      - isellora_data:/app/data
+      - isellora_uploads:/app/backend/static/uploads
+
+volumes:
+  isellora_data:
+  isellora_uploads:

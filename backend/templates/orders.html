@@ -169,6 +169,8 @@
                         </div>
 
                         <div class="order-actions">
+                            <a href="{{ url_for('order_invoice', order_id=order.id) }}" target="_blank" class="btn-tracking" style="background: white; color: var(--text-main); border: 1px solid var(--border);">🖨️ Invoice & Cert</a>
+
                             {% if order.tracking_url %}
                                 <a href="{{ order.tracking_url }}" target="_blank" rel="noopener noreferrer" class="btn-tracking">Track Courier ↗</a>
                             {% endif %}
@@ -183,6 +185,33 @@
 
                             <a href="{{ url_for('support') }}" style="font-size: 12px; color: var(--text-muted); text-decoration: underline;">Need help?</a>
                         </div>
+
+                        {% if order.status == 'Delivered' %}
+                            <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); width: 100%;">
+                                {% if order.review %}
+                                    <div style="font-size: 13px; color: #059669; font-weight: 600;">
+                                        ⭐ You rated this seller {{ order.review.rating }}/5 stars
+                                        {% if order.review.comment %}
+                                            <span style="color: var(--text-muted); font-weight: normal; margin-left: 6px;">— "{{ order.review.comment }}"</span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <form action="{{ url_for('submit_review', order_id=order.id) }}" method="POST" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">Rate Seller:</span>
+                                        <select name="rating" style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; font-weight: 700;">
+                                            <option value="5">★★★★★ 5 - Excellent</option>
+                                            <option value="4">★★★★☆ 4 - Good</option>
+                                            <option value="3">★★★☆☆ 3 - Average</option>
+                                            <option value="2">★★☆☆☆ 2 - Poor</option>
+                                            <option value="1">★☆☆☆☆ 1 - Terrible</option>
+                                        </select>
+                                        <input type="text" name="comment" placeholder="Feedback on condition accuracy..." style="flex: 1; min-width: 200px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px;">
+                                        <button type="submit" class="btn-tracking" style="padding: 5px 12px; font-size: 12px;">Submit Rating</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             {% endfor %}

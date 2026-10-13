@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#4f46e5">
     <meta name="description" content="iSellora - India's modern, transparent marketplace for buying and selling second-hand smartphones.">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='5' y='2' width='14' height='20' rx='3' fill='%234f46e5'/><path d='M8.5 10.5l2.5 2.5 4.5-4.5' stroke='%2338bdf8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
 
     <title>{% block title %}iSellora | Buy. Sell. Upgrade Smartphones{% endblock %}</title>
 
@@ -624,6 +625,7 @@
                             </div>
                             <a href="{{ url_for('account') }}" class="dropdown-item">👤 My Profile</a>
                             <a href="{{ url_for('orders') }}" class="dropdown-item">📦 My Orders</a>
+                            <a href="{{ url_for('wishlist') }}" class="dropdown-item">❤️ Saved Phones</a>
                             <a href="{{ url_for('sales') }}" class="dropdown-item">💰 My Sales</a>
                             <a href="{{ url_for('seller_dashboard') }}" class="dropdown-item">📊 Seller Dashboard</a>
                             <a href="{{ url_for('support') }}" class="dropdown-item">💬 Help & Support</a>

@@ -47,6 +47,17 @@ class User(db.Model):
     def is_admin(self):
         return self.role == "admin"
 
+    @property
+    def average_rating(self):
+        reviews = Review.query.filter_by(seller_id=self.id).all()
+        if not reviews:
+            return None
+        return round(sum(r.rating for r in reviews) / len(reviews), 1)
+
+    @property
+    def review_count(self):
+        return Review.query.filter_by(seller_id=self.id).count()
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -345,6 +356,39 @@ class ReportDispute(db.Model):
     reporter = db.relationship("User", foreign_keys=[reporter_id])
     listing = db.relationship("Listing", foreign_keys=[listing_id])
     order = db.relationship("Order", foreign_keys=[order_id])
+
+
+class Review(db.Model):
+    __tablename__ = "reviews"
+
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    order_id = db.Column(db.String(36), db.ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    buyer_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    seller_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    listing_id = db.Column(db.String(36), db.ForeignKey("listings.id", ondelete="SET NULL"), nullable=True, index=True)
+    rating = db.Column(db.Integer, nullable=False)  # 1 to 5
+    comment = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
+
+    order = db.relationship("Order", backref=db.backref("review", uselist=False))
+    buyer = db.relationship("User", foreign_keys=[buyer_id])
+    seller = db.relationship("User", foreign_keys=[seller_id])
+    listing = db.relationship("Listing", foreign_keys=[listing_id])
+
+
+class Wishlist(db.Model):
+    __tablename__ = "wishlists"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    listing_id = db.Column(db.String(36), db.ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "listing_id", name="uq_user_listing_wishlist"),
+    )
+
+    listing = db.relationship("Listing")
 
 
 class AuditEvent(db.Model):

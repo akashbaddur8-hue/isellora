@@ -290,6 +290,9 @@
                 <h4>👤 Seller Information</h4>
                 <div style="font-size: 14px; color: var(--text-main);">
                     <strong>{{ phone.seller_name or 'Verified Marketplace Seller' }}</strong>
+                    {% if phone.seller and phone.seller.average_rating %}
+                        <span style="font-size: 13px; color: #f59e0b; font-weight: 700; margin-left: 6px;">★ {{ phone.seller.average_rating }} ({{ phone.seller.review_count }} review{{ 's' if phone.seller.review_count != 1 else '' }})</span>
+                    {% endif %}
                     <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Listed on {{ phone.created_at.strftime('%d %B %Y') if phone.created_at else 'Recent' }}</p>
                     <p style="margin-top: 8px; font-size: 12px; color: #475569;">
                         🛡️ <em>Direct seller contact details will be shared securely on your order confirmation for pickup or shipment tracking.</em>
@@ -332,6 +335,10 @@
                     <a href="{{ url_for('edit_listing', listing_id=phone.id) }}" class="btn-edit" style="flex: 1; text-align: center;">✏️ Edit My Listing</a>
                 {% elif phone.is_purchasable %}
                     <a href="{{ url_for('buy_now', listing_id=phone.id) }}" class="btn-buy-now">Buy Now / Reserve Device</a>
+                    <form action="{{ url_for('toggle_wishlist', listing_id=phone.id) }}" method="POST" style="margin: 0; display: flex;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-edit" style="padding: 12px 18px; background: white; border: 1px solid var(--border); cursor: pointer;" title="Save Phone">❤️ Save</button>
+                    </form>
                 {% else %}
                     <button class="btn-buy-now btn-disabled" disabled>
                         {% if phone.inventory_status == 'reserved' %}
@@ -342,6 +349,10 @@
                             Under Review
                         {% endif %}
                     </button>
+                    <form action="{{ url_for('toggle_wishlist', listing_id=phone.id) }}" method="POST" style="margin: 0; display: flex;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-edit" style="padding: 12px 18px; background: white; border: 1px solid var(--border); cursor: pointer;" title="Save Phone">❤️ Save</button>
+                    </form>
                 {% endif %}
             </div>
 

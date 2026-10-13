@@ -26,7 +26,7 @@ from backend.database import db
 from backend.models import (
     User, Listing, ListingImage, Order, OrderStatusHistory,
     Notification, SupportTicket, ReportDispute, AuditEvent,
-    utc_now, get_legitimate_tracking_url
+    Review, Wishlist, utc_now, get_legitimate_tracking_url
 )
 from backend.config import config_by_name
 from backend.services.auth_service import (
@@ -114,29 +114,59 @@ def create_app(config_name=None):
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
         app.logger.warning(f"CSRF failure: {e.description} from {request.remote_addr}")
-        return render_template("base.html", error_message="Security token expired or invalid. Please refresh the page and try again."), 400
+        return render_template(
+            "error.html",
+            status_code=400,
+            error_title="Security Token Expired",
+            error_message="Security token expired or invalid. Please refresh the page and try again."
+        ), 400
 
     @app.errorhandler(400)
     def bad_request(e):
-        return render_template("base.html", error_message=getattr(e, "description", "Bad Request")), 400
+        return render_template(
+            "error.html",
+            status_code=400,
+            error_title="Bad Request",
+            error_message=getattr(e, "description", "The request could not be processed due to invalid parameters.")
+        ), 400
 
     @app.errorhandler(403)
     def forbidden(e):
-        return render_template("base.html", error_message="Access Denied: You do not have permission to view or modify this resource."), 403
+        return render_template(
+            "error.html",
+            status_code=403,
+            error_title="Access Forbidden",
+            error_message="You do not have permission to view or perform actions on this resource."
+        ), 403
 
     @app.errorhandler(404)
     def not_found(e):
-        return render_template("base.html", error_message="The requested page or listing could not be found."), 404
+        return render_template(
+            "error.html",
+            status_code=404,
+            error_title="Page or Phone Not Found",
+            error_message="The smartphone listing or page you are looking for has been removed, sold, or does not exist."
+        ), 404
 
     @app.errorhandler(409)
     def conflict(e):
-        return render_template("base.html", error_message=getattr(e, "description", "Conflict: Item was modified or claimed by another request.")), 409
+        return render_template(
+            "error.html",
+            status_code=409,
+            error_title="Inventory Conflict",
+            error_message=getattr(e, "description", "This item was modified or reserved by another buyer during checkout.")
+        ), 409
 
     @app.errorhandler(500)
     def internal_error(e):
         db.session.rollback()
         app.logger.exception("Internal server error")
-        return render_template("base.html", error_message="An unexpected system error occurred. Our engineering team has been alerted."), 500
+        return render_template(
+            "error.html",
+            status_code=500,
+            error_title="Internal System Error",
+            error_message="An unexpected system error occurred. Our engineering team has been alerted."
+        ), 500
 
     # =========================================================================
     # AUTHENTICATION HELPERS
@@ -370,6 +400,118 @@ def create_app(config_name=None):
             flash(msg, "error")
 
         return redirect(url_for("orders"))
+
+    @app.route("/orders/<order_id>/invoice")
+    def order_invoice(order_id):
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login", next=request.path))
+
+        order = db.session.get(Order, order_id)
+        if not order:
+            abort(404)
+
+        is_buyer = order.buyer_id == user.id
+        is_seller = order.seller_id == user.id
+        admin_auth = is_admin()
+
+        if not (is_buyer or is_seller or admin_auth):
+            abort(403)
+
+        phone = db.session.get(Listing, order.listing_id) if order.listing_id else None
+        return render_template("invoice.html", order=order, phone=phone)
+
+    @app.route("/orders/<order_id>/review", methods=["POST"])
+    def submit_review(order_id):
+        user = get_current_user()
+        if not user:
+            abort(403)
+
+        order = db.session.get(Order, order_id)
+        if not order or order.buyer_id != user.id:
+            abort(404)
+
+        if order.status != "Delivered":
+            flash("Reviews can only be submitted for successfully delivered orders.", "error")
+            return redirect(url_for("orders"))
+
+        existing_review = Review.query.filter_by(order_id=order.id).first()
+        if existing_review:
+            flash("You have already submitted a review for this order.", "info")
+            return redirect(url_for("orders"))
+
+        try:
+            rating = int(request.form.get("rating", 5))
+            if not 1 <= rating <= 5:
+                rating = 5
+        except (ValueError, TypeError):
+            rating = 5
+
+        comment = request.form.get("comment", "").strip()
+
+        review = Review(
+            order_id=order.id,
+            buyer_id=user.id,
+            seller_id=order.seller_id,
+            listing_id=order.listing_id,
+            rating=rating,
+            comment=comment
+        )
+        db.session.add(review)
+
+        if order.seller_id:
+            notice = Notification(
+                user_id=order.seller_id,
+                title="New Buyer Rating",
+                message=f"Buyer {user.name} rated your handover {rating}/5 stars.",
+                order_id=order.id
+            )
+            db.session.add(notice)
+
+        db.session.commit()
+        flash("Thank you! Your seller rating and review has been recorded.", "success")
+        return redirect(url_for("orders"))
+
+    @app.route("/wishlist/toggle/<listing_id>", methods=["POST"])
+    def toggle_wishlist(listing_id):
+        user = get_current_user()
+        if not user:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+                return jsonify({"error": "Login required"}), 401
+            return redirect(url_for("login", next=request.referrer or url_for("products")))
+
+        phone = db.session.get(Listing, listing_id)
+        if not phone:
+            abort(404)
+
+        item = Wishlist.query.filter_by(user_id=user.id, listing_id=listing_id).first()
+        if item:
+            db.session.delete(item)
+            db.session.commit()
+            saved = False
+            msg = "Removed from your saved phones."
+        else:
+            item = Wishlist(user_id=user.id, listing_id=listing_id)
+            db.session.add(item)
+            db.session.commit()
+            saved = True
+            msg = "Saved to your favorites!"
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+            return jsonify({"saved": saved, "message": msg})
+
+        flash(msg, "success" if saved else "info")
+        return redirect(request.referrer or url_for("listing_detail", listing_id=listing_id))
+
+    @app.route("/wishlist")
+    def wishlist():
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login", next=request.path))
+
+        saved_items = Wishlist.query.filter_by(user_id=user.id).order_by(Wishlist.created_at.desc()).all()
+        phones = [item.listing for item in saved_items if item.listing and item.listing.approval_status == "approved"]
+        return render_template("wishlist.html", phones=phones)
 
     @app.route("/sales")
     def sales():

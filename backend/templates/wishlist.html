@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Phones & Wishlist | iSellora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .wishlist-header {
+        margin-bottom: 32px;
+    }
+
+    .wishlist-header h1 {
+        font-size: 26px;
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+
+    .wishlist-header p {
+        color: var(--text-muted);
+        font-size: 14px;
+    }
+
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 24px;
+        margin-bottom: 60px;
+    }
+
+    .phone-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+    .phone-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .phone-image-wrapper {
+        height: 200px;
+        background: #f8fafc;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        padding: 16px;
+        position: relative;
+    }
+
+    .phone-image-wrapper img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .phone-content {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .phone-title {
+        font-size: 15px;
+        font-weight: 800;
+        margin-bottom: 4px;
+    }
+
+    .phone-specs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+
+    .spec-pill {
+        background: #f1f5f9;
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: var(--radius-sm);
+    }
+
+    .phone-footer {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 12px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .phone-price {
+        font-size: 18px;
+        font-weight: 800;
+    }
+
+    .btn-view {
+        background: var(--primary-light);
+        color: var(--primary);
+        font-weight: 700;
+        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: var(--radius-md);
+        text-decoration: none;
+    }
+
+    .btn-remove-wishlist {
+        background: none;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="wishlist-header">
+        <h1>❤️ Saved Phones & Wishlist</h1>
+        <p>Keep track of certified smartphones you want to buy or compare.</p>
+    </div>
+
+    {% if phones %}
+        <div class="product-grid">
+            {% for phone in phones %}
+                <div class="phone-card">
+                    <div class="phone-image-wrapper">
+                        <img src="{{ phone.primary_image }}" alt="{{ phone.brand }} {{ phone.model }}" loading="lazy">
+                    </div>
+                    <div class="phone-content">
+                        <div class="phone-title">{{ phone.brand }} {{ phone.model }}</div>
+                        <div class="phone-specs">
+                            <span class="spec-pill">{{ phone.storage }}</span>
+                            <span class="spec-pill">{{ phone.condition }}</span>
+                            {% if phone.battery_health %}
+                                <span class="spec-pill">🔋 {{ phone.battery_health }}%</span>
+                            {% endif %}
+                        </div>
+                        <div class="phone-footer">
+                            <div class="phone-price">{{ phone.formatted_price }}</div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <form action="{{ url_for('toggle_wishlist', listing_id=phone.id) }}" method="POST" style="margin: 0;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-remove-wishlist" title="Remove">✕ Remove</button>
+                                </form>
+                                <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="btn-view">Inspect</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 56px 20px; text-align: center; max-width: 600px; margin: 0 auto 60px;">
+            <div style="font-size: 40px; margin-bottom: 12px;">🤍</div>
+            <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">No saved smartphones yet</h3>
+            <p style="color: var(--text-muted); margin-bottom: 24px;">Click the heart icon on any smartphone card to save it here for quick access later.</p>
+            <a href="{{ url_for('products') }}" class="btn-sell">Explore Catalog</a>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

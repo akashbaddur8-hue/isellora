@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice & Inspection Certificate #{{ order.id[:8] }} | iSellora</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='5' y='2' width='14' height='20' rx='3' fill='%234f46e5'/><path d='M8.5 10.5l2.5 2.5 4.5-4.5' stroke='%2338bdf8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --bg-page: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-main);
+            padding: 40px 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .invoice-card {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 48px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+        }
+
+        .no-print-bar {
+            max-width: 800px;
+            margin: 0 auto 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-print {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-back {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .btn-back:hover {
+            color: var(--primary);
+        }
+
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 28px;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 32px;
+        }
+
+        .logo-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo-box svg {
+            width: 32px;
+            height: 32px;
+        }
+        .logo-box h2 {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+
+        .invoice-meta {
+            text-align: right;
+            font-size: 13px;
+        }
+        .invoice-meta h3 {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .parties-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-bottom: 36px;
+        }
+
+        .party-block h4 {
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .party-block p {
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .table-title {
+            font-size: 15px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 32px;
+        }
+        .invoice-table th {
+            background: #f8fafc;
+            text-align: left;
+            padding: 12px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+        }
+        .invoice-table td {
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 32px;
+            font-size: 13px;
+        }
+        .spec-item span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .spec-item strong {
+            color: var(--text-main);
+        }
+
+        .summary-box {
+            margin-left: auto;
+            width: 300px;
+            margin-bottom: 36px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+        .summary-row.total {
+            border-top: 2px solid var(--border);
+            padding-top: 12px;
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .certificate-seal {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 12px;
+            padding: 18px;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #065f46;
+        }
+        .certificate-seal strong {
+            font-size: 13px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .invoice-card {
+                border: none;
+                box-shadow: none;
+                padding: 0;
+                max-width: 100%;
+            }
+            .no-print-bar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print-bar">
+        <a href="{{ url_for('orders') }}" class="btn-back">← Back to Orders</a>
+        <button onclick="window.print()" class="btn-print">🖨️ Print Certificate & Invoice</button>
+    </div>
+
+    <div class="invoice-card">
+        <!-- HEADER -->
+        <div class="invoice-header">
+            <div class="logo-box">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="5" y="2" width="14" height="20" rx="3" fill="#4f46e5"/>
+                    <path d="M8.5 10.5l2.5 2.5 4.5-4.5" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h2>iSellora</h2>
+            </div>
+            <div class="invoice-meta">
+                <h3>CERTIFICATE & INVOICE</h3>
+                <p>Order Reference: <strong>#{{ order.id[:8] }}</strong></p>
+                <p>Date: {{ order.created_at.strftime('%d %B %Y') if order.created_at else '' }}</p>
+                <p>Status: <strong>{{ order.status }}</strong></p>
+            </div>
+        </div>
+
+        <!-- PARTIES -->
+        <div class="parties-grid">
+            <div class="party-block">
+                <h4>Buyer Details</h4>
+                <p><strong>{{ order.buyer_name }}</strong></p>
+                <p>Phone: {{ order.buyer_phone }}</p>
+                <p>Delivery: {{ order.delivery_method|capitalize }}</p>
+                <p>{{ order.shipping_address }}{% if order.pincode %}, PIN: {{ order.pincode }}{% endif %}</p>
+            </div>
+            <div class="party-block">
+                <h4>Seller Details</h4>
+                <p><strong>{{ order.seller_name or 'Verified Community Seller' }}</strong></p>
+                {% if order.seller_phone %}<p>Phone: {{ order.seller_phone }}</p>{% endif %}<p>Settlement: Direct / Cash on Delivery</p>
+                <p>Payment Status: <strong>{{ order.payment_status }}</strong></p>
+            </div>
+        </div>
+
+        <!-- LINE ITEMS -->
+        <h4 class="table-title">Smartphone Purchase</h4>
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Item Description</th>
+                    <th>Storage</th>
+                    <th>Quantity</th>
+                    <th style="text-align: right;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <strong>{{ order.brand }} {{ order.model }}</strong>
+                        <small style="display: block; color: var(--text-muted);">Listing ID: {{ order.listing_id[:8] if order.listing_id else 'N/A' }}</small>
+                    </td>
+                    <td>{{ order.storage or 'Standard' }}</td>
+                    <td>1 unit</td>
+                    <td style="text-align: right; font-weight: 700;">₹{{ order.price_rupees if order.price_rupees else (order.price_paise // 100) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- HARDWARE INSPECTION SPECS -->
+        {% if phone %}
+            <h4 class="table-title">Verified Hardware Inspection Snapshot</h4>
+            <div class="specs-grid">
+                <div class="spec-item">
+                    <span>Condition Grade</span>
+                    <strong>{{ phone.condition }}</strong>
+                </div>
+                <div class="spec-item">
+                    <span>Battery Health</span>
+                    <strong>{{ phone.battery_health }}% Health</strong>
+                </div>
+                <div class="spec-item">
+                    <span>RAM / Memory</span>
+                    <strong>{{ phone.ram or 'N/A' }}</strong>
+                </div>
+                <div class="spec-item">
+                    <span>Display</span>
+                    <strong>{{ phone.original_display or 'Original Factory' }}</strong>
+                </div>
+                <div class="spec-item">
+                    <span>Repair History</span>
+                    <strong>{{ phone.repair_history or 'Never Repaired' }}</strong>
+                </div>
+                <div class="spec-item">
+                    <span>Cosmetic Body</span>
+                    <strong>{{ phone.body_damage or 'No Damage' }}</strong>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- FINANCIAL SUMMARY -->
+        <div class="summary-box">
+            <div class="summary-row">
+                <span>Subtotal:</span>
+                <span>₹{{ order.price_paise // 100 }}</span>
+            </div>
+            <div class="summary-row">
+                <span>Delivery Charge:</span>
+                <span>{% if order.delivery_charge_paise > 0 %}₹{{ order.delivery_charge_rupees }}{% else %}FREE{% endif %}</span>
+            </div>
+            <div class="summary-row total">
+                <span>Total Amount Due:</span>
+                <span>₹{{ (order.price_paise + order.delivery_charge_paise) // 100 }}</span>
+            </div>
+        </div>
+
+        <!-- CERTIFICATE OF VERIFICATION -->
+        <div class="certificate-seal">
+            <strong>🛡️ iSellora Handover Verification Policy</strong>
+            This certificate verifies the agreed snapshot of the device at the moment of checkout. Payment is collected upon physical handover/delivery inspection. Please inspect cosmetic grading, camera modules, and verify serial/IMEI match before completing payment.
+        </div>
+    </div>
+
+</body>
+</html>

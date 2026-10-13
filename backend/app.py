@@ -489,13 +489,13 @@ def create_app(config_name=None):
             db.session.delete(item)
             db.session.commit()
             saved = False
-            msg = "Removed from your saved phones."
+            msg = "Removed from your wishlist."
         else:
             item = Wishlist(user_id=user.id, listing_id=listing_id)
             db.session.add(item)
             db.session.commit()
             saved = True
-            msg = "Saved to your favorites!"
+            msg = "Added to your wishlist!"
 
         if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
             return jsonify({"saved": saved, "message": msg})

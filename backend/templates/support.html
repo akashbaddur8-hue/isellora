@@ -128,7 +128,12 @@
         <!-- LEFT: FAQ & POLICIES -->
         <div>
             <div class="support-card">
-                <h3>🛡️ Marketplace Standards & Policies</h3>
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    Marketplace Standards & Policies
+                </h3>
                 
                 <div class="faq-item">
                     <h5>How does payment work?</h5>
@@ -154,7 +159,13 @@
             <!-- MY PREVIOUS TICKETS -->
             {% if session.get('user_id') %}
                 <div class="support-card">
-                    <h3>📋 My Support Inquiries</h3>
+                    <h3 style="display: flex; align-items: center; gap: 8px;">
+                        <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                        </svg>
+                        My Support Inquiries
+                    </h3>
                     {% if tickets %}
                         {% for tkt in tickets %}
                             <div class="ticket-row">
@@ -175,7 +186,12 @@
         <!-- RIGHT: CONTACT / TICKET FORM -->
         <div>
             <div class="support-card">
-                <h3>💬 Open a Support Ticket</h3>
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    Open a Support Ticket
+                </h3>
                 {% if session.get('user_id') %}
                     <form action="{{ url_for('support') }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

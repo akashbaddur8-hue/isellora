@@ -287,15 +287,27 @@
 
             <!-- SELLER TRUST SNAPSHOT -->
             <div class="disclosure-card" style="margin-top: 10px;">
-                <h4>👤 Seller Information</h4>
+                <h4 style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    Seller Information
+                </h4>
                 <div style="font-size: 14px; color: var(--text-main);">
                     <strong>{{ phone.seller_name or 'Verified Marketplace Seller' }}</strong>
                     {% if phone.seller and phone.seller.average_rating %}
-                        <span style="font-size: 13px; color: #f59e0b; font-weight: 700; margin-left: 6px;">★ {{ phone.seller.average_rating }} ({{ phone.seller.review_count }} review{{ 's' if phone.seller.review_count != 1 else '' }})</span>
+                        <span style="font-size: 13px; color: #f59e0b; font-weight: 700; margin-left: 6px; display: inline-flex; align-items: center; gap: 3px;">
+                            <svg class="ui-icon" style="width: 14px; height: 14px; fill: #f59e0b; color: #f59e0b;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            {{ phone.seller.average_rating }} ({{ phone.seller.review_count }} review{{ 's' if phone.seller.review_count != 1 else '' }})
+                        </span>
                     {% endif %}
                     <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Listed on {{ phone.created_at.strftime('%d %B %Y') if phone.created_at else 'Recent' }}</p>
-                    <p style="margin-top: 8px; font-size: 12px; color: #475569;">
-                        🛡️ <em>Direct seller contact details will be shared securely on your order confirmation for pickup or shipment tracking.</em>
+                    <p style="margin-top: 8px; font-size: 12px; color: #475569; display: flex; align-items: flex-start; gap: 6px;">
+                        <svg class="ui-icon" style="color: var(--primary); margin-top: 2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        <em>Direct seller contact details will be shared securely on your order confirmation for pickup or shipment tracking.</em>
                     </p>
                 </div>
             </div>
@@ -310,11 +322,17 @@
                 <div class="status-badges-row">
                     <span class="badge-pill badge-condition">{{ phone.condition }}</span>
                     {% if phone.inventory_status == 'available' %}
-                        <span class="badge-pill badge-inventory-available">✓ Available</span>
+                        <span class="badge-pill badge-inventory-available" style="display: inline-flex; align-items: center; gap: 4px;">
+                            <svg class="ui-icon" style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Available
+                        </span>
                     {% elif phone.inventory_status == 'reserved' %}
-                        <span class="badge-pill badge-inventory-reserved">⏳ Reserved by Buyer</span>
+                        <span class="badge-pill badge-inventory-reserved" style="display: inline-flex; align-items: center; gap: 4px;">
+                            <svg class="ui-icon" style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            Reserved by Buyer
+                        </span>
                     {% else %}
-                        <span class="badge-pill badge-inventory-sold">✕ Sold Out</span>
+                        <span class="badge-pill badge-inventory-sold">Sold Out</span>
                     {% endif %}
 
                     {% if phone.approval_status != 'approved' %}
@@ -332,12 +350,20 @@
             <!-- ACTION CTA -->
             <div class="cta-actions">
                 {% if is_owner %}
-                    <a href="{{ url_for('edit_listing', listing_id=phone.id) }}" class="btn-edit" style="flex: 1; text-align: center;">✏️ Edit My Listing</a>
+                    <a href="{{ url_for('edit_listing', listing_id=phone.id) }}" class="btn-edit" style="flex: 1; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        Edit My Listing
+                    </a>
                 {% elif phone.is_purchasable %}
                     <a href="{{ url_for('buy_now', listing_id=phone.id) }}" class="btn-buy-now">Buy Now / Reserve Device</a>
                     <form action="{{ url_for('toggle_wishlist', listing_id=phone.id) }}" method="POST" style="margin: 0; display: flex;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-edit" style="padding: 12px 18px; background: white; border: 1px solid var(--border); cursor: pointer;" title="Save Phone">❤️ Save</button>
+                        <button type="submit" class="btn-edit" style="padding: 12px 18px; background: white; border: 1px solid var(--border); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="Save to Wishlist">
+                            <svg class="ui-icon" style="color: #ef4444;" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                            </svg>
+                            Wishlist
+                        </button>
                     </form>
                 {% else %}
                     <button class="btn-buy-now btn-disabled" disabled>
@@ -351,14 +377,25 @@
                     </button>
                     <form action="{{ url_for('toggle_wishlist', listing_id=phone.id) }}" method="POST" style="margin: 0; display: flex;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-edit" style="padding: 12px 18px; background: white; border: 1px solid var(--border); cursor: pointer;" title="Save Phone">❤️ Save</button>
+                        <button type="submit" class="btn-edit" style="padding: 12px 18px; background: white; border: 1px solid var(--border); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="Save to Wishlist">
+                            <svg class="ui-icon" style="color: #ef4444;" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                            </svg>
+                            Wishlist
+                        </button>
                     </form>
                 {% endif %}
             </div>
 
             <!-- HARDWARE SPECIFICATIONS -->
             <div class="disclosure-card">
-                <h4>📱 Specifications</h4>
+                <h4 style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="3"></rect>
+                        <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                    </svg>
+                    Specifications
+                </h4>
                 <div class="disclosure-grid">
                     <div class="disclosure-item">
                         <span>Storage</span>
@@ -381,7 +418,12 @@
 
             <!-- CONDITION & DAMAGE DISCLOSURES -->
             <div class="disclosure-card">
-                <h4>🛡️ Verified Condition Disclosures</h4>
+                <h4 style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    Verified Condition Disclosures
+                </h4>
                 <div class="disclosure-grid">
                     <div class="disclosure-item">
                         <span>Screen Damage</span>
@@ -423,7 +465,13 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="report_type" value="Misrepresented Condition">
                     <input type="hidden" name="reason" value="User flagged listing from product page">
-                    <button type="submit" class="btn-report">🚩 Report Inaccurate Listing</button>
+                    <button type="submit" class="btn-report" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <svg class="ui-icon" style="color: #ef4444;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                            <line x1="4" y1="22" x2="4" y2="15"></line>
+                        </svg>
+                        Report Inaccurate Listing
+                    </button>
                 </form>
             </div>
         </div>

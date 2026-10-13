@@ -96,7 +96,15 @@
         </div>
 
         <div class="notice-reapproval">
-            <strong>⚠️ Moderation Notice:</strong> Modifying pricing, battery health, or condition disclosures will submit this listing for administrative re-review before updates become publicly visible to buyers.
+            <strong style="display: inline-flex; align-items: center; gap: 4px;">
+                <svg class="ui-icon" style="color: #b45309;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                Moderation Notice:
+            </strong>
+            Modifying pricing, battery health, or condition disclosures will submit this listing for administrative re-review before updates become publicly visible to buyers.
         </div>
 
         <form action="{{ url_for('edit_listing', listing_id=phone.id) }}" method="POST">

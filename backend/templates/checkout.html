@@ -252,7 +252,12 @@
 
                 <!-- Honest Payment Notice -->
                 <div class="payment-notice-box">
-                    <h4>🛡️ Safe Direct Settlement</h4>
+                    <h4 style="display: flex; align-items: center; gap: 6px;">
+                        <svg class="ui-icon" style="color: #0284c7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        Safe Direct Settlement
+                    </h4>
                     <p>
                         <strong>No online payment gateway is activated in this phase.</strong>
                         Your order will be marked <em>"Not collected"</em>. You will verify device condition firsthand and settle payment directly upon delivery or pickup handover.
@@ -289,9 +294,15 @@
                 </div>
             </div>
 
-            <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
-                ✓ Single-unit inventory reserved immediately upon submission.<br>
-                ✓ Cancel anytime prior to dispatch without cancellation penalties.
+            <div style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                    <svg class="ui-icon" style="width: 14px; height: 14px; color: var(--success);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Single-unit inventory reserved immediately upon submission.</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <svg class="ui-icon" style="width: 14px; height: 14px; color: var(--success);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Cancel anytime prior to dispatch without cancellation penalties.</span>
+                </div>
             </div>
         </aside>
     </div>

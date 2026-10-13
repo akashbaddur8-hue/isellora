@@ -126,11 +126,30 @@
 {% block content %}
 <div class="error-container">
     <div class="error-card">
-        <div class="error-icon">
-            {% if status_code == 404 %}🔍
-            {% elif status_code == 403 %}🔒
-            {% elif status_code == 500 %}🛠️
-            {% else %}🛡️{% endif %}
+        <div class="error-icon" style="width: 72px; height: 72px; margin: 0 auto 20px; border-radius: var(--radius-full); display: grid; place-items: center; 
+            {% if status_code == 404 %}background: #e0f2fe; color: #0284c7;
+            {% elif status_code == 403 %}background: #fef3c7; color: #d97706;
+            {% elif status_code == 500 %}background: #fee2e2; color: #dc2626;
+            {% else %}background: #f3e8ff; color: #7e22ce;{% endif %}">
+            {% if status_code == 404 %}
+                <svg style="width: 36px; height: 36px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            {% elif status_code == 403 %}
+                <svg style="width: 36px; height: 36px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            {% elif status_code == 500 %}
+                <svg style="width: 36px; height: 36px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                </svg>
+            {% else %}
+                <svg style="width: 36px; height: 36px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+            {% endif %}
         </div>
 
         <span class="error-badge badge-{{ status_code if status_code in [404, 403, 500, 400] else '400' }}">

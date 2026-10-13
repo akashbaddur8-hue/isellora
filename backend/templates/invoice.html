@@ -232,7 +232,14 @@
 
     <div class="no-print-bar">
         <a href="{{ url_for('orders') }}" class="btn-back">← Back to Orders</a>
-        <button onclick="window.print()" class="btn-print">🖨️ Print Certificate & Invoice</button>
+        <button onclick="window.print()" class="btn-print" style="display: inline-flex; align-items: center; gap: 8px;">
+            <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+            </svg>
+            Print Certificate & Invoice
+        </button>
     </div>
 
     <div class="invoice-card">
@@ -343,7 +350,12 @@
 
         <!-- CERTIFICATE OF VERIFICATION -->
         <div class="certificate-seal">
-            <strong>🛡️ iSellora Handover Verification Policy</strong>
+            <strong style="display: flex; align-items: center; gap: 6px;">
+                <svg style="width: 16px; height: 16px; color: #059669;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                iSellora Handover Verification Policy
+            </strong>
             This certificate verifies the agreed snapshot of the device at the moment of checkout. Payment is collected upon physical handover/delivery inspection. Please inspect cosmetic grading, camera modules, and verify serial/IMEI match before completing payment.
         </div>
     </div>

@@ -140,7 +140,13 @@
 
             <!-- 1. DEVICE HARDWARE -->
             <div class="form-section">
-                <h3>📱 1. Device Information</h3>
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="3"></rect>
+                        <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                    </svg>
+                    1. Device Information
+                </h3>
                 
                 <div class="form-row">
                     <div class="form-group">
@@ -199,7 +205,12 @@
 
             <!-- 2. CONDITION & DISCLOSURE -->
             <div class="form-section">
-                <h3>🛡️ 2. Accurate Condition & Damage Disclosures</h3>
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    2. Accurate Condition & Damage Disclosures
+                </h3>
 
                 <div class="form-row">
                     <div class="form-group">
@@ -267,7 +278,13 @@
 
             <!-- 3. PRICING & PHOTOS -->
             <div class="form-section">
-                <h3>💰 3. Pricing, Description & Photos</h3>
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    3. Pricing, Description & Photos
+                </h3>
 
                 <div class="form-group">
                     <label class="form-label" for="price">Selling Price in Rupees (₹) *</label>
@@ -283,7 +300,12 @@
                 <div class="form-group">
                     <label class="form-label">Upload Product Photos (1 to 10 images) *</label>
                     <div class="file-dropzone" onclick="document.getElementById('photos').click()">
-                        <div style="font-size: 28px; margin-bottom: 6px;">📷</div>
+                        <div style="width: 48px; height: 48px; margin: 0 auto 10px; border-radius: var(--radius-full); background: #eef2ff; color: var(--primary); display: grid; place-items: center;">
+                            <svg style="width: 24px; height: 24px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                <circle cx="12" cy="13" r="4"></circle>
+                            </svg>
+                        </div>
                         <strong>Click to select images</strong>
                         <p style="font-size: 12px; color: var(--text-muted);">Supports JPG, PNG, WEBP (Max 10MB per file)</p>
                     </div>

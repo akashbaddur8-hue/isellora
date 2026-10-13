@@ -104,7 +104,13 @@
     <div class="account-layout">
         <!-- PROFILE INFORMATION -->
         <div class="account-card">
-            <h3>👤 Profile Details</h3>
+            <h3 style="display: flex; align-items: center; gap: 8px;">
+                <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                Profile Details
+            </h3>
             <form action="{{ url_for('account') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="update_profile">
@@ -131,7 +137,13 @@
 
         <!-- PASSWORD UPDATE -->
         <div class="account-card">
-            <h3>🔒 Change Password</h3>
+            <h3 style="display: flex; align-items: center; gap: 8px;">
+                <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                Change Password
+            </h3>
             <form action="{{ url_for('account') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="change_password">
@@ -152,7 +164,13 @@
 
         <!-- QUICK LINKS -->
         <div class="account-card">
-            <h3>📱 Activity Overview</h3>
+            <h3 style="display: flex; align-items: center; gap: 8px;">
+                <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="2" width="14" height="20" rx="3"></rect>
+                    <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+                Activity Overview
+            </h3>
             <div style="display: flex; gap: 16px; margin-bottom: 20px;">
                 <div style="flex: 1; background: #f8fafc; padding: 14px; border-radius: var(--radius-md); text-align: center;">
                     <span style="font-size: 24px; font-weight: 800; color: var(--primary);">{{ my_listings|length }}</span>
@@ -171,7 +189,14 @@
 
         <!-- DANGER ZONE -->
         <div class="account-card danger-zone">
-            <h3>⚠️ Deactivate Account</h3>
+            <h3 style="display: flex; align-items: center; gap: 8px;">
+                <svg class="ui-icon" style="color: var(--error);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                Deactivate Account
+            </h3>
             <p style="font-size: 13px; color: #7f1d1d; margin-bottom: 16px; line-height: 1.5;">
                 Deactivating will revoke access to your dashboard, hide active listings, and invalidate active sessions. Historical orders are preserved for audit and dispute compliance.
             </p>

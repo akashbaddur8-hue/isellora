@@ -169,7 +169,14 @@
                         </div>
 
                         <div class="order-actions">
-                            <a href="{{ url_for('order_invoice', order_id=order.id) }}" target="_blank" class="btn-tracking" style="background: white; color: var(--text-main); border: 1px solid var(--border);">🖨️ Invoice & Cert</a>
+                            <a href="{{ url_for('order_invoice', order_id=order.id) }}" target="_blank" class="btn-tracking" style="background: white; color: var(--text-main); border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 6px;">
+                                <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                    <rect x="6" y="14" width="12" height="8"></rect>
+                                </svg>
+                                Invoice & Certificate
+                            </a>
 
                             {% if order.tracking_url %}
                                 <a href="{{ order.tracking_url }}" target="_blank" rel="noopener noreferrer" class="btn-tracking">Track Courier ↗</a>
@@ -189,8 +196,9 @@
                         {% if order.status == 'Delivered' %}
                             <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); width: 100%;">
                                 {% if order.review %}
-                                    <div style="font-size: 13px; color: #059669; font-weight: 600;">
-                                        ⭐ You rated this seller {{ order.review.rating }}/5 stars
+                                    <div style="font-size: 13px; color: #059669; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                                        <svg class="ui-icon" style="color: #f59e0b; fill: #f59e0b;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                        <span>You rated this seller {{ order.review.rating }}/5 stars</span>
                                         {% if order.review.comment %}
                                             <span style="color: var(--text-muted); font-weight: normal; margin-left: 6px;">— "{{ order.review.comment }}"</span>
                                         {% endif %}
@@ -200,11 +208,11 @@
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">Rate Seller:</span>
                                         <select name="rating" style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; font-weight: 700;">
-                                            <option value="5">★★★★★ 5 - Excellent</option>
-                                            <option value="4">★★★★☆ 4 - Good</option>
-                                            <option value="3">★★★☆☆ 3 - Average</option>
-                                            <option value="2">★★☆☆☆ 2 - Poor</option>
-                                            <option value="1">★☆☆☆☆ 1 - Terrible</option>
+                                            <option value="5">5 Stars - Excellent</option>
+                                            <option value="4">4 Stars - Good</option>
+                                            <option value="3">3 Stars - Average</option>
+                                            <option value="2">2 Stars - Poor</option>
+                                            <option value="1">1 Star - Terrible</option>
                                         </select>
                                         <input type="text" name="comment" placeholder="Feedback on condition accuracy..." style="flex: 1; min-width: 200px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px;">
                                         <button type="submit" class="btn-tracking" style="padding: 5px 12px; font-size: 12px;">Submit Rating</button>
@@ -218,7 +226,14 @@
         </div>
     {% else %}
         <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 56px 20px; text-align: center;">
-            <div style="font-size: 40px; margin-bottom: 12px;">📦</div>
+            <div style="width: 72px; height: 72px; margin: 0 auto 16px; border-radius: var(--radius-full); background: #f1f5f9; color: #64748b; display: grid; place-items: center;">
+                <svg style="width: 36px; height: 36px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+            </div>
             <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">No orders found</h3>
             <p style="color: var(--text-muted); margin-bottom: 24px;">You haven't ordered or reserved any smartphones yet.</p>
             <a href="{{ url_for('products') }}" class="btn-sell">Browse Available Phones</a>

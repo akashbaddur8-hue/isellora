@@ -126,7 +126,11 @@
 <div class="container">
 
     <div class="success-card">
-        <div class="success-icon">✓</div>
+        <div class="success-icon">
+            <svg style="width: 34px; height: 34px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        </div>
         <h1>Order Confirmed & Smartphone Reserved</h1>
         <p class="success-subtitle">Order Reference: <strong>#{{ order.id }}</strong></p>
 
@@ -156,7 +160,15 @@
         </div>
 
         <div class="next-steps-box">
-            <h4>📦 What happens next?</h4>
+            <h4 style="display: flex; align-items: center; gap: 8px;">
+                <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                What happens next?
+            </h4>
             <ol style="padding-left: 20px; margin: 0;">
                 <li>The seller has received notification of your order.</li>
                 <li>{% if order.delivery_method == 'pickup' %}
@@ -171,7 +183,14 @@
 
         <div class="success-actions">
             <a href="{{ url_for('orders') }}" class="btn-action-primary">View My Orders</a>
-            <a href="{{ url_for('order_invoice', order_id=order.id) }}" target="_blank" class="btn-action-secondary">🖨️ Print Certificate & Invoice</a>
+            <a href="{{ url_for('order_invoice', order_id=order.id) }}" target="_blank" class="btn-action-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Print Certificate & Invoice
+            </a>
             <a href="{{ url_for('products') }}" class="btn-action-secondary">Continue Browsing</a>
         </div>
     </div>

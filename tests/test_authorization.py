@@ -87,3 +87,25 @@ def test_seller_cannot_purchase_own_listing(client, seller_user, approved_listin
 
     response = client.get(f"/buy/{approved_listing.id}")
     assert response.status_code == 403
+
+
+def test_admin_login_success(client, admin_user):
+    response = client.post("/admin/login", data={
+        "email": admin_user.email,
+        "password": "AdminPass123"
+    }, follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/admin")
+
+    with client.session_transaction() as sess:
+        assert sess.get("user_role") == "admin"
+        assert sess.get("admin_authenticated") is True
+
+
+def test_non_admin_cannot_login_to_admin_portal(client, buyer_user):
+    response = client.post("/admin/login", data={
+        "email": buyer_user.email,
+        "password": "SecurePass123"
+    })
+    assert response.status_code == 401
+

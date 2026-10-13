@@ -20,6 +20,7 @@ from flask import (
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
+import click
 
 from backend.database import db
 from backend.models import (
@@ -934,14 +935,17 @@ def create_app(config_name=None):
         password = request.form.get("password", "")
         admin_cfg_email = app.config.get("ADMIN_EMAIL", "").strip().lower()
 
-        if email != admin_cfg_email:
+        user = User.query.filter_by(email=email).first()
+        is_admin_candidate = user and user.is_active and (user.role == "admin" or email == admin_cfg_email)
+
+        if not is_admin_candidate or not user.check_password(password):
             flash("Invalid administrator credentials.", "error")
             return render_template("admin_login.html"), 401
 
-        user = User.query.filter_by(email=email).first()
-        if not user or not user.check_password(password):
-            flash("Invalid administrator credentials.", "error")
-            return render_template("admin_login.html"), 401
+        # Synchronize role if matched ADMIN_EMAIL config
+        if user.role != "admin":
+            user.role = "admin"
+            db.session.commit()
 
         session.clear()
         session["user_id"] = user.id
@@ -1050,6 +1054,37 @@ def create_app(config_name=None):
             "database": db_status,
             "timestamp": utc_now().isoformat()
         }), 200 if db_status == "healthy" else 503
+
+    # =========================================================================
+    # CLI COMMANDS
+    # =========================================================================
+    @app.cli.command("create-admin")
+    @click.argument("email")
+    @click.argument("password")
+    @click.option("--name", default="Administrator", help="Admin display name")
+    def create_admin_command(email, password, name):
+        """Create a new administrator or promote an existing user."""
+        email = normalize_email(email)
+        user = User.query.filter_by(email=email).first()
+        if user:
+            user.role = "admin"
+            user.set_password(password)
+            user.is_active = True
+            if name and name != "Administrator":
+                user.name = name
+            db.session.commit()
+            click.echo(f"Successfully promoted existing user '{email}' to administrator.")
+        else:
+            user = User(
+                name=name,
+                email=email,
+                role="admin",
+                is_active=True
+            )
+            user.set_password(password)
+            db.session.add(user)
+            db.session.commit()
+            click.echo(f"Successfully created new administrator '{email}'.")
 
     return app
 

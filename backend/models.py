@@ -99,6 +99,8 @@ class Listing(db.Model):
 
     # Administrative and Status
     listing_type = db.Column(db.String(20), default="free")  # 'free', 'featured'
+    is_featured = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    featured_at = db.Column(db.DateTime(timezone=True), nullable=True)
     approval_status = db.Column(db.String(20), default="pending", nullable=False, index=True)  # 'pending', 'approved', 'rejected', 'archived'
     inventory_status = db.Column(db.String(20), default="available", nullable=False, index=True)  # 'available', 'reserved', 'sold'
     rejection_reason = db.Column(db.Text, nullable=True)
@@ -136,6 +138,10 @@ class Listing(db.Model):
     def is_purchasable(self):
         return self.approval_status == "approved" and self.inventory_status == "available"
 
+    @property
+    def is_priority(self):
+        return bool(self.is_featured or self.listing_type == "featured")
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -158,6 +164,8 @@ class Listing(db.Model):
             "original_display": self.original_display,
             "accessories": self.accessories,
             "listing_type": self.listing_type,
+            "is_featured": self.is_priority,
+            "featured_at": self.featured_at.isoformat() if self.featured_at else "",
             "approval_status": self.approval_status,
             "inventory_status": self.inventory_status,
             "seller_name": self.seller_name or (self.seller.name if self.seller else ""),
@@ -389,6 +397,41 @@ class Wishlist(db.Model):
     )
 
     listing = db.relationship("Listing")
+
+
+class ListingSubscription(db.Model):
+    __tablename__ = "listing_subscriptions"
+
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    listing_id = db.Column(db.String(36), db.ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True)
+    seller_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    plan_name = db.Column(db.String(100), default="Priority Placement (Sell First)", nullable=False)
+    amount_paise = db.Column(db.Integer, default=4900, nullable=False)  # ₹49 = 4900 paise
+    status = db.Column(db.String(30), default="active", nullable=False)  # 'active', 'expired', 'cancelled'
+    payment_method = db.Column(db.String(50), default="direct_activation", nullable=False)
+    payment_status = db.Column(db.String(30), default="active", nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    listing = db.relationship("Listing", backref=db.backref("subscriptions", lazy="dynamic", cascade="all, delete-orphan"))
+    seller = db.relationship("User", foreign_keys=[seller_id])
+
+    @property
+    def amount_rupees(self):
+        return self.amount_paise // 100
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "listing_id": self.listing_id,
+            "seller_id": self.seller_id,
+            "plan_name": self.plan_name,
+            "amount_rupees": self.amount_rupees,
+            "status": self.status,
+            "payment_status": self.payment_status,
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+            "expires_at": self.expires_at.isoformat() if self.expires_at else ""
+        }
 
 
 class AuditEvent(db.Model):

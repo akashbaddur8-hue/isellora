@@ -26,7 +26,7 @@ from backend.database import db
 from backend.models import (
     User, Listing, ListingImage, Order, OrderStatusHistory,
     Notification, SupportTicket, ReportDispute, AuditEvent,
-    Review, Wishlist, utc_now, get_legitimate_tracking_url
+    Review, Wishlist, ListingSubscription, utc_now, get_legitimate_tracking_url
 )
 from backend.config import config_by_name
 from backend.services.auth_service import (
@@ -65,6 +65,24 @@ def create_app(config_name=None):
 
     # Ensure uploads folder exists
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+    # Ensure schema updates and missing tables are present
+    with app.app_context():
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+            existing_tables = inspector.get_table_names()
+            if "listings" in existing_tables:
+                listing_cols = [c["name"] for c in inspector.get_columns("listings")]
+                with db.engine.connect() as conn:
+                    if "is_featured" not in listing_cols:
+                        conn.execute(text("ALTER TABLE listings ADD COLUMN is_featured BOOLEAN DEFAULT 0"))
+                    if "featured_at" not in listing_cols:
+                        conn.execute(text("ALTER TABLE listings ADD COLUMN featured_at DATETIME"))
+                    conn.commit()
+            db.create_all()
+        except Exception as e:
+            app.logger.warning(f"Database schema auto-check: {e}")
 
     # =========================================================================
     # CONTEXT PROCESSORS & SECURITY HEADERS
@@ -191,10 +209,10 @@ def create_app(config_name=None):
     # =========================================================================
     @app.route("/")
     def home():
-        # Fetch featured and newest approved listings
+        # Fetch featured and newest approved listings (priority boosted first)
         featured_listings = Listing.query.filter_by(
             approval_status="approved", inventory_status="available"
-        ).order_by(Listing.created_at.desc()).limit(8).all()
+        ).order_by(Listing.is_featured.desc(), Listing.created_at.desc()).limit(8).all()
         return render_template("index.html", phones=featured_listings)
 
     @app.route("/product")
@@ -716,9 +734,104 @@ def create_app(config_name=None):
             )
             db.session.add(img_rec)
 
+        # Optional priority boost (Sell First) subscription
+        priority_boost = request.form.get("priority_boost") in ("1", "true", "on", "yes")
+        if priority_boost:
+            new_listing.is_featured = True
+            new_listing.listing_type = "featured"
+            new_listing.featured_at = utc_now()
+            sub = ListingSubscription(
+                listing_id=listing_id,
+                seller_id=user.id,
+                plan_name="Priority Placement (Sell First)",
+                amount_paise=4900,
+                status="active",
+                payment_method="direct_activation",
+                payment_status="active",
+                created_at=utc_now()
+            )
+            db.session.add(sub)
+            notice = Notification(
+                user_id=user.id,
+                title="Priority Placement Activated (₹49)",
+                message=f"Your {brand} {model} has been boosted with #1 Priority Placement for ₹49. It will rank first in search results once approved."
+            )
+            db.session.add(notice)
+            audit = AuditEvent(
+                user_id=user.id,
+                action="SUBSCRIPTION_BOOST_ACTIVATED",
+                target_type="listing",
+                target_id=listing_id,
+                details="Seller subscribed to Priority Placement for ₹49 during listing creation.",
+                created_at=utc_now()
+            )
+            db.session.add(audit)
+
         db.session.commit()
-        flash("Your listing has been submitted for review! It will be visible once approved by our moderation team.", "success")
+        if priority_boost:
+            flash("Your listing has been submitted for review with Priority Placement (₹49) activated! It will rank #1 at the top of search results once approved.", "success")
+        else:
+            flash("Your listing has been submitted for review! It will be visible once approved by our moderation team.", "success")
         return redirect(url_for("seller_dashboard"))
+
+    @app.route("/seller/boost/<listing_id>", methods=["GET", "POST"])
+    def seller_boost_listing(listing_id):
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login", next=request.path))
+
+        listing = db.session.get(Listing, listing_id)
+        if not listing:
+            abort(404)
+
+        if listing.seller_id != user.id and not is_admin():
+            abort(403)
+
+        if request.method == "POST":
+            if listing.is_priority:
+                flash(f"Priority Placement is already active for {listing.brand} {listing.model}.", "info")
+                return redirect(url_for("seller_dashboard"))
+
+            listing.is_featured = True
+            listing.listing_type = "featured"
+            listing.featured_at = utc_now()
+
+            sub = ListingSubscription(
+                listing_id=listing.id,
+                seller_id=user.id,
+                plan_name="Priority Placement (Sell First)",
+                amount_paise=4900,
+                status="active",
+                payment_method="direct_activation",
+                payment_status="active",
+                created_at=utc_now()
+            )
+            db.session.add(sub)
+
+            notice = Notification(
+                user_id=user.id,
+                title="Priority Placement Activated (₹49)",
+                message=f"Your {listing.brand} {listing.model} has been boosted with #1 Priority Placement for ₹49. It now ranks first in search results to sell faster."
+            )
+            db.session.add(notice)
+
+            audit = AuditEvent(
+                user_id=user.id,
+                action="SUBSCRIPTION_BOOST_ACTIVATED",
+                target_type="listing",
+                target_id=listing.id,
+                details="Seller subscribed to Priority Placement for ₹49.",
+                created_at=utc_now()
+            )
+            db.session.add(audit)
+            db.session.commit()
+
+            flash(f"Priority Placement (₹49) activated for {listing.brand} {listing.model}! It now ranks #1 at the top of search results to sell first.", "success")
+            return redirect(url_for("seller_dashboard"))
+
+        # GET request
+        subscription = ListingSubscription.query.filter_by(listing_id=listing.id, status="active").order_by(ListingSubscription.created_at.desc()).first()
+        return render_template("boost_subscription.html", listing=listing, subscription=subscription)
 
     @app.route("/edit/<listing_id>", methods=["GET", "POST"])
     def edit_listing(listing_id):
@@ -1137,6 +1250,9 @@ def create_app(config_name=None):
         reports_list = ReportDispute.query.order_by(ReportDispute.created_at.desc()).limit(10).all()
         audit_logs = AuditEvent.query.order_by(AuditEvent.created_at.desc()).limit(20).all()
 
+        total_boosts = ListingSubscription.query.count()
+        boost_revenue = sum(s.amount_rupees for s in ListingSubscription.query.all())
+
         return render_template(
             "admin.html",
             total_users=total_users,
@@ -1148,6 +1264,8 @@ def create_app(config_name=None):
             cancelled_orders=cancelled_orders,
             open_tickets=open_tickets,
             pending_reports=pending_reports,
+            total_boosts=total_boosts,
+            boost_revenue=boost_revenue,
             users=users_list,
             listings=listings_list,
             orders=orders_list,

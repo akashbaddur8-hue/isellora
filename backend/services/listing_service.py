@@ -58,13 +58,13 @@ def query_catalog(
     if max_price is not None and max_price > 0:
         query = query.filter(Listing.price_paise <= int(round(max_price * 100)))
 
-    # Sorting
+    # Sorting: Priority boosted listings appear first
     if sort_by == "price_asc":
-        query = query.order_by(Listing.price_paise.asc())
+        query = query.order_by(Listing.is_featured.desc(), Listing.price_paise.asc())
     elif sort_by == "price_desc":
-        query = query.order_by(Listing.price_paise.desc())
+        query = query.order_by(Listing.is_featured.desc(), Listing.price_paise.desc())
     else:  # default 'latest'
-        query = query.order_by(Listing.created_at.desc())
+        query = query.order_by(Listing.is_featured.desc(), Listing.created_at.desc())
 
     # Pagination
     return query.paginate(page=page, per_page=per_page, error_out=False)

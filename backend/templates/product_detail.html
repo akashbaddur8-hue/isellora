@@ -321,6 +321,14 @@
                 
                 <div class="status-badges-row">
                     <span class="badge-pill badge-condition">{{ phone.condition }}</span>
+                    {% if phone.is_priority %}
+                        <span class="badge-pill" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #78350f; border: 1px solid #fcd34d; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;">
+                            <svg style="width: 12px; height: 12px; color: #b45309;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                            </svg>
+                            Priority Placement
+                        </span>
+                    {% endif %}
                     {% if phone.inventory_status == 'available' %}
                         <span class="badge-pill badge-inventory-available" style="display: inline-flex; align-items: center; gap: 4px;">
                             <svg class="ui-icon" style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -346,6 +354,25 @@
                 <div class="price-amount">{{ phone.formatted_price }}</div>
                 <div class="price-note">Flat price · Pay on delivery / inspection</div>
             </div>
+
+            {% if current_user and current_user.id == phone.seller_id and not phone.is_priority and phone.inventory_status == 'available' %}
+                <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fde68a; border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: #fef08a; color: #b45309; border: 1px solid #fcd34d;">
+                            <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                            </svg>
+                        </span>
+                        <div>
+                            <strong style="color: #92400e; font-size: 14px; display: block;">Sell this phone faster!</strong>
+                            <span style="color: #78350f; font-size: 12px;">Feature this listing at the #1 position of search results for ₹49.</span>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('seller_boost_listing', listing_id=phone.id) }}" class="btn btn-sm" style="background: #b45309; color: white; font-weight: 800; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px;">
+                        ⚡ Boost Now (₹49)
+                    </a>
+                </div>
+            {% endif %}
 
             <!-- ACTION CTA -->
             <div class="cta-actions">

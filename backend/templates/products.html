@@ -360,6 +360,14 @@
                                 <span class="badge-condition">
                                     {{ phone.condition }}
                                 </span>
+                                {% if phone.is_priority %}
+                                    <span style="position: absolute; top: 10px; right: 10px; z-index: 2; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #78350f; border: 1px solid #fcd34d; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 3px; box-shadow: 0 2px 4px rgba(0,0,0,0.06);">
+                                        <svg style="width: 11px; height: 11px; color: #b45309;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                        </svg>
+                                        Priority
+                                    </span>
+                                {% endif %}
                                 <img src="{{ phone.primary_image }}" alt="{{ phone.brand }} {{ phone.model }}" loading="lazy">
                             </div>
                             <div class="phone-body">

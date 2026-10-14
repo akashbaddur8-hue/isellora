@@ -140,6 +140,38 @@
         cursor: pointer;
         padding: 0;
     }
+
+    .btn-boost-mini {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #fffbeb;
+        color: #b45309;
+        border: 1px solid #fde68a;
+        padding: 4px 10px;
+        border-radius: var(--radius-full);
+        font-size: 11px;
+        font-weight: 800;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .btn-boost-mini:hover {
+        background: #fef08a;
+        border-color: #facc15;
+        color: #78350f;
+    }
+    .badge-priority-active {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 800;
+        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: var(--radius-full);
+    }
 </style>
 {% endblock %}
 
@@ -191,6 +223,7 @@
                             <th>Price</th>
                             <th>Condition</th>
                             <th>Review Status</th>
+                            <th>Placement</th>
                             <th>Inventory</th>
                             <th>Actions</th>
                         </tr>
@@ -216,6 +249,25 @@
                                         <small style="display: block; color: var(--error); font-size: 11px; margin-top: 2px;">
                                             Note: {{ phone.rejection_reason }}
                                         </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if phone.is_priority %}
+                                        <span class="badge-priority-active" title="Ranked #1 at top of search results">
+                                            <svg style="width: 12px; height: 12px; color: #b45309;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                            </svg>
+                                            Priority Active
+                                        </span>
+                                    {% elif phone.inventory_status == 'available' %}
+                                        <a href="{{ url_for('seller_boost_listing', listing_id=phone.id) }}" class="btn-boost-mini" title="Feature this phone #1 at the top of search for ₹49">
+                                            <svg style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                            </svg>
+                                            Boost (₹49)
+                                        </a>
+                                    {% else %}
+                                        <span style="color: var(--text-muted); font-size: 12px;">Standard</span>
                                     {% endif %}
                                 </td>
                                 <td>

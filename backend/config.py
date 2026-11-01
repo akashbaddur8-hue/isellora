@@ -136,11 +136,18 @@ AUTHORITATIVE_DB_PATH = os.path.join(INSTANCE_DIR, "isellora.db")
 os.makedirs(INSTANCE_DIR, exist_ok=True)
 
 
+def _clean_db_url(url: str | None) -> str:
+    url = (url or "").strip()
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    return url
+
+
 class DevelopmentConfig(Config):
     DEBUG = True
     APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://127.0.0.1:5000").rstrip("/")
     default_db_path = AUTHORITATIVE_DB_PATH
-    _env_db = (os.environ.get("DATABASE_URL") or "").strip()
+    _env_db = _clean_db_url(os.environ.get("DATABASE_URL"))
     if not _env_db or _env_db in ("sqlite:///isellora.db", "sqlite:///./isellora.db", "sqlite:///instance/isellora.db"):
         SQLALCHEMY_DATABASE_URI = f"sqlite:///{AUTHORITATIVE_DB_PATH}"
     else:
@@ -173,7 +180,7 @@ class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
     SECRET_KEY = os.environ.get("SECRET_KEY")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    SQLALCHEMY_DATABASE_URI = _clean_db_url(os.environ.get("DATABASE_URL"))
 
     @classmethod
     def validate_production(cls):

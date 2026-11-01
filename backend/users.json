@@ -1,16 +1,1 @@
-[
-    {
-        "id": "ef30d3d2-e7dd-42bd-907b-740953b369f2",
-        "name": "Akash Baddur",
-        "email": "akashbaddur2007@gmail.com",
-        "phone": "7975551621",
-        "password": "scrypt:32768:8:1$zT4lS9H7qrlO08jl$c56757ad08d62dc8211332f34d9d2c1c84421f9c55c724eee9c9bc0642c6858a857043113f7f9b6d6a152d3b0061fff883a31f5c715966d6a03d69ced9a13db7"
-    },
-    {
-        "id": "bda2d942-3ff7-4d87-8fc9-8241c094ad33",
-        "name": "alok baddur",
-        "email": "alokbaddur2007@gmail.com",
-        "phone": "9113074996",
-        "password": "scrypt:32768:8:1$CVJeYWDuEH4nUD1P$1373b43533287c7f2fcf96d752e663f85160d4af6015d1e02ce2d21183e4f12a19cd759ebab8760038da605eca634c8fd132a8785416547b2529d2b5567363e3"
-    }
-]
+[]

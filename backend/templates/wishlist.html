@@ -86,28 +86,122 @@
         border-radius: var(--radius-sm);
     }
 
-    .phone-footer {
+    /* Phone Card Bottom Pricing & Action Panel */
+    .phone-panel {
         margin-top: auto;
+        padding-top: 14px;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .phone-panel-top {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding-top: 12px;
-        border-top: 1px solid #f1f5f9;
     }
 
-    .phone-price {
-        font-size: 18px;
+    .phone-price-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .phone-price-amount {
+        font-size: 22px;
         font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -0.5px;
+        line-height: 1.1;
     }
 
-    .btn-view {
-        background: var(--primary-light);
-        color: var(--primary);
-        font-weight: 700;
-        font-size: 13px;
-        padding: 6px 12px;
-        border-radius: var(--radius-md);
+    .phone-price-label {
+        font-size: 12px;
+        color: #8a99ad;
+        font-weight: 500;
+        margin-top: 3px;
+    }
+
+    .phone-panel-arrow {
+        width: 40px;
+        height: 40px;
+        background: #f1effe;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6366f1;
         text-decoration: none;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .phone-panel-arrow svg {
+        width: 18px;
+        height: 18px;
+        transition: transform 0.2s ease;
+    }
+
+    .phone-panel-arrow:hover {
+        background: #e9e5ff;
+        color: #4f46e5;
+    }
+
+    .phone-panel-arrow:hover svg {
+        transform: translateX(3px);
+    }
+
+    .phone-panel-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .btn-panel-details {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        border: 1.5px solid #dcd7fe;
+        color: #6366f1;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 9px 12px;
+        border-radius: 12px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-panel-details:hover {
+        background: #f8f7ff;
+        border-color: #6366f1;
+        color: #4f46e5;
+    }
+
+    .btn-panel-buy {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        border: 1px solid transparent;
+        color: #ffffff !important;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 9px 12px;
+        border-radius: 12px;
+        text-decoration: none;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.22);
+        transition: all 0.2s ease;
+    }
+
+    .btn-panel-buy:hover {
+        background: linear-gradient(135deg, #5850ec 0%, #4338ca 100%);
+        box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+        transform: translateY(-1px);
+    }
+
+    .btn-panel-buy:active {
+        transform: translateY(0);
     }
 
     .btn-remove-wishlist {
@@ -159,20 +253,33 @@
                                 </span>
                             {% endif %}
                         </div>
-                        <div class="phone-footer">
-                            <div class="phone-price">{{ phone.formatted_price }}</div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <form action="{{ url_for('toggle_wishlist', listing_id=phone.id) }}" method="POST" style="margin: 0;">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-remove-wishlist" title="Remove from Wishlist" style="display: inline-flex; align-items: center; gap: 4px;">
-                                        <svg class="ui-icon" style="width: 13px; height: 13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        <div class="phone-panel">
+                            <div class="phone-panel-top">
+                                <div class="phone-price-group">
+                                    <span class="phone-price-amount phone-price">{{ phone.formatted_price }}</span>
+                                    <span class="phone-price-label">Listed price</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <form action="{{ url_for('toggle_wishlist', listing_id=phone.id) }}" method="POST" style="margin: 0;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn-remove-wishlist" title="Remove from Wishlist" style="display: inline-flex; align-items: center; gap: 4px; padding: 9px 10px; font-size: 11px;">
+                                            <svg class="ui-icon" style="width: 13px; height: 13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                    <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="phone-panel-arrow" aria-label="View {{ phone.brand }} {{ phone.model }} details">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            <polyline points="12 5 19 12 12 19"></polyline>
                                         </svg>
-                                        Remove
-                                    </button>
-                                </form>
-                                <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="btn-view">Inspect</a>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="phone-panel-actions">
+                                <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="btn-panel-details">Details</a>
+                                <a href="{{ url_for('buy_now', listing_id=phone.id) }}" class="btn-panel-buy">Buy Now</a>
                             </div>
                         </div>
                     </div>

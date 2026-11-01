@@ -4,37 +4,50 @@
 
 {% block extra_css %}
 <style>
-    /* Hero Section */
+    /* Clean, Airy Hero Section */
     .hero {
-        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
-        color: white;
-        padding: 72px 0 84px;
-        border-radius: var(--radius-lg);
+        background: 
+            radial-gradient(ellipse at 85% 15%, rgba(238, 242, 255, 0.95) 0%, rgba(255, 255, 255, 0.4) 60%),
+            radial-gradient(ellipse at 15% 85%, rgba(240, 249, 255, 0.9) 0%, rgba(255, 255, 255, 0.4) 60%),
+            #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.85);
+        color: var(--text-main);
+        padding: 56px 44px;
+        border-radius: 24px;
+        margin-top: 16px;
         margin-bottom: 50px;
         position: relative;
         overflow: hidden;
-        box-shadow: var(--shadow-lg);
+        box-shadow: 0 4px 24px -2px rgba(99, 102, 241, 0.06);
+    }
+
+    .hero-layout {
+        display: grid;
+        grid-template-columns: 1.25fr 0.85fr;
+        align-items: center;
+        gap: 40px;
+        position: relative;
+        z-index: 2;
     }
 
     .hero-content {
-        max-width: 680px;
-        position: relative;
-        z-index: 2;
+        max-width: 620px;
     }
 
     .hero-badge {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        background: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(8px);
+        background: rgba(238, 242, 255, 0.9);
+        color: #4338ca;
         padding: 6px 14px;
         border-radius: var(--radius-full);
         font-size: 13px;
         font-weight: 700;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
         margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid #e0e7ff;
+        box-shadow: 0 1px 3px rgba(79, 70, 229, 0.06);
     }
 
     .hero h1 {
@@ -42,49 +55,244 @@
         font-weight: 800;
         line-height: 1.15;
         letter-spacing: -1px;
+        color: #0f172a;
         margin-bottom: 18px;
     }
 
+    .hero-gradient-text {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #0284c7 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
     .hero p {
-        font-size: 18px;
-        color: #e0e7ff;
+        font-size: 17px;
+        color: #475569;
         line-height: 1.6;
         margin-bottom: 32px;
+        max-width: 520px;
     }
 
     .hero-actions {
         display: flex;
-        gap: 16px;
+        gap: 14px;
         flex-wrap: wrap;
+        align-items: center;
     }
 
-    .btn-hero-primary {
-        background: #ffffff;
-        color: var(--primary);
+    .btn-hero-explore {
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        color: #ffffff;
         font-weight: 700;
-        padding: 14px 28px;
-        border-radius: var(--radius-md);
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-        transition: transform 0.2s, box-shadow 0.2s;
+        font-size: 15px;
+        padding: 13px 26px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+        text-decoration: none;
     }
 
-    .btn-hero-primary:hover {
+    .btn-hero-explore:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.38);
+        color: #ffffff;
     }
 
-    .btn-hero-secondary {
-        background: rgba(255, 255, 255, 0.12);
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.3);
+    .btn-hero-sell {
+        background: #ffffff;
+        color: #1e293b;
+        border: 1.5px solid #e2e8f0;
         font-weight: 700;
-        padding: 14px 28px;
-        border-radius: var(--radius-md);
-        transition: background 0.2s;
+        font-size: 15px;
+        padding: 13px 24px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        text-decoration: none;
     }
 
-    .btn-hero-secondary:hover {
-        background: rgba(255, 255, 255, 0.2);
+    .btn-hero-sell:hover {
+        border-color: #c7d2fe;
+        background: #f8fafc;
+        color: #4f46e5;
+        transform: translateY(-2px);
+    }
+
+    /* Hero Smartphone Mockup */
+    .hero-visual {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 10px 0;
+    }
+
+    .phone-mockup-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 340px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 440px;
+    }
+
+    /* Soft circular lavender/blue glow disk behind phone */
+    .phone-glow-backdrop {
+        position: absolute;
+        width: 320px;
+        height: 320px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(224, 231, 255, 0.95) 0%, rgba(237, 233, 254, 0.65) 55%, rgba(243, 244, 255, 0) 75%);
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .phone-device {
+        background: #181d2f;
+        border-radius: 42px;
+        padding: 9px;
+        box-shadow: 
+            0 24px 50px -10px rgba(15, 23, 42, 0.22),
+            0 8px 20px -5px rgba(99, 102, 241, 0.18),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+        position: relative;
+        z-index: 2;
+        width: 220px;
+        transform: rotate(6deg);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .phone-device:hover {
+        transform: rotate(4deg) translateY(-2px);
+    }
+
+    .phone-screen {
+        background: linear-gradient(168deg, #5765f2 0%, #4353df 45%, #2e3fc7 100%);
+        border-radius: 34px;
+        overflow: hidden;
+        height: 390px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 12px 14px 28px;
+        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .phone-notch {
+        width: 52px;
+        height: 14px;
+        background: #181d2f;
+        border-radius: 999px;
+        margin: 0 auto;
+        flex-shrink: 0;
+    }
+
+    .phone-brand-showcase {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        margin-top: -14px;
+    }
+
+    .showcase-sparkle {
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 16px;
+        filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.35));
+    }
+
+    .showcase-sparkle svg {
+        width: 40px;
+        height: 40px;
+    }
+
+    .showcase-logo {
+        font-size: 26px;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: -0.5px;
+        line-height: 1.1;
+        margin-bottom: 6px;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .showcase-tagline {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 1.6px;
+        color: rgba(255, 255, 255, 0.8);
+        text-transform: uppercase;
+    }
+
+    /* Floating White Cards */
+    .floating-info-card {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        padding: 14px 18px;
+        border-radius: 18px;
+        box-shadow: 
+            0 16px 36px -6px rgba(15, 23, 42, 0.1),
+            0 4px 12px rgba(15, 23, 42, 0.04);
+        z-index: 5;
+        white-space: nowrap;
+        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+        text-decoration: none;
+    }
+
+    .floating-info-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 
+            0 20px 42px -6px rgba(15, 23, 42, 0.14),
+            0 6px 16px rgba(15, 23, 42, 0.06);
+    }
+
+    .floating-card-title {
+        font-size: 14px;
+        font-weight: 800;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        line-height: 1.2;
+    }
+
+    .floating-card-icon {
+        font-size: 15px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .floating-card-sub {
+        font-size: 12px;
+        font-weight: 500;
+        color: #64748b;
+        margin-top: 4px;
+    }
+
+    .card-top-left {
+        top: 24px;
+        left: -15px;
+    }
+
+    .card-bottom-right {
+        bottom: 30px;
+        right: -20px;
     }
 
     /* Brand Strip */
@@ -163,6 +371,17 @@
         transition: transform 0.2s;
     }
 
+    .brand-live-badge {
+        font-size: 11px;
+        font-weight: 700;
+        background: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+        padding: 2px 8px;
+        border-radius: 999px;
+        margin-top: -2px;
+    }
+
     /* Product Grid */
     .product-grid {
         display: grid;
@@ -202,7 +421,9 @@
         height: 100%;
         object-fit: contain;
         padding: 12px;
-        transition: transform 0.3s;
+        position: relative;
+        z-index: 1;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .phone-card:hover .phone-image-wrapper img {
@@ -213,6 +434,8 @@
         position: absolute;
         top: 12px;
         left: 12px;
+        z-index: 10;
+        pointer-events: none;
         background: rgba(15, 23, 42, 0.85);
         color: white;
         backdrop-filter: blur(4px);
@@ -222,6 +445,7 @@
         border-radius: var(--radius-full);
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     }
 
     .badge-condition.like-new { background: #059669; }
@@ -269,34 +493,122 @@
         border-radius: var(--radius-sm);
     }
 
-    .phone-footer {
+    /* Phone Card Bottom Pricing & Action Panel */
+    .phone-panel {
         margin-top: auto;
+        padding-top: 14px;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .phone-panel-top {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding-top: 14px;
-        border-top: 1px solid #f1f5f9;
     }
 
-    .phone-price {
-        font-size: 20px;
+    .phone-price-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .phone-price-amount {
+        font-size: 22px;
         font-weight: 800;
-        color: var(--text-main);
+        color: #0f172a;
+        letter-spacing: -0.5px;
+        line-height: 1.1;
     }
 
-    .btn-view {
-        background: var(--primary-light);
-        color: var(--primary);
+    .phone-price-label {
+        font-size: 12px;
+        color: #8a99ad;
+        font-weight: 500;
+        margin-top: 3px;
+    }
+
+    .phone-panel-arrow {
+        width: 42px;
+        height: 42px;
+        background: #f1effe;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6366f1;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .phone-panel-arrow svg {
+        width: 18px;
+        height: 18px;
+        transition: transform 0.2s ease;
+    }
+
+    .phone-panel-arrow:hover {
+        background: #e9e5ff;
+        color: #4f46e5;
+    }
+
+    .phone-panel-arrow:hover svg {
+        transform: translateX(3px);
+    }
+
+    .phone-panel-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .btn-panel-details {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        border: 1.5px solid #dcd7fe;
+        color: #6366f1;
+        font-size: 14px;
         font-weight: 700;
-        font-size: 13px;
-        padding: 7px 14px;
-        border-radius: var(--radius-md);
-        transition: background 0.2s, color 0.2s;
+        padding: 10px 14px;
+        border-radius: 12px;
+        text-decoration: none;
+        transition: all 0.2s ease;
     }
 
-    .phone-card:hover .btn-view {
-        background: var(--primary);
-        color: white;
+    .btn-panel-details:hover {
+        background: #f8f7ff;
+        border-color: #6366f1;
+        color: #4f46e5;
+    }
+
+    .btn-panel-buy {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        border: 1px solid transparent;
+        color: #ffffff !important;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 10px 14px;
+        border-radius: 12px;
+        text-decoration: none;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.22);
+        transition: all 0.2s ease;
+    }
+
+    .btn-panel-buy:hover {
+        background: linear-gradient(135deg, #5850ec 0%, #4338ca 100%);
+        box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+        transform: translateY(-1px);
+    }
+
+    .btn-panel-buy:active {
+        transform: translateY(0);
     }
 
     /* How It Works */
@@ -347,8 +659,9 @@
 
     /* Seller CTA Banner */
     .seller-cta {
-        background: linear-gradient(135deg, #0f172a, #1e293b);
-        color: white;
+        background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+        border: 1px solid #bfdbfe;
+        color: #0f172a;
         border-radius: var(--radius-lg);
         padding: 44px;
         display: flex;
@@ -356,24 +669,85 @@
         justify-content: space-between;
         gap: 30px;
         flex-wrap: wrap;
+        box-shadow: 0 4px 20px rgba(59, 130, 246, 0.08);
     }
 
     .seller-cta h3 {
         font-size: 26px;
         font-weight: 800;
+        color: #0f172a;
         margin-bottom: 8px;
+        letter-spacing: -0.3px;
     }
 
     .seller-cta p {
-        color: #94a3b8;
+        color: #475569;
+        font-size: 15px;
+        line-height: 1.6;
         max-width: 540px;
     }
 
-    @media (max-width: 768px) {
-        .hero h1 { font-size: 32px; }
-        .hero p { font-size: 16px; }
-        .hero { padding: 48px 24px; }
+    .btn-seller-cta,
+    .btn-hero-primary {
+        background: var(--primary);
+        color: #ffffff !important;
+        font-weight: 700;
+        font-size: 15px;
+        padding: 13px 26px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background 0.2s;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .btn-seller-cta:hover,
+    .btn-hero-primary:hover {
+        background: var(--primary-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.38);
+        color: #ffffff !important;
+    }
+
+    @media (max-width: 900px) {
+        .hero { padding: 40px 24px; }
+        .hero-layout {
+            grid-template-columns: 1fr;
+            gap: 40px;
+            text-align: center;
+        }
+        .hero-content {
+            margin: 0 auto;
+        }
+        .hero h1 { font-size: 34px; }
+        .hero p { font-size: 15px; margin-left: auto; margin-right: auto; }
+        .hero-badge { margin-left: auto; margin-right: auto; }
+        .hero-actions { justify-content: center; }
+        .phone-mockup-wrapper { max-width: 300px; margin: 20px auto; min-height: 400px; }
+        .card-top-left { left: 0px; top: 12px; }
+        .card-bottom-right { right: 0px; bottom: 18px; }
         .how-it-works { padding: 32px 20px; }
+    }
+
+    @media (max-width: 520px) {
+        .hero { padding: 32px 18px; border-radius: 18px; }
+        .hero h1 { font-size: 28px; }
+        .hero-actions { flex-direction: column; width: 100%; }
+        .btn-hero-explore, .btn-hero-sell { width: 100%; justify-content: center; }
+        .phone-device { width: 195px; }
+        .phone-screen { height: 340px; }
+        .phone-glow-backdrop { width: 270px; height: 270px; }
+        .floating-info-card { padding: 10px 14px; }
+        .floating-card-title { font-size: 12px; }
+        .floating-card-sub { font-size: 11px; }
+        .card-top-left { left: -5px; top: 10px; }
+        .card-bottom-right { right: -5px; bottom: 12px; }
+        .seller-cta { padding: 32px 20px; text-align: center; justify-content: center; }
+        .seller-cta h3 { font-size: 22px; }
+        .btn-seller-cta, .btn-hero-primary { width: 100%; justify-content: center; }
     }
 </style>
 {% endblock %}
@@ -383,19 +757,74 @@
 
     <!-- HERO SECTION -->
     <section class="hero">
-        <div class="container">
+        <div class="hero-layout">
+            <!-- LEFT CONTENT -->
             <div class="hero-content">
-                <div class="hero-badge" style="display: inline-flex; align-items: center; gap: 6px;">
-                    <svg class="ui-icon" style="color: var(--accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <div class="hero-badge">
+                    <svg class="ui-icon" style="color: #4f46e5;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                     </svg>
                     <span>Verified Hardware & Honest Grading</span>
                 </div>
-                <h1>Smartphones You Can Trust at Prices You Deserve.</h1>
+                <h1>Smartphones You Can <span class="hero-gradient-text">Trust</span> at Prices You <span class="hero-gradient-text">Deserve</span>.</h1>
                 <p>Browse second-hand Apple, Samsung, OnePlus & Pixel phones with full battery health disclosures, scratch reports, and transparent peer pricing.</p>
                 <div class="hero-actions">
-                    <a href="{{ url_for('products') }}" class="btn-hero-primary">Browse Phones</a>
-                    <a href="{{ url_for('sell') }}" class="btn-hero-secondary">Sell Your Device</a>
+                    <a href="{{ url_for('products') }}" class="btn-hero-explore">
+                        Explore Phones
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                    <a href="{{ url_for('sell') }}" class="btn-hero-sell">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Sell Your Phone
+                    </a>
+                </div>
+            </div>
+
+            <!-- RIGHT VISUAL / MOCKUP -->
+            <div class="hero-visual">
+                <div class="phone-mockup-wrapper">
+                    <!-- BACKGROUND CIRCULAR GLOW -->
+                    <div class="phone-glow-backdrop"></div>
+
+                    <!-- FLOATING CARD 1: TOP LEFT -->
+                    <div class="floating-info-card card-top-left">
+                        <div class="floating-card-title">
+                            <span class="floating-card-icon">✨</span>
+                            <span>Find your upgrade</span>
+                        </div>
+                        <div class="floating-card-sub">Explore available phones</div>
+                    </div>
+
+                    <!-- FLOATING CARD 2: BOTTOM RIGHT -->
+                    <div class="floating-info-card card-bottom-right">
+                        <div class="floating-card-title">
+                            <span class="floating-card-icon">📱</span>
+                            <span>Your next phone</span>
+                        </div>
+                        <div class="floating-card-sub">Start exploring today</div>
+                    </div>
+
+                    <!-- PHONE CONTAINER -->
+                    <div class="phone-device">
+                        <div class="phone-screen">
+                            <div class="phone-notch"></div>
+                            <div class="phone-brand-showcase">
+                                <div class="showcase-sparkle">
+                                    <svg viewBox="0 0 24 24" width="40" height="40" fill="#ffffff" aria-hidden="true">
+                                        <path d="M12 0 C12 6.627 17.373 12 24 12 C17.373 12 12 17.373 12 24 C12 17.373 6.627 12 0 12 C6.627 12 12 6.627 12 0 Z"/>
+                                    </svg>
+                                </div>
+                                <div class="showcase-logo">iSellora</div>
+                                <div class="showcase-tagline">BUY. SELL. UPGRADE.</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -415,6 +844,9 @@
                     </svg>
                 </div>
                 <span>Apple</span>
+                {% if brand_counts and brand_counts.get('apple', 0) > 0 %}
+                    <span class="brand-live-badge">{{ brand_counts.get('apple') }} in stock</span>
+                {% endif %}
             </a>
             <a href="{{ url_for('products', brand='Samsung') }}" class="brand-card">
                 <div class="brand-icon-wrapper">
@@ -423,6 +855,9 @@
                     </svg>
                 </div>
                 <span>Samsung</span>
+                {% if brand_counts and brand_counts.get('samsung', 0) > 0 %}
+                    <span class="brand-live-badge">{{ brand_counts.get('samsung') }} in stock</span>
+                {% endif %}
             </a>
             <a href="{{ url_for('products', brand='OnePlus') }}" class="brand-card">
                 <div class="brand-icon-wrapper">
@@ -431,6 +866,9 @@
                     </svg>
                 </div>
                 <span>OnePlus</span>
+                {% if brand_counts and brand_counts.get('oneplus', 0) > 0 %}
+                    <span class="brand-live-badge">{{ brand_counts.get('oneplus') }} in stock</span>
+                {% endif %}
             </a>
             <a href="{{ url_for('products', brand='Google') }}" class="brand-card">
                 <div class="brand-icon-wrapper">
@@ -442,6 +880,9 @@
                     </svg>
                 </div>
                 <span>Google</span>
+                {% if brand_counts and brand_counts.get('google', 0) > 0 %}
+                    <span class="brand-live-badge">{{ brand_counts.get('google') }} in stock</span>
+                {% endif %}
             </a>
             <a href="{{ url_for('products', brand='Xiaomi') }}" class="brand-card">
                 <div class="brand-icon-wrapper">
@@ -450,6 +891,9 @@
                     </svg>
                 </div>
                 <span>Xiaomi</span>
+                {% if brand_counts and brand_counts.get('xiaomi', 0) > 0 %}
+                    <span class="brand-live-badge">{{ brand_counts.get('xiaomi') }} in stock</span>
+                {% endif %}
             </a>
             <a href="{{ url_for('products', brand='Motorola') }}" class="brand-card">
                 <div class="brand-icon-wrapper">
@@ -458,7 +902,11 @@
                     </svg>
                 </div>
                 <span>Motorola</span>
+                {% if brand_counts and brand_counts.get('motorola', 0) > 0 %}
+                    <span class="brand-live-badge">{{ brand_counts.get('motorola') }} in stock</span>
+                {% endif %}
             </a>
+        </div>
         </div>
     </section>
 
@@ -466,7 +914,7 @@
     <section>
         <div class="section-title">
             <h3>Featured & Recently Listed</h3>
-            <a href="{{ url_for('products') }}">View Catalog ({{ phones|length }}+) →</a>
+            <a href="{{ url_for('products') }}">View Catalog ({{ total_catalog_count if total_catalog_count is defined else phones|length }}) →</a>
         </div>
 
         {% if phones %}
@@ -474,18 +922,18 @@
                 {% for phone in phones %}
                     <div class="phone-card">
                         <div class="phone-image-wrapper">
+                            <img src="{{ phone.primary_image }}" alt="{{ phone.brand }} {{ phone.model }}" loading="lazy">
                             <span class="badge-condition {{ phone.condition|lower|replace(' ', '-') }}">
                                 {{ phone.condition }}
                             </span>
                             {% if phone.is_priority %}
-                                <span style="position: absolute; top: 12px; right: 12px; z-index: 2; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #78350f; border: 1px solid #fcd34d; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                                <span style="position: absolute; top: 12px; right: 12px; z-index: 10; pointer-events: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #78350f; border: 1px solid #fcd34d; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
                                     <svg style="width: 11px; height: 11px; color: #b45309;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                                         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                                     </svg>
                                     Priority
                                 </span>
                             {% endif %}
-                            <img src="{{ phone.primary_image }}" alt="{{ phone.brand }} {{ phone.model }}" loading="lazy">
                         </div>
                         <div class="phone-body">
                             <span class="phone-brand">{{ phone.brand }}</span>
@@ -505,9 +953,23 @@
                                     <span class="spec-pill">{{ phone.ram }} RAM</span>
                                 {% endif %}
                             </div>
-                            <div class="phone-footer">
-                                <div class="phone-price">{{ phone.formatted_price }}</div>
-                                <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="btn-view">View Details</a>
+                            <div class="phone-panel">
+                                <div class="phone-panel-top">
+                                    <div class="phone-price-group">
+                                        <span class="phone-price-amount phone-price">{{ phone.formatted_price }}</span>
+                                        <span class="phone-price-label">Listed price</span>
+                                    </div>
+                                    <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="phone-panel-arrow" aria-label="View {{ phone.brand }} {{ phone.model }} details">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            <polyline points="12 5 19 12 12 19"></polyline>
+                                        </svg>
+                                    </a>
+                                </div>
+                                <div class="phone-panel-actions">
+                                    <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="btn-panel-details">Details</a>
+                                    <a href="{{ url_for('buy_now', listing_id=phone.id) }}" class="btn-panel-buy">Buy Now</a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -558,7 +1020,13 @@
             <h3>Ready to Upgrade? Sell Your Phone on iSellora</h3>
             <p>Reach serious local and regional buyers without paying hefty middleman listing commissions.</p>
         </div>
-        <a href="{{ url_for('sell') }}" class="btn-hero-primary">+ List Your Phone Now</a>
+        <a href="{{ url_for('sell') }}" class="btn-seller-cta">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Sell now
+        </a>
     </section>
 
 </div>

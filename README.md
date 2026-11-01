@@ -18,15 +18,29 @@
 
 ---
 
-## 2. Payment Arrangement Notice (Phase 1)
+## 2. Payment Gateway Architecture (Phase 2: Razorpay & COD)
 
-> **Important**: Online payment gateway integration (Razorpay, Stripe, cards, automated UPI capture, and webhooks) is **strictly deferred** to a future phase.
->
-> In this phase:
-> - All orders operate under transparent **Direct Settlement / Cash on Delivery (COD)**.
-> - Orders are honestly marked as `Not collected` upon checkout.
-> - No fake payment success screens or unverified UPI transfer instructions exist.
-> - Buyers verify device hardware condition in person upon pickup or delivery, then settle payment directly.
+iSellora implements a production-grade, secure multi-channel payment architecture supporting both **Razorpay Online Checkout** and **Cash on Delivery (COD)**:
+
+- **Official Razorpay Python SDK & Checkout Integration**:
+  - Secure checkout launched via `https://checkout.razorpay.com/v1/checkout.js` with fallback redirection modal.
+  - Server-side cryptographic HMAC SHA-256 signature verification (`razorpay.utility.verify_payment_signature`).
+  - Authoritative amount calculation strictly performed on the server side in integer paise (`order.total_paise` in INR); client-submitted amounts/currencies are never trusted.
+- **Webhook Reconciliation Engine**:
+  - Inbound server-to-server webhook endpoint (`POST /payment/webhook`) with HMAC SHA-256 validation via `X-Razorpay-Signature` and `RAZORPAY_WEBHOOK_SECRET`.
+  - Durable `WebhookEvent` model providing permanent audit trail and deduplication against repeated gateway retries.
+  - Event reconciliation for `order.paid`, `payment.captured`, `payment.failed`, and `refund.processed`.
+- **Cash on Delivery (COD) Separation**:
+  - COD orders create orders in `Pending` status with `payment_status="Not collected"` without calling Razorpay order creation.
+  - Payment status remains strictly decoupled from shipping delivery status; authorized post-delivery collection is recorded via `record_cod_payment_collection`.
+- **Verified Priority Placement (₹49 Boost)**:
+  - Sellers can boost smartphone listings to the #1 position in catalog search feeds for ₹49 (4900 paise).
+  - Direct or unverified activations are blocked; priority placement activates only upon verified Razorpay payment.
+- **Inventory Concurrency & Reservation Expiry**:
+  - Checkout atomically locks single-unit inventory (`inventory_status="reserved"`).
+  - Abandoned reservations automatically expire after 30 minutes via `expire_abandoned_reservations()`, returning unsold devices to `available` status.
+- **Authorized Refund Workflows**:
+  - Role-protected administrative refund workflow (`POST /admin/payment/<id>/refund`) calling Razorpay refund API with immutable audit tracking.
 
 ---
 
@@ -109,13 +123,26 @@ Run the full automated test suite using `pytest`:
 pytest tests -v
 ```
 
-### Test Coverage Highlights:
-- **Authentication**: Registration, password complexity validation, duplicate rejection, login, rate limiting, and logout session invalidation.
-- **Authorization**: Private order shielding, cross-seller listing edit/delete rejection, non-admin admin route prevention, self-purchase blocking.
-- **CSRF Protection**: Verification that POST requests without valid CSRF tokens are rejected with HTTP 400.
-- **Listings**: Input boundary validation (price, battery), image magic-byte verification, re-moderation on edit, server-side search and filtering.
-- **Orders & Inventory Concurrency**: Atomic claim testing confirming concurrent attempts to buy the same single-unit phone are blocked, duplicate submission idempotency, status transitions, and cancellation inventory release.
-- **Data Migration**: Verification that legacy JSON records import without loss.
+### Test Coverage Highlights (81 Automated Tests Passing — 100%):
+- **Razorpay Payment Integration (`test_razorpay_integration.py` - 20 tests)**:
+  - Authoritative amount calculation in integer paise (INR).
+  - Razorpay order creation and single-unit inventory reservation.
+  - HMAC SHA-256 checkout signature verification and order confirmation.
+  - Rejection of invalid signatures, order ID mismatches, and unauthorized user verification attempts.
+  - Idempotent callback handling without duplicate history or state corruptions.
+  - Payment failure tracking and modal dismissal logging preserving retry capability.
+  - Independent Cash on Delivery (COD) workflow and authorized post-delivery collection.
+  - Webhook HMAC signature verification and rejection of forged webhooks.
+  - Asynchronous webhook reconciliation for `order.paid`, `payment.captured`, `payment.failed`, and `refund.processed`.
+  - Webhook deduplication and replay protection via `WebhookEvent`.
+  - Priority Placement (₹49 / 4900 paise) boost order creation and verified activation.
+  - Automatic inventory release on abandoned reservation expiry (30-minute timeout).
+  - Authorized administrative refund workflows with full audit logging.
+- **Security Audit & Hardening (`test_security_audit.py` - 26 tests)**: Privilege escalation prevention, production configuration validation, order transition enforcement, redirect safety, support ticket ownership, price bounds checking.
+- **Priority Placement & Subscriptions (`test_boost_subscription.py` - 5 tests)**: Boost page access control, catalog priority sorting, admin subscription revenue metrics.
+- **Orders & Inventory Concurrency (`test_orders.py` - 5 tests)**: Atomic claim testing confirming concurrent attempts to buy the same single-unit phone are blocked, duplicate submission idempotency, status transitions, and cancellation inventory release.
+- **Authentication & Authorization (`test_auth.py`, `test_authorization.py` - 14 tests)**: Registration, password complexity, brute-force rate-limiting, private order shielding, cross-seller listing protection, and admin isolation.
+- **Listings, Reviews, Wishlist & Features (`test_listings.py`, `test_features.py`, `test_csrf.py`, `test_migration.py` - 11 tests)**.
 
 ---
 

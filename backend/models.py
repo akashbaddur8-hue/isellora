@@ -21,8 +21,14 @@ class User(db.Model):
 
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
     name = db.Column(db.String(100), nullable=False)
+    username = db.Column(db.String(50), unique=True, nullable=True, index=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     phone = db.Column(db.String(20), nullable=False)
+    avatar_path = db.Column(db.String(255), nullable=True)
+    city = db.Column(db.String(100), nullable=True)
+    state = db.Column(db.String(100), nullable=True)
+    bio = db.Column(db.Text, nullable=True)
+    is_verified = db.Column(db.Boolean, default=False, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default="user", nullable=False)  # 'user', 'admin'
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -48,6 +54,23 @@ class User(db.Model):
         return self.role == "admin"
 
     @property
+    def avatar_url(self):
+        return self.avatar_path if self.avatar_path else None
+
+    @property
+    def display_location(self):
+        parts = [p.strip() for p in (self.city, self.state) if p and p.strip()]
+        return ", ".join(parts) if parts else None
+
+    @property
+    def initial(self):
+        return (self.name or "U")[0].upper()
+
+    @property
+    def member_since(self):
+        return self.created_at.strftime("%B %Y") if self.created_at else "Recently"
+
+    @property
     def average_rating(self):
         reviews = Review.query.filter_by(seller_id=self.id).all()
         if not reviews:
@@ -62,8 +85,14 @@ class User(db.Model):
         return {
             "id": self.id,
             "name": self.name,
+            "username": self.username or "",
             "email": self.email,
             "phone": self.phone,
+            "city": self.city or "",
+            "state": self.state or "",
+            "bio": self.bio or "",
+            "avatar_url": self.avatar_url or "",
+            "is_verified": self.is_verified,
             "role": self.role,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else ""
@@ -128,7 +157,7 @@ class Listing(db.Model):
     def primary_image(self):
         if self.images:
             return self.images[0].image_path
-        return "/static/images/Apple-iPhone-15-lineup-hero-geo-230912_inline.jpg.large.jpg"
+        return "/static/images/phone-placeholder.svg"
 
     @property
     def all_image_paths(self):
@@ -140,7 +169,7 @@ class Listing(db.Model):
 
     @property
     def is_priority(self):
-        return bool(self.is_featured or self.listing_type == "featured")
+        return bool(self.is_featured)
 
     def to_dict(self):
         return {
@@ -221,9 +250,11 @@ class Order(db.Model):
     # Status machine
     status = db.Column(db.String(20), default="Pending", nullable=False, index=True)  # 'Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'
     
-    # Payment architecture (Payment integration strictly deferred; clear audit tracking)
-    payment_method = db.Column(db.String(50), default="cod", nullable=False)  # 'cod', 'pickup_direct', 'pay_on_delivery'
-    payment_status = db.Column(db.String(50), default="Not collected", nullable=False, index=True)  # 'Not collected', 'Paid', 'Refunded'
+    # Payment architecture (Razorpay online checkout & Cash on Delivery)
+    payment_method = db.Column(db.String(50), default="cod", nullable=False)  # 'razorpay', 'cod'
+    payment_status = db.Column(db.String(50), default="Not collected", nullable=False, index=True)  # 'created', 'pending', 'authorized', 'paid', 'failed', 'refunded', 'Not collected', 'Collected upon delivery'
+    razorpay_order_id = db.Column(db.String(100), nullable=True, index=True)
+    razorpay_payment_id = db.Column(db.String(100), nullable=True, index=True)
     
     # Cancellation audit
     cancellation_reason = db.Column(db.Text, nullable=True)
@@ -408,8 +439,10 @@ class ListingSubscription(db.Model):
     plan_name = db.Column(db.String(100), default="Priority Placement (Sell First)", nullable=False)
     amount_paise = db.Column(db.Integer, default=4900, nullable=False)  # ₹49 = 4900 paise
     status = db.Column(db.String(30), default="active", nullable=False)  # 'active', 'expired', 'cancelled'
-    payment_method = db.Column(db.String(50), default="direct_activation", nullable=False)
-    payment_status = db.Column(db.String(30), default="active", nullable=False)
+    payment_method = db.Column(db.String(50), default="razorpay", nullable=False)
+    payment_status = db.Column(db.String(30), default="pending", nullable=False)  # 'pending', 'paid', 'failed'
+    razorpay_order_id = db.Column(db.String(100), nullable=True, index=True)
+    razorpay_payment_id = db.Column(db.String(100), nullable=True, index=True)
     created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
     expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
@@ -429,9 +462,84 @@ class ListingSubscription(db.Model):
             "amount_rupees": self.amount_rupees,
             "status": self.status,
             "payment_status": self.payment_status,
+            "razorpay_order_id": self.razorpay_order_id or "",
+            "razorpay_payment_id": self.razorpay_payment_id or "",
             "created_at": self.created_at.isoformat() if self.created_at else "",
             "expires_at": self.expires_at.isoformat() if self.expires_at else ""
         }
+
+
+class Payment(db.Model):
+    __tablename__ = "payments"
+
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    order_id = db.Column(db.String(36), db.ForeignKey("orders.id", ondelete="CASCADE"), nullable=True, index=True)
+    subscription_id = db.Column(db.String(36), db.ForeignKey("listing_subscriptions.id", ondelete="CASCADE"), nullable=True, index=True)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    purpose = db.Column(db.String(50), default="order", nullable=False, index=True)  # 'order', 'priority_boost'
+    provider = db.Column(db.String(50), default="razorpay", nullable=False)  # 'razorpay', 'cod'
+
+    razorpay_order_id = db.Column(db.String(100), unique=True, nullable=True, index=True)
+    razorpay_payment_id = db.Column(db.String(100), unique=True, nullable=True, index=True)
+    razorpay_signature = db.Column(db.String(255), nullable=True)
+
+    amount_paise = db.Column(db.BigInteger, nullable=False)
+    currency = db.Column(db.String(10), default="INR", nullable=False)
+    status = db.Column(db.String(30), default="created", nullable=False, index=True)  # 'created', 'pending', 'authorized', 'paid', 'failed', 'refunded', 'partially_refunded'
+
+    error_code = db.Column(db.String(100), nullable=True)
+    error_description = db.Column(db.Text, nullable=True)
+
+    refund_id = db.Column(db.String(100), nullable=True, index=True)
+    refund_status = db.Column(db.String(50), nullable=True)
+    refund_amount_paise = db.Column(db.BigInteger, default=0, nullable=False)
+
+    created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    paid_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    order = db.relationship("Order", backref=db.backref("payments", lazy="dynamic", cascade="all, delete-orphan"))
+    subscription = db.relationship("ListingSubscription", backref=db.backref("payments", lazy="dynamic", cascade="all, delete-orphan"))
+    user = db.relationship("User", foreign_keys=[user_id])
+
+    @property
+    def amount_rupees(self):
+        return self.amount_paise // 100
+
+    @property
+    def formatted_amount(self):
+        return f"₹{self.amount_rupees:,.0f}"
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "order_id": self.order_id,
+            "subscription_id": self.subscription_id,
+            "user_id": self.user_id,
+            "purpose": self.purpose,
+            "provider": self.provider,
+            "razorpay_order_id": self.razorpay_order_id,
+            "razorpay_payment_id": self.razorpay_payment_id,
+            "amount_rupees": self.amount_rupees,
+            "currency": self.currency,
+            "status": self.status,
+            "refund_id": self.refund_id,
+            "refund_amount_paise": self.refund_amount_paise,
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+            "paid_at": self.paid_at.isoformat() if self.paid_at else ""
+        }
+
+
+class WebhookEvent(db.Model):
+    __tablename__ = "webhook_events"
+
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    event_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    event_type = db.Column(db.String(100), nullable=False, index=True)
+    payload = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(30), default="processed", nullable=False)  # 'processed', 'ignored', 'failed'
+    created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
 
 
 class AuditEvent(db.Model):
@@ -445,6 +553,46 @@ class AuditEvent(db.Model):
     details = db.Column(db.Text, nullable=True)
     ip_address = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class PasswordResetToken(db.Model):
+    __tablename__ = "password_reset_tokens"
+
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    used_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    is_revoked = db.Column(db.Boolean, default=False, nullable=False)
+    ip_address = db.Column(db.String(50), nullable=True)
+    user_agent = db.Column(db.String(255), nullable=True)
+
+    user = db.relationship("User", backref=db.backref("reset_tokens", lazy="dynamic", cascade="all, delete-orphan"))
+
+    @property
+    def is_expired(self):
+        if not self.expires_at:
+            return True
+        now = utc_now()
+        if self.expires_at.tzinfo is None:
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+        return now >= self.expires_at
+
+    @property
+    def is_valid(self):
+        return (not self.is_revoked) and (self.used_at is None) and (not self.is_expired)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+            "expires_at": self.expires_at.isoformat() if self.expires_at else "",
+            "used_at": self.used_at.isoformat() if self.used_at else None,
+            "is_revoked": self.is_revoked,
+            "is_valid": self.is_valid
+        }
 
 
 def get_legitimate_tracking_url(courier_name, tracking_number):

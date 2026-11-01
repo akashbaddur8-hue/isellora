@@ -295,19 +295,45 @@
                     Seller Information
                 </h4>
                 <div style="font-size: 14px; color: var(--text-main);">
-                    <strong>{{ phone.seller_name or 'Verified Marketplace Seller' }}</strong>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap;">
+                        <div>
+                            {% if phone.seller_id %}
+                                <a href="{{ url_for('seller_profile', user_id=phone.seller_id) }}" style="font-weight: 800; font-size: 15px; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                                    <span>{{ phone.seller_name or 'Marketplace Seller' }}</span>
+                                    <svg class="ui-icon" style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                </a>
+                            {% else %}
+                                <strong>{{ phone.seller_name or 'Marketplace Seller' }}</strong>
+                            {% endif %}
+                            
+                            {% if phone.seller and phone.seller.display_location %}
+                                <small style="display: block; color: var(--text-muted); font-size: 12px; margin-top: 2px;">
+                                    📍 {{ phone.seller.display_location }}
+                                </small>
+                            {% endif %}
+                        </div>
+
+                        {% if phone.seller_id %}
+                            <a href="{{ url_for('seller_profile', user_id=phone.seller_id) }}" class="btn-action-sm" style="background: #f1f5f9; border: 1px solid var(--border); color: var(--text-main); font-weight: 700; padding: 5px 10px; border-radius: var(--radius-md); font-size: 12px; text-decoration: none;">
+                                View Seller Profile
+                            </a>
+                        {% endif %}
+                    </div>
+
                     {% if phone.seller and phone.seller.average_rating %}
-                        <span style="font-size: 13px; color: #f59e0b; font-weight: 700; margin-left: 6px; display: inline-flex; align-items: center; gap: 3px;">
-                            <svg class="ui-icon" style="width: 14px; height: 14px; fill: #f59e0b; color: #f59e0b;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                            {{ phone.seller.average_rating }} ({{ phone.seller.review_count }} review{{ 's' if phone.seller.review_count != 1 else '' }})
-                        </span>
+                        <div style="margin-top: 6px;">
+                            <span style="font-size: 13px; color: #f59e0b; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;">
+                                <svg class="ui-icon" style="width: 14px; height: 14px; fill: #f59e0b; color: #f59e0b;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                {{ phone.seller.average_rating }} ({{ phone.seller.review_count }} review{{ 's' if phone.seller.review_count != 1 else '' }})
+                            </span>
+                        </div>
                     {% endif %}
-                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Listed on {{ phone.created_at.strftime('%d %B %Y') if phone.created_at else 'Recent' }}</p>
+                    <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">Listed on {{ phone.created_at.strftime('%d %B %Y') if phone.created_at else 'Recent' }}</p>
                     <p style="margin-top: 8px; font-size: 12px; color: #475569; display: flex; align-items: flex-start; gap: 6px;">
                         <svg class="ui-icon" style="color: var(--primary); margin-top: 2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                         </svg>
-                        <em>Direct seller contact details will be shared securely on your order confirmation for pickup or shipment tracking.</em>
+                        <em>Direct seller contact details and pickup coordinates are coordinated securely upon order placement.</em>
                     </p>
                 </div>
             </div>
@@ -343,10 +369,19 @@
                         <span class="badge-pill badge-inventory-sold">Sold Out</span>
                     {% endif %}
 
-                    {% if phone.approval_status != 'approved' %}
-                        <span class="badge-pill" style="background: #fef3c7; color: #92400e;">Status: {{ phone.approval_status|capitalize }}</span>
+                    {% if phone.approval_status == 'rejected' %}
+                        <span class="badge-pill" style="background: var(--error-light); color: #991b1b;">Status: Rejected</span>
+                    {% elif phone.approval_status == 'pending' %}
+                        <span class="badge-pill" style="background: #fef3c7; color: #92400e;">Status: Pending Review</span>
+                    {% elif phone.approval_status != 'approved' %}
+                        <span class="badge-pill" style="background: #f1f5f9; color: #64748b;">Status: {{ phone.approval_status|capitalize }}</span>
                     {% endif %}
                 </div>
+                {% if phone.approval_status == 'rejected' and phone.rejection_reason %}
+                    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-md); padding: 10px 14px; margin-top: 10px; color: #991b1b; font-size: 13px; line-height: 1.5;">
+                        <strong>Rejection Feedback:</strong> {{ phone.rejection_reason }}
+                    </div>
+                {% endif %}
             </div>
 
             <!-- PRICE BOX -->

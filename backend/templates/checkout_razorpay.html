@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Complete Payment | Order #{{ order.id[:8] }} — iSellora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pay-container {
+        max-width: 580px;
+        margin: 40px auto 70px;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 36px;
+        box-shadow: var(--shadow-md);
+        text-align: center;
+    }
+
+    .pay-header {
+        margin-bottom: 24px;
+    }
+
+    .pay-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #eef2ff;
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 800;
+        padding: 6px 14px;
+        border-radius: var(--radius-full);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 14px;
+    }
+
+    .order-box {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        text-align: left;
+        margin-bottom: 24px;
+    }
+
+    .order-line {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        margin-bottom: 10px;
+        color: var(--text-muted);
+    }
+
+    .order-line.total {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--text-main);
+    }
+
+    .btn-pay-now {
+        width: 100%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 16px;
+        border-radius: var(--radius-md);
+        font-size: 16px;
+        font-weight: 800;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+        transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn-pay-now:hover {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+    }
+
+    .status-msg {
+        display: none;
+        padding: 14px;
+        border-radius: var(--radius-md);
+        margin-bottom: 20px;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .status-msg.info {
+        display: block;
+        background: #eff6ff;
+        color: #1e40af;
+        border: 1px solid #bfdbfe;
+    }
+
+    .status-msg.error {
+        display: block;
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .status-msg.success {
+        display: block;
+        background: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="pay-container">
+        <div class="pay-header">
+            <div class="pay-badge">
+                <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                    <line x1="2" y1="10" x2="22" y2="10"></line>
+                </svg>
+                Razorpay Secure Checkout
+            </div>
+            <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 6px;">Complete Online Payment</h1>
+            <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Order Reference: #{{ order.id }}</p>
+        </div>
+
+        <div id="statusAlert" class="status-msg"></div>
+
+        <div class="order-box">
+            <div class="order-line">
+                <span>Smartphone</span>
+                <strong style="color: var(--text-main);">{{ order.brand }} {{ order.model }} ({{ order.storage }})</strong>
+            </div>
+            <div class="order-line">
+                <span>Recipient</span>
+                <strong style="color: var(--text-main);">{{ order.buyer_name }}</strong>
+            </div>
+            <div class="order-line">
+                <span>Delivery Arrangement</span>
+                <strong style="color: var(--text-main);">{{ 'Local Pickup Handover' if order.delivery_method == 'pickup' else 'Insured Courier Shipping' }}</strong>
+            </div>
+            <div class="order-line total">
+                <span>Total Payable</span>
+                <span style="color: var(--primary);">{{ order.formatted_total }}</span>
+            </div>
+        </div>
+
+        <button type="button" id="btnPay" class="btn-pay-now" onclick="launchRazorpayCheckout()">
+            <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                <line x1="2" y1="10" x2="22" y2="10"></line>
+            </svg>
+            Pay {{ order.formatted_total }} via Razorpay
+        </button>
+
+        <div style="margin-top: 18px; display: flex; justify-content: center; gap: 20px;">
+            <a href="{{ url_for('buy_now', listing_id=phone.id) }}" style="font-size: 13px; color: var(--text-muted); text-decoration: none;">
+                ← Change Payment Method / Edit Details
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    const rzpConfig = {
+        key: "{{ razorpay.key_id }}",
+        amount: {{ razorpay.amount_paise }},
+        currency: "{{ razorpay.currency }}",
+        name: "iSellora Marketplace",
+        description: "{{ order.brand }} {{ order.model }} Purchase",
+        order_id: "{{ razorpay.razorpay_order_id }}",
+        prefill: {
+            name: "{{ razorpay.prefill.name }}",
+            email: "{{ razorpay.prefill.email }}",
+            contact: "{{ razorpay.prefill.contact }}"
+        },
+        theme: {
+            color: "#4f46e5"
+        }
+    };
+
+    function showStatus(text, type) {
+        const box = document.getElementById('statusAlert');
+        box.className = 'status-msg ' + type;
+        box.textContent = text;
+        box.style.display = 'block';
+    }
+
+    function launchRazorpayCheckout() {
+        showStatus("Opening secure Razorpay Checkout modal...", "info");
+        const options = {
+            ...rzpConfig,
+            handler: function (response) {
+                showStatus("Payment successful! Verifying signature with server...", "info");
+                document.getElementById('btnPay').disabled = true;
+
+                fetch("{{ url_for('payment_verify') }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token() }}"
+                    },
+                    body: JSON.stringify({
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.redirect_url) {
+                        showStatus("Verified! Redirecting to confirmation...", "success");
+                        window.location.href = data.redirect_url;
+                    } else {
+                        showStatus(data.error || "Verification failed. Please contact customer support.", "error");
+                        document.getElementById('btnPay').disabled = false;
+                    }
+                })
+                .catch(err => {
+                    showStatus("Network error during verification. We are reconciling your transaction in the background.", "error");
+                    document.getElementById('btnPay').disabled = false;
+                });
+            },
+            modal: {
+                ondismiss: function () {
+                    showStatus("Payment window closed. You can retry paying whenever you are ready.", "error");
+                    fetch("{{ url_for('payment_failed') }}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token() }}"
+                        },
+                        body: JSON.stringify({
+                            razorpay_order_id: "{{ razorpay.razorpay_order_id }}",
+                            error_code: "MODAL_DISMISSED",
+                            error_description: "Customer closed the Razorpay payment modal."
+                        })
+                    });
+                }
+            }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+            showStatus("Payment failed: " + (response.error.description || "Transaction declined."), "error");
+            fetch("{{ url_for('payment_failed') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({
+                    razorpay_order_id: "{{ razorpay.razorpay_order_id }}",
+                    error_code: response.error.code,
+                    error_description: response.error.description
+                })
+            });
+        });
+
+        rzp.open();
+    }
+
+    // Auto-launch checkout once loaded
+    window.addEventListener('load', function() {
+        launchRazorpayCheckout();
+    });
+</script>
+{% endblock %}

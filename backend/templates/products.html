@@ -143,6 +143,7 @@
         background: #f1f5f9;
         display: grid;
         place-items: center;
+        overflow: hidden;
     }
 
     .phone-image-wrapper img {
@@ -150,19 +151,36 @@
         height: 100%;
         object-fit: contain;
         padding: 10px;
+        position: relative;
+        z-index: 1;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .phone-card:hover .phone-image-wrapper img {
+        transform: scale(1.04);
     }
 
     .badge-condition {
         position: absolute;
         top: 10px;
         left: 10px;
+        z-index: 10;
+        pointer-events: none;
         background: rgba(15, 23, 42, 0.85);
         color: white;
         font-size: 11px;
         font-weight: 700;
         padding: 3px 8px;
         border-radius: var(--radius-full);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     }
+
+    .badge-condition.like-new { background: #059669; }
+    .badge-condition.excellent { background: #2563eb; }
+    .badge-condition.good { background: #d97706; }
+    .badge-condition.fair { background: #dc2626; }
 
     .phone-body {
         padding: 16px;
@@ -200,27 +218,122 @@
         border-radius: var(--radius-sm);
     }
 
-    .phone-footer {
+    /* Phone Card Bottom Pricing & Action Panel */
+    .phone-panel {
         margin-top: auto;
+        padding-top: 14px;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .phone-panel-top {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding-top: 12px;
-        border-top: 1px solid #f1f5f9;
     }
 
-    .phone-price {
-        font-size: 18px;
+    .phone-price-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .phone-price-amount {
+        font-size: 22px;
         font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -0.5px;
+        line-height: 1.1;
     }
 
-    .btn-view {
-        background: var(--primary-light);
-        color: var(--primary);
+    .phone-price-label {
+        font-size: 12px;
+        color: #8a99ad;
+        font-weight: 500;
+        margin-top: 3px;
+    }
+
+    .phone-panel-arrow {
+        width: 42px;
+        height: 42px;
+        background: #f1effe;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6366f1;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .phone-panel-arrow svg {
+        width: 18px;
+        height: 18px;
+        transition: transform 0.2s ease;
+    }
+
+    .phone-panel-arrow:hover {
+        background: #e9e5ff;
+        color: #4f46e5;
+    }
+
+    .phone-panel-arrow:hover svg {
+        transform: translateX(3px);
+    }
+
+    .phone-panel-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .btn-panel-details {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        border: 1.5px solid #dcd7fe;
+        color: #6366f1;
+        font-size: 14px;
         font-weight: 700;
-        font-size: 13px;
-        padding: 6px 12px;
-        border-radius: var(--radius-md);
+        padding: 10px 14px;
+        border-radius: 12px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-panel-details:hover {
+        background: #f8f7ff;
+        border-color: #6366f1;
+        color: #4f46e5;
+    }
+
+    .btn-panel-buy {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        border: 1px solid transparent;
+        color: #ffffff !important;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 10px 14px;
+        border-radius: 12px;
+        text-decoration: none;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.22);
+        transition: all 0.2s ease;
+    }
+
+    .btn-panel-buy:hover {
+        background: linear-gradient(135deg, #5850ec 0%, #4338ca 100%);
+        box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+        transform: translateY(-1px);
+    }
+
+    .btn-panel-buy:active {
+        transform: translateY(0);
     }
 
     /* Pagination */
@@ -346,9 +459,23 @@
 
         <!-- MAIN CATALOG CONTENT -->
         <main style="padding: 0;">
+            {% if brand %}
+                <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px 22px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; box-shadow: var(--shadow-sm);">
+                    <div>
+                        <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Shop by Brand</div>
+                        <h1 style="font-size: 22px; font-weight: 800; margin: 0; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                            {{ brand|capitalize }} Smartphones
+                        </h1>
+                    </div>
+                    <a href="{{ url_for('products') }}" style="font-size: 13px; font-weight: 700; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                        All Brands →
+                    </a>
+                </div>
+            {% endif %}
+
             <div class="catalog-header">
                 <div class="catalog-count">
-                    Showing <strong>{{ phones|length }}</strong> of <strong>{{ pagination.total }}</strong> available smartphones
+                    Showing <strong>{{ phones|length }}</strong> of <strong>{{ pagination.total }}</strong> available smartphones{% if brand %} for <strong>{{ brand|capitalize }}</strong>{% endif %}
                 </div>
             </div>
 
@@ -357,18 +484,18 @@
                     {% for phone in phones %}
                         <div class="phone-card">
                             <div class="phone-image-wrapper">
-                                <span class="badge-condition">
+                                <img src="{{ phone.primary_image }}" alt="{{ phone.brand }} {{ phone.model }}" loading="lazy">
+                                <span class="badge-condition {{ phone.condition|lower|replace(' ', '-') }}">
                                     {{ phone.condition }}
                                 </span>
                                 {% if phone.is_priority %}
-                                    <span style="position: absolute; top: 10px; right: 10px; z-index: 2; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #78350f; border: 1px solid #fcd34d; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 3px; box-shadow: 0 2px 4px rgba(0,0,0,0.06);">
+                                    <span style="position: absolute; top: 10px; right: 10px; z-index: 10; pointer-events: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #78350f; border: 1px solid #fcd34d; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 3px; box-shadow: 0 2px 4px rgba(0,0,0,0.06);">
                                         <svg style="width: 11px; height: 11px; color: #b45309;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                                             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                                         </svg>
                                         Priority
                                     </span>
                                 {% endif %}
-                                <img src="{{ phone.primary_image }}" alt="{{ phone.brand }} {{ phone.model }}" loading="lazy">
                             </div>
                             <div class="phone-body">
                                 <span class="phone-brand">{{ phone.brand }}</span>
@@ -388,9 +515,23 @@
                                         <span class="spec-pill">{{ phone.ram }} RAM</span>
                                     {% endif %}
                                 </div>
-                                <div class="phone-footer">
-                                    <div class="phone-price">{{ phone.formatted_price }}</div>
-                                    <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="btn-view">Inspect</a>
+                                <div class="phone-panel">
+                                    <div class="phone-panel-top">
+                                        <div class="phone-price-group">
+                                            <span class="phone-price-amount phone-price">{{ phone.formatted_price }}</span>
+                                            <span class="phone-price-label">Listed price</span>
+                                        </div>
+                                        <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="phone-panel-arrow" aria-label="View {{ phone.brand }} {{ phone.model }} details">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                                <polyline points="12 5 19 12 12 19"></polyline>
+                                            </svg>
+                                        </a>
+                                    </div>
+                                    <div class="phone-panel-actions">
+                                        <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="btn-panel-details">Details</a>
+                                        <a href="{{ url_for('buy_now', listing_id=phone.id) }}" class="btn-panel-buy">Buy Now</a>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -2,10 +2,13 @@
 Data migration verification tests.
 Verifies that legacy JSON datasets can be imported into the relational database without silent loss.
 """
+import os
 from backend.app import create_app
 from backend.database import db
 from backend.models import User, Listing, Order, Notification
 from backend.migrate_legacy_data import run_migration
+
+FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 
 
 def test_legacy_data_migration_and_idempotency():
@@ -14,7 +17,7 @@ def test_legacy_data_migration_and_idempotency():
         db.create_all()
 
         # Run 1: First migration
-        report1 = run_migration(app=app, dry_run=False)
+        report1 = run_migration(app=app, dry_run=False, data_dir=FIXTURES_DIR)
         assert report1["users"]["imported"] >= 2
         assert report1["listings"]["imported"] >= 10
         assert report1["orders"]["imported"] >= 3
@@ -40,7 +43,7 @@ def test_legacy_data_migration_and_idempotency():
                 assert sold_listing.inventory_status == "sold"
 
         # Run 2: Idempotent rerun
-        report2 = run_migration(app=app, dry_run=False)
+        report2 = run_migration(app=app, dry_run=False, data_dir=FIXTURES_DIR)
         assert report2["users"]["imported"] == 0
         assert report2["listings"]["imported"] == 0
         assert report2["orders"]["imported"] == 0

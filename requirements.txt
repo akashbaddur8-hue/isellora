@@ -8,3 +8,4 @@ python-dotenv==1.2.4
 pytest==9.1.1
 gunicorn==26.2.0
 Pillow>=10.0.0
+razorpay>=2.0.1

@@ -1,0 +1,558 @@
+{% extends "base.html" %}
+
+{% block title %}Listing Moderation & Approvals | iSellora Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .mod-header {
+        background: linear-gradient(135deg, #1e1b4b, #312e81);
+        color: white;
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        margin-bottom: 28px;
+        box-shadow: var(--shadow-md);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .mod-header h1 {
+        font-size: 26px;
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+
+    .mod-header p {
+        color: #c7d2fe;
+        font-size: 14px;
+        margin: 0;
+    }
+
+    .btn-admin-nav {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 9px 18px;
+        border-radius: var(--radius-md);
+        font-weight: 700;
+        font-size: 13px;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+
+    .btn-admin-nav:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Filter Tabs */
+    .filter-pills-bar {
+        display: flex;
+        gap: 10px;
+        border-bottom: 2px solid var(--border);
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        overflow-x: auto;
+    }
+
+    .filter-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 16px;
+        border-radius: var(--radius-full);
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        color: var(--text-muted);
+        background: white;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+    }
+
+    .filter-tab:hover {
+        background: #f8fafc;
+        color: var(--text-main);
+    }
+
+    .filter-tab.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .filter-tab .tab-badge {
+        font-size: 11px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.08);
+    }
+
+    .filter-tab.active .tab-badge {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+    }
+
+    /* Listing Moderation Cards */
+    .mod-cards-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .mod-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        box-shadow: var(--shadow-sm);
+        display: grid;
+        grid-template-columns: 140px 1fr 280px;
+        gap: 24px;
+        align-items: start;
+        transition: box-shadow 0.2s;
+    }
+
+    .mod-card:hover {
+        box-shadow: var(--shadow-md);
+    }
+
+    .mod-thumb-wrapper {
+        width: 140px;
+        height: 140px;
+        border-radius: var(--radius-md);
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .mod-thumb-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 4px;
+    }
+
+    .mod-info-col h3 {
+        font-size: 18px;
+        font-weight: 800;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .mod-meta-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+
+    .pill-spec {
+        font-size: 11px;
+        font-weight: 700;
+        background: #f1f5f9;
+        color: #475569;
+        padding: 3px 8px;
+        border-radius: var(--radius-sm);
+    }
+
+    .disclosures-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 8px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 10px 14px;
+        margin-bottom: 12px;
+    }
+
+    .disclosure-cell small {
+        display: block;
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+    }
+
+    .disclosure-cell span {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .seller-audit-info {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+
+    /* Actions Column */
+    .mod-actions-col {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .price-display {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--text-main);
+    }
+
+    .status-badge-lg {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 800;
+        padding: 4px 10px;
+        border-radius: var(--radius-full);
+        text-align: center;
+    }
+
+    .status-badge-lg.pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .status-badge-lg.approved { background: var(--success-light); color: #065f46; border: 1px solid #a7f3d0; }
+    .status-badge-lg.rejected { background: var(--error-light); color: #991b1b; border: 1px solid #fecaca; }
+
+    .btn-mod-approve {
+        width: 100%;
+        background: #059669;
+        color: white;
+        border: none;
+        padding: 10px 14px;
+        border-radius: var(--radius-md);
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: background 0.2s;
+    }
+
+    .btn-mod-approve:hover {
+        background: #047857;
+    }
+
+    .btn-mod-reject {
+        width: 100%;
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 10px 14px;
+        border-radius: var(--radius-md);
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: background 0.2s;
+    }
+
+    .btn-mod-reject:hover {
+        background: #b91c1c;
+    }
+
+    .btn-mod-review {
+        width: 100%;
+        background: #64748b;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: var(--radius-md);
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .btn-mod-review:hover {
+        background: #475569;
+    }
+
+    .empty-state-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 56px 20px;
+        text-align: center;
+    }
+
+    .empty-state-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 16px;
+        border-radius: var(--radius-full);
+        background: #ecfdf5;
+        color: #059669;
+        display: grid;
+        place-items: center;
+    }
+
+    @media (max-width: 900px) {
+        .mod-card {
+            grid-template-columns: 1fr;
+        }
+        .mod-thumb-wrapper {
+            width: 100%;
+            height: 200px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="mod-header">
+        <div>
+            <h1>Listing Moderation & Approvals</h1>
+            <p>Review pre-owned smartphones submitted by sellers, inspect condition disclosures, and publish verified devices.</p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="{{ url_for('admin_dashboard') }}" class="btn-admin-nav">
+                <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Admin Dashboard
+            </a>
+            <a href="{{ url_for('products') }}" target="_blank" class="btn-admin-nav">
+                View Live Catalog ↗
+            </a>
+        </div>
+    </div>
+
+    <!-- FILTER TABS -->
+    <div class="filter-pills-bar">
+        <a href="{{ url_for('admin_listing_approvals', status='pending') }}" class="filter-tab {% if status_filter == 'pending' %}active{% endif %}">
+            <span>Pending Review</span>
+            <span class="tab-badge">{{ pending_count }}</span>
+        </a>
+        <a href="{{ url_for('admin_listing_approvals', status='approved') }}" class="filter-tab {% if status_filter == 'approved' %}active{% endif %}">
+            <span>Approved</span>
+            <span class="tab-badge">{{ approved_count }}</span>
+        </a>
+        <a href="{{ url_for('admin_listing_approvals', status='rejected') }}" class="filter-tab {% if status_filter == 'rejected' %}active{% endif %}">
+            <span>Rejected</span>
+            <span class="tab-badge">{{ rejected_count }}</span>
+        </a>
+        <a href="{{ url_for('admin_listing_approvals', status='all') }}" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">
+            <span>All Submissions</span>
+            <span class="tab-badge">{{ all_count }}</span>
+        </a>
+    </div>
+
+    <!-- LISTINGS CONTAINER -->
+    {% if listings %}
+        <div class="mod-cards-list">
+            {% for phone in listings %}
+                <div class="mod-card">
+                    
+                    <!-- THUMBNAIL -->
+                    <div class="mod-thumb-wrapper">
+                        <img src="{{ phone.primary_image }}" alt="{{ phone.brand }} {{ phone.model }}">
+                        {% if phone.all_image_paths|length > 1 %}
+                            <span style="position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.65); color: white; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
+                                {{ phone.all_image_paths|length }} photos
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- DETAILS -->
+                    <div class="mod-info-col">
+                        <h3>
+                            <span>{{ phone.brand }} {{ phone.model }}</span>
+                            {% if phone.is_priority %}
+                                <span style="font-size: 11px; font-weight: 800; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 999px;">
+                                    ★ Priority Boost (₹49)
+                                </span>
+                            {% endif %}
+                        </h3>
+
+                        <div class="mod-meta-row">
+                            <span class="pill-spec">{{ phone.storage }}</span>
+                            {% if phone.ram %}
+                                <span class="pill-spec">{{ phone.ram }} RAM</span>
+                            {% endif %}
+                            {% if phone.color %}
+                                <span class="pill-spec">Color: {{ phone.color }}</span>
+                            {% endif %}
+                            <span class="pill-spec" style="background: #e0f2fe; color: #0369a1;">Grade: {{ phone.condition }}</span>
+                            {% if phone.battery_health %}
+                                <span class="pill-spec" style="background: #ecfdf5; color: #047857;">Battery: {{ phone.battery_health }}%</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- TRUST DISCLOSURES -->
+                        <div class="disclosures-grid">
+                            <div class="disclosure-cell">
+                                <small>Screen Damage</small>
+                                <span>{{ phone.screen_damage or 'No Damage' }}</span>
+                            </div>
+                            <div class="disclosure-cell">
+                                <small>Body Damage</small>
+                                <span>{{ phone.body_damage or 'No Damage' }}</span>
+                            </div>
+                            <div class="disclosure-cell">
+                                <small>Repair History</small>
+                                <span>{{ phone.repair_history or 'Never Repaired' }}</span>
+                            </div>
+                            <div class="disclosure-cell">
+                                <small>Original Display</small>
+                                <span>{{ phone.original_display or 'Yes' }}</span>
+                            </div>
+                            <div class="disclosure-cell">
+                                <small>Included Items</small>
+                                <span>{{ phone.accessories or 'Phone Only' }}</span>
+                            </div>
+                            <div class="disclosure-cell">
+                                <small>Inventory</small>
+                                <span style="text-transform: capitalize;">{{ phone.inventory_status }}</span>
+                            </div>
+                        </div>
+
+                        <!-- DESCRIPTION -->
+                        <p style="font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 10px;">
+                            <strong>Seller Description:</strong> {{ phone.description }}
+                        </p>
+
+                        <!-- SELLER & SUBMISSION TIMESTAMP -->
+                        <div class="seller-audit-info">
+                            <span>Submitted by: <strong>{{ phone.seller_name or 'N/A' }}</strong></span>
+                            {% if phone.seller_phone %}
+                                <span> &middot; Phone: {{ phone.seller_phone }}</span>
+                            {% endif %}
+                            <span> &middot; Date: {{ phone.created_at.strftime('%d %b %Y, %I:%M %p') if phone.created_at else 'N/A' }}</span>
+                            <span> &middot; ID: <code>{{ phone.id[:8] }}</code></span>
+                            {% if phone.rejection_reason %}
+                                <div style="margin-top: 6px; color: #dc2626; font-weight: 600;">
+                                    Rejection Feedback: {{ phone.rejection_reason }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- ACTION PANEL -->
+                    <div class="mod-actions-col">
+                        <div>
+                            <small style="display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">Listing Price</small>
+                            <div class="price-display">{{ phone.formatted_price }}</div>
+                        </div>
+
+                        <div>
+                            <small style="display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Current Status</small>
+                            <span class="status-badge-lg {{ phone.approval_status }}">
+                                {{ phone.approval_status|capitalize }}
+                            </span>
+                        </div>
+
+                        <hr style="border: none; border-top: 1px solid var(--border); margin: 4px 0;">
+
+                        <!-- APPROVE BUTTON FORM -->
+                        {% if phone.approval_status != 'approved' %}
+                            <form action="{{ url_for('admin_listing_status', listing_id=phone.id) }}" method="POST" style="margin: 0;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="action" value="approve">
+                                <input type="hidden" name="next" value="{{ request.full_path }}">
+                                <button type="submit" class="btn-mod-approve">
+                                    <svg class="ui-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    Approve & Publish
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        <!-- REJECT BUTTON FORM -->
+                        {% if phone.approval_status != 'rejected' %}
+                            <form action="{{ url_for('admin_listing_status', listing_id=phone.id) }}" method="POST" style="margin: 0;" onsubmit="return handleReject(this);">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="action" value="reject">
+                                <input type="hidden" name="reason" id="reason_{{ phone.id }}" value="">
+                                <input type="hidden" name="next" value="{{ request.full_path }}">
+                                <button type="submit" class="btn-mod-reject">
+                                    <svg class="ui-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                    Reject Listing
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        <!-- SEND BACK TO REVIEW IF ALREADY MODERATED -->
+                        {% if phone.approval_status != 'pending' %}
+                            <form action="{{ url_for('admin_listing_status', listing_id=phone.id) }}" method="POST" style="margin: 0;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="action" value="pending">
+                                <input type="hidden" name="next" value="{{ request.full_path }}">
+                                <button type="submit" class="btn-mod-review">
+                                    Reset to Pending Review
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" target="_blank" style="text-align: center; font-size: 12px; color: var(--primary); font-weight: 700; text-decoration: none;">
+                            Inspect Full Page ↗
+                        </a>
+                    </div>
+
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- EMPTY STATE -->
+        <div class="empty-state-card">
+            <div class="empty-state-icon">
+                <svg style="width: 32px; height: 32px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            {% if status_filter == 'pending' %}
+                <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">No Listings Awaiting Moderation</h3>
+                <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto 24px;">All submitted smartphones have been reviewed! New submissions from sellers will appear here automatically.</p>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn-sell" style="display: inline-block;">Back to Admin Dashboard</a>
+            {% else %}
+                <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">No {{ status_filter|capitalize }} Listings Found</h3>
+                <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto 24px;">There are no listings matching this status category in the database.</p>
+                <a href="{{ url_for('admin_listing_approvals', status='pending') }}" class="btn-sell" style="display: inline-block;">View Pending Queue</a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+</div>
+
+<script>
+function handleReject(form) {
+    const defaultReason = "Condition does not match description or photos are unclear.";
+    const userReason = prompt("Enter rejection reason / feedback for the seller:", defaultReason);
+    if (userReason === null) {
+        return false; // User cancelled prompt
+    }
+    const reasonInput = form.querySelector('input[name="reason"]');
+    if (reasonInput) {
+        reasonInput.value = userReason.trim() || defaultReason;
+    }
+    return true;
+}
+</script>
+{% endblock %}

@@ -377,20 +377,59 @@
                     </div>
                 </div>
 
-                <!-- ACTIVATION FORM -->
-                <form action="{{ url_for('seller_boost_listing', listing_id=listing.id) }}" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn-activate-boost">
-                        <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                {% if not razorpay_configured %}
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 20px;">
+                    <div style="display: flex; gap: 10px; align-items: flex-start;">
+                        <svg style="width: 20px; height: 20px; color: #b45309; flex-shrink: 0; margin-top: 2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
                         </svg>
-                        Activate Priority Placement (₹49)
-                    </button>
-                </form>
+                        <div style="font-size: 13px; color: #92400e; line-height: 1.45;">
+                            <strong>Razorpay Test Mode Setup Required</strong><br>
+                            To activate ₹49 Priority Placement, set your test keys in <code>backend/.env</code>:
+                            <div style="margin-top: 6px; font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.05); padding: 6px 10px; border-radius: 4px;">
+                                RAZORPAY_KEY_ID=rzp_test_...<br>
+                                RAZORPAY_KEY_SECRET=...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-activate-boost" disabled style="background: #94a3b8; cursor: not-allowed; box-shadow: none; opacity: 0.85;">
+                    <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    Configure Test Keys in backend/.env to Boost
+                </button>
+                {% else %}
+                <!-- PAYMENT INTEGRATION NOTICE -->
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 20px;">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <svg style="width: 20px; height: 20px; color: #2563eb; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <div style="font-size: 13px; color: #1e40af; line-height: 1.45;">
+                            <strong>Instant Activation via Razorpay</strong><br>
+                            Pay securely using UPI, Cards, or Netbanking. Your smartphone listing will be instantly pinned to #1 in search results upon verified payment.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="boostStatusBox" style="display: none; padding: 12px 16px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; margin-bottom: 16px;"></div>
+
+                <!-- ACTIVATION BUTTON -->
+                <button type="button" id="btnPayBoost" class="btn-activate-boost">
+                    <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    Pay ₹49 & Activate Priority Placement
+                </button>
+                {% endif %}
 
                 <div style="text-align: center; margin-top: 14px;">
                     <a href="{{ url_for('seller_dashboard') }}" style="font-size: 13px; color: var(--text-muted); text-decoration: none;">
-                        No thanks, continue without priority boost
+                        ← Return to Seller Dashboard
                     </a>
                 </div>
             {% endif %}
@@ -400,4 +439,142 @@
     </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    const btnPayBoost = document.getElementById('btnPayBoost');
+    const boostStatusBox = document.getElementById('boostStatusBox');
+
+    function showBoostStatus(message, type) {
+        if (!boostStatusBox) return;
+        boostStatusBox.style.display = 'block';
+        if (type === 'error') {
+            boostStatusBox.style.background = '#fef2f2';
+            boostStatusBox.style.color = '#991b1b';
+            boostStatusBox.style.border = '1px solid #fecaca';
+        } else if (type === 'success') {
+            boostStatusBox.style.background = '#ecfdf5';
+            boostStatusBox.style.color = '#065f46';
+            boostStatusBox.style.border = '1px solid #a7f3d0';
+        } else {
+            boostStatusBox.style.background = '#eff6ff';
+            boostStatusBox.style.color = '#1e40af';
+            boostStatusBox.style.border = '1px solid #bfdbfe';
+        }
+        boostStatusBox.textContent = message;
+    }
+
+    if (btnPayBoost) {
+        btnPayBoost.addEventListener('click', function () {
+            btnPayBoost.disabled = true;
+            showBoostStatus("Initializing secure checkout...", "info");
+
+            fetch("{{ url_for('seller_boost_create_order', listing_id=listing.id) }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token() }}"
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    showBoostStatus(data.error || "Unable to initiate payment.", "error");
+                    btnPayBoost.disabled = false;
+                    return;
+                }
+
+                showBoostStatus("Opening Razorpay payment gateway...", "info");
+                const rzp = data.razorpay;
+
+                const options = {
+                    key: rzp.key_id,
+                    amount: rzp.amount_paise,
+                    currency: rzp.currency,
+                    name: "iSellora Marketplace",
+                    description: "Priority Placement (₹49) — {{ listing.brand }} {{ listing.model }}",
+                    order_id: rzp.razorpay_order_id,
+                    prefill: rzp.prefill,
+                    theme: {
+                        color: "#b45309"
+                    },
+                    handler: function (response) {
+                        showBoostStatus("Payment authorized! Verifying signature...", "info");
+
+                        fetch("{{ url_for('seller_boost_verify', listing_id=listing.id) }}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": "{{ csrf_token() }}"
+                            },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(verifyData => {
+                            if (verifyData.success) {
+                                showBoostStatus("Priority Placement activated! Redirecting...", "success");
+                                window.location.href = verifyData.redirect_url || "{{ url_for('seller_dashboard') }}";
+                            } else {
+                                showBoostStatus(verifyData.error || "Signature verification failed.", "error");
+                                btnPayBoost.disabled = false;
+                            }
+                        })
+                        .catch(err => {
+                            showBoostStatus("Verification network error. Status will update via webhook reconciliation.", "error");
+                            btnPayBoost.disabled = false;
+                        });
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            showBoostStatus("Payment cancelled. Your listing remains standard until boosted.", "error");
+                            btnPayBoost.disabled = false;
+                            fetch("{{ url_for('payment_failed') }}", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "X-CSRFToken": "{{ csrf_token() }}"
+                                },
+                                body: JSON.stringify({
+                                    razorpay_order_id: rzp.razorpay_order_id,
+                                    error_code: "MODAL_DISMISSED",
+                                    error_description: "Seller closed the priority boost checkout window."
+                                })
+                            });
+                        }
+                    }
+                };
+
+                const rzpInstance = new Razorpay(options);
+                rzpInstance.on('payment.failed', function (resp) {
+                    showBoostStatus("Payment failed: " + (resp.error.description || "Transaction declined."), "error");
+                    btnPayBoost.disabled = false;
+                    fetch("{{ url_for('payment_failed') }}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token() }}"
+                        },
+                        body: JSON.stringify({
+                            razorpay_order_id: rzp.razorpay_order_id,
+                            error_code: resp.error.code,
+                            error_description: resp.error.description
+                        })
+                    });
+                });
+
+                rzpInstance.open();
+            })
+            .catch(err => {
+                showBoostStatus("Network error connecting to payment gateway.", "error");
+                btnPayBoost.disabled = false;
+            });
+        });
+    }
+</script>
 {% endblock %}

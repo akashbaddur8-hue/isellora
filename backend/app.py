@@ -8,6 +8,8 @@ import uuid
 
 # Ensure project root is in sys.path so 'backend' is recognized regardless of invocation method
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+INSTANCE_DIR = os.path.join(PROJECT_ROOT, "instance")
+os.makedirs(INSTANCE_DIR, exist_ok=True)
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
@@ -15,7 +17,7 @@ from datetime import datetime, timezone
 from urllib.parse import quote_plus
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, session, abort, flash, jsonify
+    url_for, session, abort, flash, jsonify, current_app
 )
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from werkzeug.utils import secure_filename
@@ -26,13 +28,20 @@ from backend.database import db
 from backend.models import (
     User, Listing, ListingImage, Order, OrderStatusHistory,
     Notification, SupportTicket, ReportDispute, AuditEvent,
-    Review, Wishlist, ListingSubscription, utc_now, get_legitimate_tracking_url
+    Review, Wishlist, ListingSubscription, Payment, WebhookEvent,
+    PasswordResetToken, utc_now, get_legitimate_tracking_url
 )
-from backend.config import config_by_name
+from backend.config import config_by_name, ProductionConfig
 from backend.services.auth_service import (
     is_rate_limited, record_failed_attempt, clear_failed_attempts,
-    validate_password_strength, normalize_email, validate_phone
+    validate_password_strength, normalize_email, validate_phone,
+    validate_username, is_safe_redirect_url,
+    validate_email_format, is_reset_rate_limited, record_reset_request,
+    is_submission_rate_limited, record_submission_attempt,
+    create_password_reset_token, verify_password_reset_token,
+    consume_password_reset_token
 )
+from backend.services.email_service import send_password_reset_email
 from backend.services.listing_service import (
     query_catalog, validate_image_file, moderate_listing
 )
@@ -41,6 +50,12 @@ from backend.services.order_service import (
 )
 from backend.services.inventory_service import (
     release_listing_reservation
+)
+from backend.services.payment_service import (
+    create_order_razorpay_payment, create_boost_razorpay_payment,
+    verify_checkout_signature, verify_webhook_signature,
+    process_order_checkout_callback, process_boost_checkout_callback,
+    record_payment_failure, process_webhook, initiate_payment_refund
 )
 
 csrf = CSRFProtect()
@@ -52,19 +67,52 @@ def create_app(config_name=None):
 
     app = Flask(
         __name__,
+        instance_path=INSTANCE_DIR,
         template_folder=os.path.join(os.path.dirname(__file__), "templates"),
         static_folder=os.path.join(os.path.dirname(__file__), "static")
     )
 
+    if config_name == "production":
+        ProductionConfig.validate_production()
+
     config_class = config_by_name.get(config_name, config_by_name["development"])
     app.config.from_object(config_class)
+
+    # Razorpay Test Mode credential startup validation (never printing secret values)
+    if not app.config.get("TESTING"):
+        status = config_class.validate_razorpay()
+        if not status["configured"]:
+            app.logger.warning(
+                "Razorpay Test Mode credentials incomplete in backend/.env (Missing/Placeholder: %s). "
+                "Online card/UPI checkout will be paused until valid test credentials are provided. "
+                "Cash on Delivery (COD) remains active.",
+                ", ".join(status["missing"])
+            )
+        else:
+            app.logger.info("Razorpay Test Mode active. Gateway Key ID: %s", status["masked_key_id"])
+            if not status["has_webhook_secret"]:
+                app.logger.warning(
+                    "RAZORPAY_WEBHOOK_SECRET is not configured in backend/.env. "
+                    "Inbound webhook signatures will be rejected until a webhook secret is set."
+                )
+
+        mail_status = config_class.validate_email_config()
+        if not mail_status["configured"]:
+            app.logger.info(
+                "Mail server is not configured in backend/.env. "
+                "Development mode active: Password reset emails will be captured in local outbox (instance/dev_email_outbox.log). "
+                "To enable live SMTP delivery, configure MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD in backend/.env."
+            )
+        else:
+            app.logger.info("Mail server active: %s:%s (Sender: %s)", mail_status["mail_server"], mail_status["mail_port"], mail_status["default_sender"])
 
     # Initialize extensions
     db.init_app(app)
     csrf.init_app(app)
 
-    # Ensure uploads folder exists
+    # Ensure uploads folder and avatars subfolder exist
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    os.makedirs(os.path.join(app.config["UPLOAD_FOLDER"], "avatars"), exist_ok=True)
 
     # Ensure schema updates and missing tables are present
     with app.app_context():
@@ -72,14 +120,28 @@ def create_app(config_name=None):
             from sqlalchemy import inspect, text
             inspector = inspect(db.engine)
             existing_tables = inspector.get_table_names()
-            if "listings" in existing_tables:
-                listing_cols = [c["name"] for c in inspector.get_columns("listings")]
-                with db.engine.connect() as conn:
+            with db.engine.connect() as conn:
+                if "listings" in existing_tables:
+                    listing_cols = [c["name"] for c in inspector.get_columns("listings")]
                     if "is_featured" not in listing_cols:
                         conn.execute(text("ALTER TABLE listings ADD COLUMN is_featured BOOLEAN DEFAULT 0"))
                     if "featured_at" not in listing_cols:
                         conn.execute(text("ALTER TABLE listings ADD COLUMN featured_at DATETIME"))
-                    conn.commit()
+                if "users" in existing_tables:
+                    user_cols = [c["name"] for c in inspector.get_columns("users")]
+                    if "username" not in user_cols:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN username VARCHAR(50)"))
+                    if "avatar_path" not in user_cols:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN avatar_path VARCHAR(255)"))
+                    if "city" not in user_cols:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN city VARCHAR(100)"))
+                    if "state" not in user_cols:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN state VARCHAR(100)"))
+                    if "bio" not in user_cols:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN bio TEXT"))
+                    if "is_verified" not in user_cols:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT 0"))
+                conn.commit()
             db.create_all()
         except Exception as e:
             app.logger.warning(f"Database schema auto-check: {e}")
@@ -104,11 +166,21 @@ def create_app(config_name=None):
                 session.clear()
                 current_user = None
 
+        rzp_key_id = current_app.config.get("RAZORPAY_KEY_ID", "")
+        rzp_configured = bool(
+            rzp_key_id and
+            rzp_key_id != "rzp_test_placeholder_key_id" and
+            current_app.config.get("RAZORPAY_KEY_SECRET") and
+            current_app.config.get("RAZORPAY_KEY_SECRET") != "placeholder_razorpay_secret_key"
+        )
+
         return {
             "current_user": current_user,
             "notifications": notifications,
             "unread_notification_count": unread_count,
-            "now": utc_now()
+            "now": utc_now(),
+            "razorpay_key_id": rzp_key_id,
+            "razorpay_configured": rzp_configured
         }
 
     @app.after_request
@@ -213,7 +285,38 @@ def create_app(config_name=None):
         featured_listings = Listing.query.filter_by(
             approval_status="approved", inventory_status="available"
         ).order_by(Listing.is_featured.desc(), Listing.created_at.desc()).limit(8).all()
-        return render_template("index.html", phones=featured_listings)
+        total_available = Listing.query.filter_by(
+            approval_status="approved", inventory_status="available"
+        ).count()
+
+        # Count available approved phones per brand
+        from sqlalchemy import func
+        brand_rows = db.session.query(
+            func.lower(Listing.brand), func.count(Listing.id)
+        ).filter(
+            Listing.approval_status == "approved",
+            Listing.inventory_status == "available"
+        ).group_by(func.lower(Listing.brand)).all()
+        brand_counts = {row[0]: row[1] for row in brand_rows}
+
+        return render_template(
+            "index.html",
+            phones=featured_listings,
+            total_catalog_count=total_available,
+            brand_counts=brand_counts
+        )
+
+    @app.route("/brands")
+    @app.route("/shop-by-brand")
+    def shop_by_brand():
+        brand = request.args.get("brand", "").strip()
+        if brand:
+            return redirect(url_for("products", brand=brand))
+        return redirect(url_for("products"))
+
+    @app.route("/brand/<brand_name>")
+    def brand_catalog(brand_name):
+        return redirect(url_for("products", brand=brand_name.strip()))
 
     @app.route("/product")
     def product():
@@ -229,20 +332,31 @@ def create_app(config_name=None):
         ram = request.args.get("ram", "").strip()
         sort_by = request.args.get("sort", "latest").strip()
         
+        import math
+
         try:
-            page = max(1, int(request.args.get("page", 1)))
-        except ValueError:
+            page_val = int(request.args.get("page", 1))
+            page = max(1, min(page_val, 10000))
+        except (ValueError, TypeError, OverflowError):
             page = 1
 
-        try:
-            min_price = float(request.args.get("min_price", 0)) if request.args.get("min_price") else None
-        except ValueError:
-            min_price = None
+        def _safe_price(val):
+            if not val:
+                return None
+            try:
+                p = float(str(val).replace(",", "").replace("₹", "").strip())
+                if not math.isfinite(p) or math.isnan(p) or p < 0 or p > 100000000:
+                    return None
+                return p
+            except (ValueError, TypeError, OverflowError):
+                return None
 
-        try:
-            max_price = float(request.args.get("max_price", 0)) if request.args.get("max_price") else None
-        except ValueError:
-            max_price = None
+        min_price = _safe_price(request.args.get("min_price"))
+        max_price = _safe_price(request.args.get("max_price"))
+
+        # If min_price > max_price, swap them safely so query remains valid
+        if min_price is not None and max_price is not None and min_price > max_price:
+            min_price, max_price = max_price, min_price
 
         pagination = query_catalog(
             search=search,
@@ -292,7 +406,7 @@ def create_app(config_name=None):
         )
 
     # =========================================================================
-    # CHECKOUT & ORDER ROUTES (Payment Gateway strictly deferred)
+    # CHECKOUT & PAYMENT ROUTES (Razorpay Online Checkout & COD)
     # =========================================================================
     @app.route("/buy/<listing_id>", methods=["GET", "POST"])
     def buy_now(listing_id):
@@ -308,11 +422,18 @@ def create_app(config_name=None):
         if listing.seller_id == user.id:
             return render_template("base.html", error_message="You cannot purchase your own listing."), 403
 
+        razorpay_key_id = current_app.config.get("RAZORPAY_KEY_ID", "")
+
         if request.method == "GET":
             token = str(uuid.uuid4())
             session["checkout_token"] = token
             session["checkout_listing_id"] = str(listing_id)
-            return render_template("checkout.html", phone=listing, checkout_token=token)
+            return render_template(
+                "checkout.html",
+                phone=listing,
+                checkout_token=token,
+                razorpay_key_id=razorpay_key_id
+            )
 
         # POST submission
         checkout_token = request.form.get("checkout_token") or session.get("checkout_token")
@@ -324,30 +445,36 @@ def create_app(config_name=None):
         delivery_method = request.form.get("delivery_method", "pickup").strip().lower()
         shipping_address = request.form.get("address", "").strip()
         pincode = request.form.get("pincode", "").strip()
+        payment_method = request.form.get("payment_method", "cod").strip().lower()
 
         if not (2 <= len(buyer_name) <= 100):
             flash("Please enter a valid full name (2-100 characters).", "error")
-            return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 400
+            return render_template("checkout.html", phone=listing, checkout_token=checkout_token, razorpay_key_id=razorpay_key_id), 400
 
         if not validate_phone(buyer_phone):
             flash("Please enter a valid 10-digit phone number.", "error")
-            return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 400
+            return render_template("checkout.html", phone=listing, checkout_token=checkout_token, razorpay_key_id=razorpay_key_id), 400
 
         if delivery_method not in ("pickup", "shipping"):
             flash("Invalid delivery method selected.", "error")
-            return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 400
+            return render_template("checkout.html", phone=listing, checkout_token=checkout_token, razorpay_key_id=razorpay_key_id), 400
+
+        if payment_method not in ("cod", "razorpay"):
+            flash("Invalid payment method selected.", "error")
+            return render_template("checkout.html", phone=listing, checkout_token=checkout_token, razorpay_key_id=razorpay_key_id), 400
 
         if delivery_method == "shipping":
             if len(shipping_address) < 10:
                 flash("Please enter a complete delivery address.", "error")
-                return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 400
+                return render_template("checkout.html", phone=listing, checkout_token=checkout_token, razorpay_key_id=razorpay_key_id), 400
             if not pincode.isdigit() or len(pincode) != 6:
                 flash("Please enter a valid 6-digit PIN code.", "error")
-                return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 400
+                return render_template("checkout.html", phone=listing, checkout_token=checkout_token, razorpay_key_id=razorpay_key_id), 400
         else:
             shipping_address = "Local Pickup arranged directly with seller"
             pincode = None
 
+        # 1. Create internal order and reserve inventory atomically
         order, error = create_order(
             buyer_id=user.id,
             listing_id=listing_id,
@@ -356,17 +483,131 @@ def create_app(config_name=None):
             delivery_method=delivery_method,
             shipping_address=shipping_address,
             pincode=pincode,
-            checkout_token=checkout_token
+            checkout_token=checkout_token,
+            payment_method=payment_method
         )
 
         if error:
+            if request.is_json:
+                return jsonify({"success": False, "error": error}), 409
             flash(error, "error")
-            return render_template("checkout.html", phone=listing, checkout_token=checkout_token), 409
+            return render_template("checkout.html", phone=listing, checkout_token=checkout_token, razorpay_key_id=razorpay_key_id), 409
+
+        # Handle Cash on Delivery (COD)
+        if payment_method == "cod":
+            session.pop("checkout_token", None)
+            session.pop("checkout_listing_id", None)
+            flash("Your smartphone order has been reserved! Payment will be collected upon delivery.", "success")
+            if request.is_json:
+                return jsonify({
+                    "success": True,
+                    "payment_method": "cod",
+                    "redirect_url": url_for("order_confirmation", order_id=order.id)
+                })
+            return redirect(url_for("order_confirmation", order_id=order.id))
+
+        # Handle Online Payment (Razorpay Checkout)
+        rzp_data, rzp_err = create_order_razorpay_payment(order, user)
+        if rzp_err:
+            if request.is_json:
+                return jsonify({"success": False, "error": rzp_err}), 400
+            flash(rzp_err, "error")
+            return render_template("checkout.html", phone=listing, checkout_token=checkout_token, razorpay_key_id=razorpay_key_id), 400
 
         session.pop("checkout_token", None)
         session.pop("checkout_listing_id", None)
 
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({
+                "success": True,
+                "payment_method": "razorpay",
+                "order_id": order.id,
+                "razorpay": rzp_data
+            })
+
+        return render_template(
+            "checkout_razorpay.html",
+            order=order,
+            phone=listing,
+            razorpay=rzp_data
+        )
+
+    @app.route("/payment/verify", methods=["POST"])
+    def payment_verify():
+        user = get_current_user()
+        if not user:
+            if request.is_json:
+                return jsonify({"success": False, "error": "Authentication required."}), 401
+            return redirect(url_for("login"))
+
+        data = request.get_json(silent=True) or request.form
+        razorpay_order_id = (data.get("razorpay_order_id") or "").strip()
+        razorpay_payment_id = (data.get("razorpay_payment_id") or "").strip()
+        razorpay_signature = (data.get("razorpay_signature") or "").strip()
+
+        if not razorpay_order_id or not razorpay_payment_id or not razorpay_signature:
+            if request.is_json:
+                return jsonify({"success": False, "error": "Missing payment signature verification parameters."}), 400
+            flash("Payment verification failed: missing verification tokens.", "error")
+            return redirect(url_for("orders"))
+
+        success, msg, order = process_order_checkout_callback(
+            razorpay_order_id=razorpay_order_id,
+            razorpay_payment_id=razorpay_payment_id,
+            razorpay_signature=razorpay_signature,
+            current_user_id=user.id
+        )
+
+        if not success or not order:
+            if request.is_json:
+                return jsonify({"success": False, "error": msg}), 400
+            flash(f"Payment verification failed: {msg}", "error")
+            return redirect(url_for("orders"))
+
+        flash(f"Payment of {order.formatted_total} verified successfully! Your smartphone order is confirmed.", "success")
+        if request.is_json:
+            return jsonify({
+                "success": True,
+                "message": msg,
+                "redirect_url": url_for("order_confirmation", order_id=order.id)
+            })
         return redirect(url_for("order_confirmation", order_id=order.id))
+
+    @app.route("/payment/failed", methods=["POST"])
+    def payment_failed():
+        user = get_current_user()
+        if not user:
+            return jsonify({"success": False, "error": "Authentication required."}), 401
+
+        data = request.get_json(silent=True) or request.form
+        razorpay_order_id = (data.get("razorpay_order_id") or "").strip()
+        error_code = (data.get("error_code") or "PAYMENT_CANCELLED").strip()
+        error_description = (data.get("error_description") or "Payment checkout was cancelled or dismissed.").strip()
+
+        record_payment_failure(
+            razorpay_order_id=razorpay_order_id,
+            error_code=error_code,
+            error_description=error_description,
+            user_id=user.id
+        )
+
+        return jsonify({"success": True, "message": "Failure state recorded."})
+
+    @app.route("/payment/webhook", methods=["POST"])
+    @csrf.exempt
+    def payment_webhook():
+        raw_body = request.get_data()
+        signature = request.headers.get("X-Razorpay-Signature", "").strip()
+
+        if not signature:
+            return jsonify({"error": "Missing X-Razorpay-Signature header."}), 400
+
+        success, msg, status_code = process_webhook(raw_body, signature)
+        return jsonify({
+            "success": success,
+            "status": "success" if success else "failed",
+            "message": msg
+        }), status_code
 
     @app.route("/order-success/<order_id>")
     def order_confirmation(order_id):
@@ -541,6 +782,9 @@ def create_app(config_name=None):
         return render_template("sales.html", sales=my_sales)
 
     @app.route("/seller-dashboard")
+    @app.route("/listings")
+    @app.route("/my-listings")
+    @app.route("/seller/listings")
     def seller_dashboard():
         user = get_current_user()
         if not user:
@@ -551,13 +795,18 @@ def create_app(config_name=None):
 
         total_earnings = sum(order.price_rupees for order in my_sales if order.status == "Delivered")
         pending_orders = sum(1 for order in my_sales if order.status == "Pending")
+        total_listed_value = sum(
+            l.price_rupees for l in my_listings 
+            if l.inventory_status == "available"
+        )
 
         return render_template(
             "seller_dashboard.html",
             listings=my_listings,
             sales=my_sales,
             total_earnings=total_earnings,
-            pending_orders_count=pending_orders
+            pending_orders_count=pending_orders,
+            total_listed_value=total_listed_value
         )
 
     @app.route("/update-order-status/<order_id>", methods=["POST"])
@@ -694,6 +943,27 @@ def create_app(config_name=None):
                 flash("Only JPG, JPEG, PNG, and WEBP image files are supported.", "error")
                 return render_template("sell.html", user=user), 400
 
+        # Auto-align brand if user entered a known brand in model name
+        model_low = model.lower()
+        if "samsung" in model_low or "galaxy" in model_low:
+            brand = "Samsung"
+        elif "iphone" in model_low or "apple" in model_low:
+            brand = "Apple"
+        elif "oneplus" in model_low or "nord" in model_low:
+            brand = "OnePlus"
+        elif "pixel" in model_low:
+            brand = "Google"
+        elif "xiaomi" in model_low or "redmi" in model_low or "poco" in model_low:
+            brand = "Xiaomi"
+        elif "motorola" in model_low or "moto" in model_low:
+            brand = "Motorola"
+        elif "realme" in model_low:
+            brand = "Realme"
+        elif "vivo" in model_low:
+            brand = "Vivo"
+        elif "oppo" in model_low:
+            brand = "Oppo"
+
         listing_id = str(uuid.uuid4())
         new_listing = Listing(
             id=listing_id,
@@ -734,45 +1004,30 @@ def create_app(config_name=None):
             )
             db.session.add(img_rec)
 
-        # Optional priority boost (Sell First) subscription
-        priority_boost = request.form.get("priority_boost") in ("1", "true", "on", "yes")
-        if priority_boost:
-            new_listing.is_featured = True
-            new_listing.listing_type = "featured"
-            new_listing.featured_at = utc_now()
-            sub = ListingSubscription(
-                listing_id=listing_id,
-                seller_id=user.id,
-                plan_name="Priority Placement (Sell First)",
-                amount_paise=4900,
-                status="active",
-                payment_method="direct_activation",
-                payment_status="active",
-                created_at=utc_now()
-            )
-            db.session.add(sub)
-            notice = Notification(
-                user_id=user.id,
-                title="Priority Placement Activated (₹49)",
-                message=f"Your {brand} {model} has been boosted with #1 Priority Placement for ₹49. It will rank first in search results once approved."
-            )
-            db.session.add(notice)
-            audit = AuditEvent(
-                user_id=user.id,
-                action="SUBSCRIPTION_BOOST_ACTIVATED",
-                target_type="listing",
-                target_id=listing_id,
-                details="Seller subscribed to Priority Placement for ₹49 during listing creation.",
-                created_at=utc_now()
-            )
-            db.session.add(audit)
+        # Determine chosen listing type (Free vs Priority Boost)
+        listing_type = request.form.get("listing_type", "free").strip().lower()
+        if request.form.get("priority_boost"):
+            listing_type = "priority"
+        is_priority_chosen = (listing_type == "priority")
 
-        db.session.commit()
-        if priority_boost:
-            flash("Your listing has been submitted for review with Priority Placement (₹49) activated! It will rank #1 at the top of search results once approved.", "success")
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Failed to save listing: {e}")
+            flash("An unexpected error occurred while saving your listing. Please try again.", "error")
+            return render_template("sell.html", user=user), 500
+
+        rzp_configured = bool(app.config.get("RAZORPAY_KEY_ID") and app.config.get("RAZORPAY_KEY_SECRET"))
+        if is_priority_chosen and rzp_configured:
+            flash("Listing submitted for review! Complete your ₹49 priority payment now to activate #1 top placement once approved.", "info")
+            return redirect(url_for("seller_boost_listing", listing_id=new_listing.id))
+        elif is_priority_chosen and not rzp_configured:
+            flash("Your listing has been submitted for review! (Note: Paid priority boosts are temporarily unavailable pending gateway setup).", "info")
+            return redirect(url_for("seller_dashboard"))
         else:
             flash("Your listing has been submitted for review! It will be visible once approved by our moderation team.", "success")
-        return redirect(url_for("seller_dashboard"))
+            return redirect(url_for("seller_dashboard"))
 
     @app.route("/seller/boost/<listing_id>", methods=["GET", "POST"])
     def seller_boost_listing(listing_id):
@@ -787,51 +1042,88 @@ def create_app(config_name=None):
         if listing.seller_id != user.id and not is_admin():
             abort(403)
 
+        razorpay_key_id = current_app.config.get("RAZORPAY_KEY_ID", "")
+
         if request.method == "POST":
-            if listing.is_priority:
-                flash(f"Priority Placement is already active for {listing.brand} {listing.model}.", "info")
-                return redirect(url_for("seller_dashboard"))
-
-            listing.is_featured = True
-            listing.listing_type = "featured"
-            listing.featured_at = utc_now()
-
-            sub = ListingSubscription(
-                listing_id=listing.id,
-                seller_id=user.id,
-                plan_name="Priority Placement (Sell First)",
-                amount_paise=4900,
-                status="active",
-                payment_method="direct_activation",
-                payment_status="active",
-                created_at=utc_now()
+            # If standard form POST, initialize Razorpay payment
+            rzp_data, rzp_err = create_boost_razorpay_payment(listing, user)
+            if rzp_err:
+                flash(rzp_err, "error")
+                return redirect(url_for("seller_boost_listing", listing_id=listing.id))
+            return render_template(
+                "boost_subscription.html",
+                listing=listing,
+                subscription=None,
+                paid_boost_enabled=True,
+                razorpay=rzp_data,
+                razorpay_key_id=razorpay_key_id
             )
-            db.session.add(sub)
 
-            notice = Notification(
-                user_id=user.id,
-                title="Priority Placement Activated (₹49)",
-                message=f"Your {listing.brand} {listing.model} has been boosted with #1 Priority Placement for ₹49. It now ranks first in search results to sell faster."
-            )
-            db.session.add(notice)
+        # GET request: render priority boost page with active Razorpay checkout
+        subscription = ListingSubscription.query.filter_by(
+            listing_id=listing.id, status="active", payment_status="paid"
+        ).order_by(ListingSubscription.created_at.desc()).first()
+        return render_template(
+            "boost_subscription.html",
+            listing=listing,
+            subscription=subscription,
+            paid_boost_enabled=True,
+            razorpay_key_id=razorpay_key_id
+        )
 
-            audit = AuditEvent(
-                user_id=user.id,
-                action="SUBSCRIPTION_BOOST_ACTIVATED",
-                target_type="listing",
-                target_id=listing.id,
-                details="Seller subscribed to Priority Placement for ₹49.",
-                created_at=utc_now()
-            )
-            db.session.add(audit)
-            db.session.commit()
+    @app.route("/seller/boost/<listing_id>/create-order", methods=["POST"])
+    def seller_boost_create_order(listing_id):
+        user = get_current_user()
+        if not user:
+            return jsonify({"success": False, "error": "Authentication required."}), 401
 
-            flash(f"Priority Placement (₹49) activated for {listing.brand} {listing.model}! It now ranks #1 at the top of search results to sell first.", "success")
-            return redirect(url_for("seller_dashboard"))
+        listing = db.session.get(Listing, listing_id)
+        if not listing:
+            return jsonify({"success": False, "error": "Listing not found."}), 404
 
-        # GET request
-        subscription = ListingSubscription.query.filter_by(listing_id=listing.id, status="active").order_by(ListingSubscription.created_at.desc()).first()
-        return render_template("boost_subscription.html", listing=listing, subscription=subscription)
+        if listing.seller_id != user.id and not is_admin():
+            return jsonify({"success": False, "error": "Unauthorized."}), 403
+
+        rzp_data, err = create_boost_razorpay_payment(listing, user)
+        if err:
+            return jsonify({"success": False, "error": err}), 400
+
+        return jsonify({"success": True, "razorpay": rzp_data})
+
+    @app.route("/seller/boost/<listing_id>/verify", methods=["POST"])
+    def seller_boost_verify(listing_id):
+        user = get_current_user()
+        if not user:
+            return jsonify({"success": False, "error": "Authentication required."}), 401
+
+        listing = db.session.get(Listing, listing_id)
+        if not listing:
+            return jsonify({"success": False, "error": "Listing not found."}), 404
+
+        data = request.get_json(silent=True) or request.form
+        razorpay_order_id = (data.get("razorpay_order_id") or "").strip()
+        razorpay_payment_id = (data.get("razorpay_payment_id") or "").strip()
+        razorpay_signature = (data.get("razorpay_signature") or "").strip()
+
+        if not razorpay_order_id or not razorpay_payment_id or not razorpay_signature:
+            return jsonify({"success": False, "error": "Missing signature verification tokens."}), 400
+
+        success, msg, subscription = process_boost_checkout_callback(
+            razorpay_order_id=razorpay_order_id,
+            razorpay_payment_id=razorpay_payment_id,
+            razorpay_signature=razorpay_signature,
+            current_user_id=user.id
+        )
+
+        if not success:
+            return jsonify({"success": False, "error": msg}), 400
+
+        flash("Priority Placement (₹49) activated! Your smartphone is now pinned at #1 in search results.", "success")
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "redirect_url": url_for("seller_dashboard")
+        })
 
     @app.route("/edit/<listing_id>", methods=["GET", "POST"])
     def edit_listing(listing_id):
@@ -956,14 +1248,13 @@ def create_app(config_name=None):
             flash("An account with this email already exists. Please log in.", "error")
             return render_template("signup.html"), 400
 
-        admin_email = app.config.get("ADMIN_EMAIL", "").strip().lower()
-        role = "admin" if email == admin_email else "user"
-
+        # Public registration ALWAYS creates a regular customer account.
+        # Administrative accounts can ONLY be provisioned via the secure CLI command.
         new_user = User(
             name=name,
             email=email,
             phone=phone,
-            role=role,
+            role="user",
             is_active=True
         )
         new_user.set_password(password)
@@ -1007,11 +1298,11 @@ def create_app(config_name=None):
         session["user_name"] = user.name
         session["user_email"] = user.email
         session["user_role"] = user.role
-        session["admin_authenticated"] = user.is_admin
+        session["admin_authenticated"] = False
 
         flash(f"Welcome back, {user.name}!", "success")
-        next_url = request.args.get("next")
-        if next_url and next_url.startswith("/"):
+        next_url = request.values.get("next")
+        if next_url and is_safe_redirect_url(next_url):
             return redirect(next_url)
         return redirect(url_for("home"))
 
@@ -1021,6 +1312,137 @@ def create_app(config_name=None):
         flash("You have been signed out.", "info")
         return redirect(url_for("home"))
 
+    @app.route("/forgot-password", methods=["GET", "POST"])
+    def forgot_password():
+        if request.method == "GET":
+            if session.get("user_id"):
+                return redirect(url_for("home"))
+            return render_template("forgot_password.html")
+
+        email_raw = request.form.get("email", "")
+        email = normalize_email(email_raw)
+        client_ip = request.remote_addr or "unknown"
+
+        # 1. Server-side email format validation
+        if not validate_email_format(email):
+            flash("Please enter a valid email address.", "error")
+            return render_template("forgot_password.html", submitted_email=email_raw), 400
+
+        # 2. Rate limiting check (per-email and per-IP)
+        if is_reset_rate_limited(email) or is_reset_rate_limited(client_ip):
+            flash("Too many password reset requests. For security, please wait 15 minutes before requesting another link.", "error")
+            return render_template("forgot_password.html", submitted_email=email_raw), 429
+
+        # Record attempt for rate limiting
+        record_reset_request(email)
+        record_reset_request(client_ip)
+
+        # 3. Lookup user
+        user = User.query.filter_by(email=email).first()
+
+        # 4. If account exists and is active, create token and send email
+        if user and user.is_active:
+            user_agent = request.user_agent.string if request.user_agent else None
+            token_record, plaintext_token = create_password_reset_token(
+                user=user,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                expires_in_minutes=current_app.config.get("PASSWORD_RESET_EXPIRY_MINUTES", 15)
+            )
+
+            # Build reset URL using trusted configured base URL
+            base_url = (current_app.config.get("APP_BASE_URL") or "").rstrip("/")
+            if not base_url:
+                base_url = request.host_url.rstrip("/")
+            reset_url = f"{base_url}/reset-password/{plaintext_token}"
+
+            # Transmit email
+            success, send_msg = send_password_reset_email(user.email, user.name, reset_url)
+            if not success:
+                flash("We encountered a technical issue delivering the reset instructions. Please try again later.", "error")
+                return render_template("forgot_password.html", submitted_email=email_raw), 500
+
+            # Log audit event
+            audit = AuditEvent(
+                user_id=user.id,
+                action="password_reset_requested",
+                target_type="user",
+                target_id=user.id,
+                details="Password reset token issued and email sent",
+                ip_address=client_ip
+            )
+            db.session.add(audit)
+            db.session.commit()
+
+        # 5. Generic response to prevent account enumeration
+        flash("If an account exists with this email, you will receive password reset instructions shortly.", "success")
+        return redirect(url_for("login"))
+
+    @app.route("/reset-password/<token>", methods=["GET", "POST"])
+    def reset_password(token):
+        client_ip = request.remote_addr or "unknown"
+
+        # Rate limit token validation / submissions
+        if is_submission_rate_limited(client_ip):
+            flash("Too many attempts. For security, please wait 15 minutes before trying again.", "error")
+            return render_template("reset_password.html", valid=False, error_message="Too many attempts. Please try again later."), 429
+
+        # Verify token validity
+        is_valid, error_msg, token_record = verify_password_reset_token(token)
+
+        if request.method == "GET":
+            if not is_valid:
+                record_submission_attempt(client_ip)
+                return render_template("reset_password.html", valid=False, error_message=error_msg), 400
+            return render_template("reset_password.html", valid=True, token=token)
+
+        # POST: Password update
+        record_submission_attempt(client_ip)
+
+        if not is_valid or not token_record:
+            return render_template("reset_password.html", valid=False, error_message=error_msg), 400
+
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if not new_password or not confirm_password:
+            flash("Please provide and confirm your new password.", "error")
+            return render_template("reset_password.html", valid=True, token=token), 400
+
+        if new_password != confirm_password:
+            flash("The passwords do not match. Please try again.", "error")
+            return render_template("reset_password.html", valid=True, token=token), 400
+
+        # Validate password policy
+        is_strong, strength_err = validate_password_strength(new_password)
+        if not is_strong:
+            flash(strength_err, "error")
+            return render_template("reset_password.html", valid=True, token=token), 400
+
+        # Atomically consume token and update password
+        success, result_msg = consume_password_reset_token(token_record, new_password)
+        if not success:
+            flash(result_msg, "error")
+            return render_template("reset_password.html", valid=False, error_message=result_msg), 400
+
+        # Audit event
+        audit = AuditEvent(
+            user_id=token_record.user_id,
+            action="password_reset_completed",
+            target_type="user",
+            target_id=token_record.user_id,
+            details="Password successfully changed via secure reset token",
+            ip_address=client_ip
+        )
+        db.session.add(audit)
+        db.session.commit()
+
+        # Invalidate any active session
+        session.clear()
+
+        flash("Your password has been reset successfully! You can now sign in with your new password.", "success")
+        return redirect(url_for("login"))
+
     @app.route("/account", methods=["GET", "POST"])
     def account():
         user = get_current_user()
@@ -1028,14 +1450,16 @@ def create_app(config_name=None):
             return redirect(url_for("login"))
 
         if request.method == "POST":
-            # Profile update or password change
             action = request.form.get("action")
             if action == "change_password":
                 current_pwd = request.form.get("current_password", "")
                 new_pwd = request.form.get("new_password", "")
+                confirm_pwd = request.form.get("confirm_password", "")
 
                 if not user.check_password(current_pwd):
                     flash("Current password is incorrect.", "error")
+                elif confirm_pwd and new_pwd != confirm_pwd:
+                    flash("New password and confirmation do not match.", "error")
                 else:
                     is_strong, err_msg = validate_password_strength(new_pwd)
                     if not is_strong:
@@ -1045,29 +1469,154 @@ def create_app(config_name=None):
                         user.updated_at = utc_now()
                         db.session.commit()
                         flash("Password updated successfully.", "success")
+                return redirect(url_for("account", tab="security"))
+
             elif action == "update_profile":
                 new_name = request.form.get("name", "").strip()
+                new_username = request.form.get("username", "").strip()
                 new_phone = request.form.get("phone", "").strip()
-                if new_name and len(new_name) >= 2:
-                    user.name = new_name
-                if validate_phone(new_phone):
-                    user.phone = new_phone
+                new_city = request.form.get("city", "").strip()
+                new_state = request.form.get("state", "").strip()
+                new_bio = request.form.get("bio", "").strip()
+                remove_avatar = request.form.get("remove_avatar") == "true"
+
+                errors = []
+                if not new_name or len(new_name) < 2:
+                    errors.append("Full name must be at least 2 characters long.")
+                elif len(new_name) > 100:
+                    errors.append("Full name cannot exceed 100 characters.")
+
+                if new_username:
+                    valid_u, u_msg = validate_username(new_username)
+                    if not valid_u:
+                        errors.append(u_msg)
+                    else:
+                        existing_u = User.query.filter(
+                            User.username.ilike(new_username),
+                            User.id != user.id
+                        ).first()
+                        if existing_u:
+                            errors.append(f"The username '@{new_username}' is already in use by another member.")
+
+                if not new_phone or not validate_phone(new_phone):
+                    errors.append("Please provide a valid 10-digit Indian phone number.")
+
+                if len(new_bio) > 500:
+                    errors.append("Bio cannot exceed 500 characters.")
+
+                # Handle avatar upload
+                avatar_file = request.files.get("avatar")
+                saved_avatar_path = None
+                if avatar_file and avatar_file.filename:
+                    avatar_file.seek(0, os.SEEK_END)
+                    file_size = avatar_file.tell()
+                    avatar_file.seek(0)
+                    if file_size > 3 * 1024 * 1024:
+                        errors.append("Profile image must be smaller than 3MB.")
+                    elif not validate_image_file(avatar_file):
+                        errors.append("Invalid profile image. Supported formats: JPG, PNG, WEBP.")
+                    else:
+                        avatar_ext = secure_filename(avatar_file.filename).rsplit('.', 1)[1].lower()
+                        avatar_fname = f"avatar_{user.id}_{uuid.uuid4().hex[:8]}.{avatar_ext}"
+                        avatar_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], "avatars")
+                        os.makedirs(avatar_dir, exist_ok=True)
+                        avatar_file.save(os.path.join(avatar_dir, avatar_fname))
+                        saved_avatar_path = f"/static/uploads/avatars/{avatar_fname}"
+
+                if errors:
+                    for err in errors:
+                        flash(err, "error")
+                    return redirect(url_for("account", tab="profile"))
+
+                # Apply updates
+                user.name = new_name
+                user.username = new_username if new_username else None
+                user.phone = new_phone
+                user.city = new_city[:100] if new_city else None
+                user.state = new_state[:100] if new_state else None
+                user.bio = new_bio[:500] if new_bio else None
+
+                if remove_avatar:
+                    user.avatar_path = None
+                elif saved_avatar_path:
+                    user.avatar_path = saved_avatar_path
+
                 user.updated_at = utc_now()
                 db.session.commit()
                 session["user_name"] = user.name
                 flash("Profile updated successfully.", "success")
+                return redirect(url_for("account", tab="profile"))
 
             return redirect(url_for("account"))
 
+        active_tab = request.args.get("tab", "profile").strip().lower()
+        if active_tab not in ("profile", "security", "activity", "danger"):
+            active_tab = "profile"
+
         my_listings = Listing.query.filter_by(seller_id=user.id).order_by(Listing.created_at.desc()).all()
-        my_orders = Order.query.filter_by(buyer_id=user.id).order_by(Order.created_at.desc()).limit(5).all()
+        approved_listings = [l for l in my_listings if l.approval_status == 'approved' and l.inventory_status == 'available']
+        pending_listings = [l for l in my_listings if l.approval_status == 'pending']
+        sold_listings = [l for l in my_listings if l.inventory_status == 'sold']
+
+        recent_orders = Order.query.filter_by(buyer_id=user.id).order_by(Order.created_at.desc()).limit(5).all()
+        recent_sales = Order.query.filter_by(seller_id=user.id).order_by(Order.created_at.desc()).limit(5).all()
+        seller_reviews = Review.query.filter_by(seller_id=user.id).order_by(Review.created_at.desc()).all()
 
         return render_template(
             "account.html",
             user=user,
+            active_tab=active_tab,
             my_listings=my_listings,
-            recent_orders=my_orders
+            approved_listings=approved_listings,
+            pending_listings=pending_listings,
+            sold_listings=sold_listings,
+            recent_orders=recent_orders,
+            recent_sales=recent_sales,
+            seller_reviews=seller_reviews
         )
+
+    @app.route("/seller/<user_id>")
+    @app.route("/user/<user_id>", endpoint="user_profile")
+    def seller_profile(user_id):
+        seller = db.session.get(User, user_id)
+        if not seller or not seller.is_active:
+            abort(404)
+
+        current_user = get_current_user()
+        is_own_profile = bool(current_user and current_user.id == seller.id)
+        is_admin_viewer = is_admin()
+
+        # Public listings strictly limited to approved & available
+        active_listings = Listing.query.filter_by(
+            seller_id=seller.id,
+            approval_status="approved",
+            inventory_status="available"
+        ).order_by(Listing.is_featured.desc(), Listing.created_at.desc()).all()
+
+        completed_sales_count = Order.query.filter_by(
+            seller_id=seller.id,
+            status="Delivered"
+        ).count()
+
+        reviews = Review.query.filter_by(seller_id=seller.id).order_by(Review.created_at.desc()).all()
+
+        return render_template(
+            "seller_profile.html",
+            seller=seller,
+            listings=active_listings,
+            completed_sales_count=completed_sales_count,
+            reviews=reviews,
+            is_own_profile=is_own_profile,
+            is_admin_viewer=is_admin_viewer
+        )
+
+    @app.route("/u/<username>")
+    def seller_profile_by_username(username):
+        clean = (username or "").strip().lstrip("@")
+        seller = User.query.filter(User.username.ilike(clean), User.is_active.is_(True)).first()
+        if not seller:
+            abort(404)
+        return redirect(url_for("seller_profile", user_id=seller.id))
 
     @app.route("/account/deactivate", methods=["POST"])
     def deactivate_account():
@@ -1119,9 +1668,18 @@ def create_app(config_name=None):
                 flash("Please log in to submit a support ticket.", "error")
                 return redirect(url_for("login"))
 
-            subject = request.form.get("subject", "").strip()
-            description = request.form.get("description", "").strip()
             order_id = request.form.get("order_id", "").strip() or None
+
+            if order_id:
+                order = db.session.get(Order, order_id)
+                is_authorized_order = order and (
+                    order.buyer_id == user.id or
+                    order.seller_id == user.id or
+                    is_admin()
+                )
+                if not is_authorized_order:
+                    flash("The specified order could not be found or is not associated with your account.", "error")
+                    return render_template("support.html", tickets=user_tickets), 400
 
             if not subject or not description:
                 flash("Please provide both a subject and details for your ticket.", "error")
@@ -1188,19 +1746,21 @@ def create_app(config_name=None):
 
         email = normalize_email(request.form.get("email", ""))
         password = request.form.get("password", "")
-        admin_cfg_email = app.config.get("ADMIN_EMAIL", "").strip().lower()
+        client_ip = request.remote_addr or "unknown"
+
+        if is_rate_limited(email) or is_rate_limited(client_ip):
+            flash("Too many failed attempts. Please try again after 15 minutes.", "error")
+            return render_template("admin_login.html"), 429
 
         user = User.query.filter_by(email=email).first()
-        is_admin_candidate = user and user.is_active and (user.role == "admin" or email == admin_cfg_email)
-
-        if not is_admin_candidate or not user.check_password(password):
+        if not user or not user.is_active or user.role != "admin" or not user.check_password(password):
+            record_failed_attempt(email)
+            record_failed_attempt(client_ip)
             flash("Invalid administrator credentials.", "error")
             return render_template("admin_login.html"), 401
 
-        # Synchronize role if matched ADMIN_EMAIL config
-        if user.role != "admin":
-            user.role = "admin"
-            db.session.commit()
+        clear_failed_attempts(email)
+        clear_failed_attempts(client_ip)
 
         session.clear()
         session["user_id"] = user.id
@@ -1250,8 +1810,10 @@ def create_app(config_name=None):
         reports_list = ReportDispute.query.order_by(ReportDispute.created_at.desc()).limit(10).all()
         audit_logs = AuditEvent.query.order_by(AuditEvent.created_at.desc()).limit(20).all()
 
-        total_boosts = ListingSubscription.query.count()
-        boost_revenue = sum(s.amount_rupees for s in ListingSubscription.query.all())
+        # Only genuine, verified paid subscriptions count toward active boosts and revenue
+        verified_boosts = ListingSubscription.query.filter_by(status="active", payment_status="paid").all()
+        total_boosts = len(verified_boosts)
+        boost_revenue = sum(s.amount_rupees for s in verified_boosts)
 
         return render_template(
             "admin.html",
@@ -1274,13 +1836,50 @@ def create_app(config_name=None):
             audit_logs=audit_logs
         )
 
+    @app.route("/admin/listing-approvals")
+    def admin_listing_approvals():
+        if not is_admin():
+            return redirect(url_for("admin_login"))
+
+        status_filter = request.args.get("status", "pending").strip().lower()
+        if status_filter not in ("pending", "approved", "rejected", "all"):
+            status_filter = "pending"
+
+        pending_count = Listing.query.filter_by(approval_status="pending").count()
+        approved_count = Listing.query.filter_by(approval_status="approved").count()
+        rejected_count = Listing.query.filter_by(approval_status="rejected").count()
+        all_count = Listing.query.count()
+
+        query = Listing.query
+        if status_filter in ("pending", "approved", "rejected"):
+            query = query.filter_by(approval_status=status_filter)
+
+        listings = query.order_by(Listing.created_at.desc()).all()
+
+        return render_template(
+            "admin_listing_approvals.html",
+            listings=listings,
+            status_filter=status_filter,
+            pending_count=pending_count,
+            approved_count=approved_count,
+            rejected_count=rejected_count,
+            all_count=all_count
+        )
+
     @app.route("/admin/listing/<listing_id>/status", methods=["POST"])
     def admin_listing_status(listing_id):
         if not is_admin():
             abort(403)
 
-        action = request.form.get("status", "").strip().lower()
-        reason = request.form.get("reason", "").strip()
+        data = request.get_json(silent=True) or request.form
+        action = (data.get("action") or data.get("status") or "").strip().lower()
+        reason = (data.get("reason") or "").strip()
+
+        if not action:
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"success": False, "error": "Missing moderation action."}), 400
+            flash("Missing moderation action.", "error")
+            return redirect(url_for("admin_dashboard"))
 
         admin_user_id = session.get("user_id")
         success, msg = moderate_listing(
@@ -1290,11 +1889,52 @@ def create_app(config_name=None):
             reason=reason
         )
 
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            if success:
+                return jsonify({"success": True, "message": f"Listing moderation updated: {action}."})
+            return jsonify({"success": False, "error": msg}), 400
+
         if success:
             flash(f"Listing moderation updated: {action}.", "success")
         else:
             flash(msg, "error")
 
+        next_url = data.get("next") or request.referrer
+        if next_url and is_safe_redirect_url(next_url):
+            return redirect(next_url)
+        return redirect(url_for("admin_dashboard"))
+
+    @app.route("/admin/payment/<payment_id>/refund", methods=["POST"])
+    def admin_refund_payment(payment_id):
+        if not is_admin():
+            abort(403)
+
+        data = request.get_json(silent=True) or request.form
+        reason = (data.get("reason") or "").strip() or "Customer refund approved by admin."
+        payment = db.session.get(Payment, payment_id)
+        if not payment:
+            if request.is_json:
+                return jsonify({"success": False, "error": "Payment record not found."}), 404
+            flash("Payment record not found.", "error")
+            return redirect(url_for("admin_dashboard"))
+
+        amount_paise = payment.amount_paise
+        user = get_current_user()
+        success, msg = initiate_payment_refund(
+            payment_id=payment.id,
+            amount_paise=amount_paise,
+            reason=reason,
+            actor_id=user.id if user else "admin",
+            actor_role="admin"
+        )
+
+        if success:
+            flash(msg, "success")
+        else:
+            flash(f"Refund failed: {msg}", "error")
+
+        if request.is_json:
+            return jsonify({"success": success, "message": msg}), (200 if success else 400)
         return redirect(url_for("admin_dashboard"))
 
     # =========================================================================
@@ -1332,6 +1972,15 @@ def create_app(config_name=None):
             user.is_active = True
             if name and name != "Administrator":
                 user.name = name
+            audit = AuditEvent(
+                user_id=user.id,
+                action="ADMIN_ROLE_PROVISIONED",
+                target_type="user",
+                target_id=user.id,
+                details=f"User role updated to admin via CLI provisioning.",
+                created_at=utc_now()
+            )
+            db.session.add(audit)
             db.session.commit()
             click.echo(f"Successfully promoted existing user '{email}' to administrator.")
         else:
@@ -1343,6 +1992,16 @@ def create_app(config_name=None):
             )
             user.set_password(password)
             db.session.add(user)
+            db.session.flush()
+            audit = AuditEvent(
+                user_id=user.id,
+                action="ADMIN_ACCOUNT_CREATED",
+                target_type="user",
+                target_id=user.id,
+                details=f"New administrator account created via CLI.",
+                created_at=utc_now()
+            )
+            db.session.add(audit)
             db.session.commit()
             click.echo(f"Successfully created new administrator '{email}'.")
 
@@ -1353,4 +2012,7 @@ def create_app(config_name=None):
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    backend_env = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    extra_files = [backend_env] if os.path.exists(backend_env) else []
+    app.run(debug=True, host="127.0.0.1", port=5000, extra_files=extra_files)
+

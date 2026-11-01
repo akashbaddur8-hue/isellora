@@ -181,10 +181,18 @@
             <h1>iSellora Administration Console</h1>
             <p>Verified platform controls, listing moderation, user management, and dispute logs.</p>
         </div>
-        <form action="{{ url_for('admin_logout') }}" method="POST" class="admin-logout-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">Admin Logout ↪</button>
-        </form>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <a href="{{ url_for('admin_listing_approvals') }}" style="background: #4f46e5; border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 9px 18px; border-radius: var(--radius-md); font-weight: 700; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                <span>Listing Approvals</span>
+                {% if pending_approvals > 0 %}
+                    <span style="background: #f59e0b; color: #1e1b4b; padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 800;">{{ pending_approvals }}</span>
+                {% endif %}
+            </a>
+            <form action="{{ url_for('admin_logout') }}" method="POST" class="admin-logout-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Admin Logout ↪</button>
+            </form>
+        </div>
     </div>
 
     <!-- METRICS GRID (Calculated directly from database) -->
@@ -200,6 +208,7 @@
         <div class="metric-card">
             <span>Pending Approvals</span>
             <strong style="color: #d97706;">{{ pending_approvals }}</strong>
+            <a href="{{ url_for('admin_listing_approvals') }}" style="display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 700; color: #4f46e5; text-decoration: none;">Review queue &rarr;</a>
         </div>
         <div class="metric-card">
             <span>Total Orders</span>
@@ -244,7 +253,18 @@
     <!-- TAB 1: LISTING MODERATION -->
     <div class="tab-pane active" id="tabModeration">
         <div class="admin-card">
-            <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;">Smartphone Listings</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="font-size: 16px; font-weight: 800; margin: 0 0 4px 0;">Smartphone Listings</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Overview of all inventory and moderation status across the platform.</p>
+                </div>
+                <a href="{{ url_for('admin_listing_approvals') }}" class="btn-action-sm" style="background: #4f46e5; color: white; padding: 8px 14px; text-decoration: none; border-radius: var(--radius-md); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                    <span>📋 Open Dedicated Approval Queue</span>
+                    {% if pending_approvals > 0 %}
+                        <span style="background: #f59e0b; color: #1e1b4b; padding: 1px 7px; border-radius: 10px; font-weight: 800; font-size: 11px;">{{ pending_approvals }} pending</span>
+                    {% endif %}
+                </a>
+            </div>
             <div class="table-responsive">
                 <table class="admin-table">
                     <thead>
@@ -287,7 +307,7 @@
                                         {% if phone.approval_status != 'approved' %}
                                             <form action="{{ url_for('admin_listing_status', listing_id=phone.id) }}" method="POST">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <input type="hidden" name="status" value="approved">
+                                                <input type="hidden" name="action" value="approve">
                                                 <button type="submit" class="btn-action-sm btn-approve">Approve</button>
                                             </form>
                                         {% endif %}
@@ -295,7 +315,7 @@
                                         {% if phone.approval_status != 'rejected' %}
                                             <form action="{{ url_for('admin_listing_status', listing_id=phone.id) }}" method="POST" onsubmit="return confirm('Reject listing with feedback?');">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <input type="hidden" name="status" value="rejected">
+                                                <input type="hidden" name="action" value="reject">
                                                 <input type="hidden" name="reason" value="Condition does not match description or photos unclear">
                                                 <button type="submit" class="btn-action-sm btn-reject">Reject</button>
                                             </form>
@@ -304,7 +324,7 @@
                                         {% if phone.approval_status != 'pending' %}
                                             <form action="{{ url_for('admin_listing_status', listing_id=phone.id) }}" method="POST">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <input type="hidden" name="status" value="pending">
+                                                <input type="hidden" name="action" value="pending">
                                                 <button type="submit" class="btn-action-sm btn-hide">Review</button>
                                             </form>
                                         {% endif %}

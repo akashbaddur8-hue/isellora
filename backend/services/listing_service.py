@@ -38,7 +38,30 @@ def query_catalog(
 
     if brand:
         b_clean = brand.strip().lower()
-        query = query.filter(Listing.brand.ilike(f"%{b_clean}%"))
+        alt_terms = []
+        if "pixel" in b_clean:
+            alt_terms.append("google")
+        if "galaxy" in b_clean:
+            alt_terms.append("samsung")
+        if "iphone" in b_clean:
+            alt_terms.append("apple")
+        if b_clean == "google":
+            alt_terms.append("pixel")
+        if b_clean == "samsung":
+            alt_terms.append("galaxy")
+        if b_clean == "apple":
+            alt_terms.append("iphone")
+
+        from sqlalchemy import or_
+        brand_filters = [
+            Listing.brand.ilike(f"%{b_clean}%"),
+            Listing.model.ilike(f"%{b_clean}%")
+        ]
+        for alt in alt_terms:
+            brand_filters.append(Listing.brand.ilike(f"%{alt}%"))
+            brand_filters.append(Listing.model.ilike(f"%{alt}%"))
+
+        query = query.filter(or_(*brand_filters))
 
     if condition:
         c_clean = condition.strip().lower()
@@ -52,11 +75,21 @@ def query_catalog(
         r_clean = ram.strip().lower()
         query = query.filter(Listing.ram.ilike(f"%{r_clean}%"))
 
-    if min_price is not None and min_price > 0:
-        query = query.filter(Listing.price_paise >= int(round(min_price * 100)))
+    import math
 
-    if max_price is not None and max_price > 0:
-        query = query.filter(Listing.price_paise <= int(round(max_price * 100)))
+    if min_price is not None and isinstance(min_price, (int, float)) and math.isfinite(min_price) and min_price > 0:
+        try:
+            min_paise = int(round(min_price * 100))
+            query = query.filter(Listing.price_paise >= min_paise)
+        except (ValueError, OverflowError):
+            pass
+
+    if max_price is not None and isinstance(max_price, (int, float)) and math.isfinite(max_price) and max_price > 0:
+        try:
+            max_paise = int(round(max_price * 100))
+            query = query.filter(Listing.price_paise <= max_paise)
+        except (ValueError, OverflowError):
+            pass
 
     # Sorting: Priority boosted listings appear first
     if sort_by == "price_asc":
@@ -66,8 +99,18 @@ def query_catalog(
     else:  # default 'latest'
         query = query.order_by(Listing.is_featured.desc(), Listing.created_at.desc())
 
-    # Pagination
-    return query.paginate(page=page, per_page=per_page, error_out=False)
+    # Pagination bounds clamping
+    try:
+        safe_page = max(1, min(int(page), 10000))
+    except (ValueError, TypeError, OverflowError):
+        safe_page = 1
+
+    try:
+        safe_per_page = max(1, min(int(per_page), 100))
+    except (ValueError, TypeError, OverflowError):
+        safe_per_page = 12
+
+    return query.paginate(page=safe_page, per_page=safe_per_page, error_out=False)
 
 
 def validate_image_file(file_storage) -> bool:
@@ -104,38 +147,56 @@ def moderate_listing(
     reason: str = None
 ) -> tuple[bool, str]:
     """
-    Admin moderation for listings: 'approve', 'reject', or 'hide'.
+    Admin moderation for listings.
+    Canonical actions: 'approve', 'reject', 'pending'
+    Database statuses: 'approved', 'rejected', 'pending'
     Logs audit event and sends notification to seller.
     """
+    if not action or not isinstance(action, str):
+        return False, "Missing moderation action."
+
+    action_norm = action.strip().lower()
+
     listing = db.session.get(Listing, listing_id)
     if not listing:
         return False, "Listing not found."
 
+    # Prevent sellers from moderating their own listings
+    if admin_id and listing.seller_id and str(listing.seller_id) == str(admin_id):
+        return False, "Sellers cannot approve or moderate their own listings."
+
     old_status = listing.approval_status
-    if action == "approve":
+
+    if action_norm in ("approve", "approved"):
+        canonical_action = "approve"
         listing.approval_status = "approved"
         listing.rejection_reason = None
         listing.reviewed_at = utc_now()
         title = "Your phone is Approved!"
         msg = f"{listing.brand} {listing.model} is now live on iSellora. Buyers can view and purchase it."
-    elif action == "reject":
+
+    elif action_norm in ("reject", "rejected"):
+        canonical_action = "reject"
         listing.approval_status = "rejected"
         listing.rejection_reason = reason or "Listing did not meet marketplace quality guidelines."
         listing.reviewed_at = utc_now()
         title = "Listing Needs Changes"
         msg = f"{listing.brand} {listing.model} was rejected: {listing.rejection_reason}"
-    elif action in ("hide", "pending"):
+
+    elif action_norm in ("pending", "hide", "review"):
+        canonical_action = "pending"
         listing.approval_status = "pending"
         listing.reviewed_at = utc_now()
         title = "Listing Under Review"
         msg = f"{listing.brand} {listing.model} is pending administrative review."
+
     else:
         return False, f"Invalid moderation action: {action}"
 
     # Log audit event
     audit = AuditEvent(
         user_id=admin_id,
-        action=f"LISTING_MODERATION_{action.upper()}",
+        action=f"LISTING_MODERATION_{canonical_action.upper()}",
         target_type="listing",
         target_id=listing_id,
         details=f"Status changed from {old_status} to {listing.approval_status}. Reason: {reason or 'N/A'}",
@@ -154,5 +215,9 @@ def moderate_listing(
         )
         db.session.add(notice)
 
-    db.session.commit()
-    return True, ""
+    try:
+        db.session.commit()
+        return True, ""
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Database transaction failed: {str(e)}"

@@ -250,21 +250,55 @@
                     </div>
                 </div>
 
-                <!-- Honest Payment Notice -->
-                <div class="payment-notice-box">
+                <!-- Payment Method Selector -->
+                <div class="form-group" style="margin-top: 24px;">
+                    <label class="form-label">Payment Method *</label>
+                    <div class="delivery-options">
+                        <label class="delivery-option-box {% if razorpay_configured %}active{% endif %}" id="optRazorpay" style="{% if not razorpay_configured %}opacity: 0.65; cursor: not-allowed;{% endif %}">
+                            <input type="radio" name="payment_method" value="razorpay" {% if razorpay_configured %}checked{% else %}disabled{% endif %} onchange="togglePaymentMode(this.value)">
+                            <strong>Pay Online (Razorpay)</strong>
+                            <small>{% if razorpay_configured %}UPI, Credit/Debit Cards, NetBanking{% else %}Pending keys in backend/.env{% endif %}</small>
+                        </label>
+                        <label class="delivery-option-box {% if not razorpay_configured %}active{% endif %}" id="optCod">
+                            <input type="radio" name="payment_method" value="cod" {% if not razorpay_configured %}checked{% endif %} onchange="togglePaymentMode(this.value)">
+                            <strong>Cash on Delivery (COD)</strong>
+                            <small>Settle upon device inspection</small>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Payment Info Boxes -->
+                <div id="razorpayNoticeBox" class="payment-notice-box" style="{% if not razorpay_configured %}display: none;{% endif %} background: #eef2ff; border-color: #c7d2fe; color: #3730a3;">
                     <h4 style="display: flex; align-items: center; gap: 6px;">
-                        <svg class="ui-icon" style="color: #0284c7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        <svg class="ui-icon" style="color: #4f46e5;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                            <line x1="2" y1="10" x2="22" y2="10"></line>
                         </svg>
-                        Safe Direct Settlement
+                        Secure Razorpay Online Payment
                     </h4>
-                    <p>
-                        <strong>No online payment gateway is activated in this phase.</strong>
-                        Your order will be marked <em>"Not collected"</em>. You will verify device condition firsthand and settle payment directly upon delivery or pickup handover.
+                    <p style="margin: 0; font-size: 13px; line-height: 1.5;">
+                        Official 256-bit encrypted checkout. Supports Google Pay, PhonePe, Paytm, BHIM UPI, RuPay/Visa/MasterCard, and NetBanking.
                     </p>
                 </div>
 
-                <button type="submit" class="btn-place-order">Confirm Order & Reserve Phone</button>
+                <div id="codNoticeBox" class="payment-notice-box" style="{% if razorpay_configured %}display: none;{% endif %} background: #fffbeb; border-color: #fde68a; color: #92400e;">
+                    <h4 style="display: flex; align-items: center; gap: 6px;">
+                        <svg class="ui-icon" style="color: #b45309;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        Pay on Device Inspection / Delivery
+                    </h4>
+                    <p style="margin: 0; font-size: 13px; line-height: 1.5;">
+                        No online payment required now. Your order will be marked <em>"Not collected"</em>. You will inspect the phone firsthand and settle payment directly upon handover.
+                    </p>
+                </div>
+
+                <!-- Payment Status Indicator -->
+                <div id="paymentStatusBox" style="display: none; padding: 14px; border-radius: var(--radius-md); margin-bottom: 18px; font-size: 14px; font-weight: 700; text-align: center;"></div>
+
+                <button type="submit" id="btnSubmitOrder" class="btn-place-order">
+                    {% if razorpay_configured %}Proceed to Razorpay Online Payment{% else %}Confirm Order & Reserve Phone (COD){% endif %}
+                </button>
             </form>
         </div>
 
@@ -311,8 +345,11 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
+    window.RAZORPAY_KEY_ID = "{{ razorpay_key_id }}";
     const phoneBasePrice = {{ phone.price_rupees }};
+    let currentPaymentMethod = {% if razorpay_configured %}'razorpay'{% else %}'cod'{% endif %};
 
     function toggleDeliveryMode(method) {
         const shippingFields = document.getElementById('shippingFields');
@@ -335,6 +372,175 @@
             summaryDeliveryFee.textContent = '₹0 (Pickup)';
             summaryTotal.textContent = '₹' + phoneBasePrice.toLocaleString('en-IN');
         }
+    }
+
+    function togglePaymentMode(method) {
+        currentPaymentMethod = method;
+        const optRazorpay = document.getElementById('optRazorpay');
+        const optCod = document.getElementById('optCod');
+        const razorpayNoticeBox = document.getElementById('razorpayNoticeBox');
+        const codNoticeBox = document.getElementById('codNoticeBox');
+        const btnSubmit = document.getElementById('btnSubmitOrder');
+
+        if (method === 'razorpay') {
+            optRazorpay.classList.add('active');
+            optCod.classList.remove('active');
+            razorpayNoticeBox.style.display = 'block';
+            codNoticeBox.style.display = 'none';
+            btnSubmit.textContent = 'Proceed to Razorpay Online Payment';
+        } else {
+            optCod.classList.add('active');
+            optRazorpay.classList.remove('active');
+            codNoticeBox.style.display = 'block';
+            razorpayNoticeBox.style.display = 'none';
+            btnSubmit.textContent = 'Confirm Order & Reserve Phone (COD)';
+        }
+    }
+
+    function showPaymentStatus(text, type) {
+        const box = document.getElementById('paymentStatusBox');
+        box.style.display = 'block';
+        if (type === 'info') {
+            box.style.background = '#eff6ff';
+            box.style.color = '#1e40af';
+            box.style.border = '1px solid #bfdbfe';
+        } else if (type === 'error') {
+            box.style.background = '#fef2f2';
+            box.style.color = '#991b1b';
+            box.style.border = '1px solid #fecaca';
+        } else if (type === 'success') {
+            box.style.background = '#ecfdf5';
+            box.style.color = '#065f46';
+            box.style.border = '1px solid #a7f3d0';
+        }
+        box.textContent = text;
+    }
+
+    // Interactive Checkout Interceptor for Razorpay modal
+    const checkoutForm = document.querySelector('form[action*="/buy/"]');
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', function (e) {
+            if (currentPaymentMethod !== 'razorpay') {
+                return; // Normal POST for Cash on Delivery
+            }
+
+            e.preventDefault();
+            const btnSubmit = document.getElementById('btnSubmitOrder');
+            btnSubmit.disabled = true;
+            showPaymentStatus("Initializing Razorpay secure checkout...", "info");
+
+            const formData = new FormData(checkoutForm);
+
+            fetch(checkoutForm.action, {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    showPaymentStatus(data.error || "Unable to reserve device or start payment.", "error");
+                    btnSubmit.disabled = false;
+                    return;
+                }
+
+                if (data.payment_method === 'cod') {
+                    window.location.href = data.redirect_url;
+                    return;
+                }
+
+                // Launch Razorpay modal
+                showPaymentStatus("Opening Razorpay payment window...", "info");
+                const rzp = data.razorpay;
+
+                const rzpOptions = {
+                    key: rzp.key_id,
+                    amount: rzp.amount_paise,
+                    currency: rzp.currency,
+                    name: "iSellora Marketplace",
+                    description: "{{ phone.brand }} {{ phone.model }} Purchase",
+                    order_id: rzp.razorpay_order_id,
+                    prefill: rzp.prefill,
+                    theme: {
+                        color: "#4f46e5"
+                    },
+                    handler: function (response) {
+                        showPaymentStatus("Payment authorized! Verifying signature with server...", "info");
+
+                        fetch("{{ url_for('payment_verify') }}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": "{{ csrf_token() }}"
+                            },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(verifyData => {
+                            if (verifyData.success && verifyData.redirect_url) {
+                                showPaymentStatus("Payment verified! Redirecting to confirmation...", "success");
+                                window.location.href = verifyData.redirect_url;
+                            } else {
+                                showPaymentStatus(verifyData.error || "Payment signature verification failed.", "error");
+                                btnSubmit.disabled = false;
+                            }
+                        })
+                        .catch(err => {
+                            showPaymentStatus("Network verification issue. We are reconciling with the gateway in background.", "error");
+                            btnSubmit.disabled = false;
+                        });
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            showPaymentStatus("Payment was cancelled or closed. You can retry paying whenever ready.", "error");
+                            btnSubmit.disabled = false;
+                            fetch("{{ url_for('payment_failed') }}", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "X-CSRFToken": "{{ csrf_token() }}"
+                                },
+                                body: JSON.stringify({
+                                    razorpay_order_id: rzp.razorpay_order_id,
+                                    error_code: "MODAL_DISMISSED",
+                                    error_description: "Customer closed the Razorpay modal window."
+                                })
+                            });
+                        }
+                    }
+                };
+
+                const rzpInstance = new Razorpay(rzpOptions);
+                rzpInstance.on('payment.failed', function (resp) {
+                    showPaymentStatus("Payment declined: " + (resp.error.description || "Transaction failed."), "error");
+                    btnSubmit.disabled = false;
+                    fetch("{{ url_for('payment_failed') }}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token() }}"
+                        },
+                        body: JSON.stringify({
+                            razorpay_order_id: rzp.razorpay_order_id,
+                            error_code: resp.error.code,
+                            error_description: resp.error.description
+                        })
+                    });
+                });
+
+                rzpInstance.open();
+            })
+            .catch(err => {
+                showPaymentStatus("Network error submitting order. Please try again.", "error");
+                btnSubmit.disabled = false;
+            });
+        });
     }
 </script>
 {% endblock %}

@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#4f46e5">
-    <meta name="description" content="iSellora - India's modern, transparent marketplace for buying and selling second-hand smartphones.">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='5' y='2' width='14' height='20' rx='3' fill='%234f46e5'/><path d='M8.5 10.5l2.5 2.5 4.5-4.5' stroke='%2338bdf8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+    {% if razorpay_key_id %}
+    <meta name="razorpay-key-id" content="{{ razorpay_key_id }}">
+    {% endif %}
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/favicon.png') }}">
 
     <title>{% block title %}iSellora | Buy. Sell. Upgrade Smartphones{% endblock %}</title>
 
@@ -71,7 +74,13 @@
 
         body {
             font-family: var(--font-sans);
-            background-color: var(--bg-page);
+            background-color: #ffffff;
+            background-image: 
+                radial-gradient(ellipse 70% 40% at 15% -5%, rgba(238, 242, 255, 0.85) 0%, rgba(255, 255, 255, 0) 65%),
+                radial-gradient(ellipse 60% 40% at 85% 10%, rgba(240, 249, 255, 0.85) 0%, rgba(255, 255, 255, 0) 65%),
+                radial-gradient(ellipse 50% 30% at 50% 100%, rgba(250, 245, 255, 0.6) 0%, rgba(255, 255, 255, 0) 70%);
+            background-repeat: no-repeat;
+            background-attachment: fixed;
             color: var(--text-main);
             line-height: 1.5;
             min-height: 100vh;
@@ -125,6 +134,20 @@
             color: var(--primary);
             letter-spacing: -0.5px;
             flex-shrink: 0;
+            text-decoration: none;
+        }
+
+        .logo-img {
+            height: 48px;
+            width: auto;
+            max-width: 210px;
+            object-fit: contain;
+            display: block;
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .logo-img:hover {
+            transform: scale(1.02);
         }
 
         .logo-badge {
@@ -572,15 +595,8 @@
     <!-- NAVBAR -->
     <header class="navbar">
         <div class="container nav-inner">
-            <a href="{{ url_for('home') }}" class="logo">
-                <span class="logo-badge">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-                        <rect x="5" y="2" width="14" height="20" rx="3" stroke="#ffffff" stroke-width="2" fill="none"/>
-                        <line x1="10" y1="18" x2="14" y2="18" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-                        <path d="M8.5 10.5l2.5 2.5 4.5-4.5" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </span>
-                <span>iSellora</span>
+            <a href="{{ url_for('home') }}" class="logo" aria-label="iSellora Home">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="iSellora - Your Digital Commerce Hub" class="logo-img">
             </a>
 
             <!-- SEARCH BAR -->
@@ -649,7 +665,11 @@
                     <!-- USER PROFILE DROPDOWN -->
                     <div class="dropdown" id="userDropdown">
                         <button class="dropdown-trigger" type="button">
-                            <span class="avatar-circle">{{ (session.get('user_name', 'U'))[0] | upper }}</span>
+                            {% if current_user and current_user.avatar_url %}
+                                <img src="{{ current_user.avatar_url }}" alt="Avatar" class="avatar-circle" style="object-fit: cover;">
+                            {% else %}
+                                <span class="avatar-circle">{{ (session.get('user_name', 'U'))[0] | upper }}</span>
+                            {% endif %}
                             <span>{{ session.get('user_name', 'Account').split(' ')[0] }}</span>
                             <svg class="ui-icon" style="width: 12px; height: 12px; color: var(--text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -662,8 +682,14 @@
                             </div>
                             <a href="{{ url_for('account') }}" class="dropdown-item">
                                 <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                <span>My Profile</span>
+                                <span>My Profile & Settings</span>
                             </a>
+                            {% if session.get('user_id') %}
+                                <a href="{{ url_for('seller_profile', user_id=session.get('user_id')) }}" class="dropdown-item">
+                                    <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                    <span>Public Seller Profile</span>
+                                </a>
+                            {% endif %}
                             <a href="{{ url_for('orders') }}" class="dropdown-item">
                                 <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                                 <span>My Orders</span>
@@ -689,6 +715,10 @@
                                 <a href="{{ url_for('admin_dashboard') }}" class="dropdown-item" style="color: var(--primary); font-weight: 700;">
                                     <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                                     <span>Admin Dashboard</span>
+                                </a>
+                                <a href="{{ url_for('admin_listing_approvals') }}" class="dropdown-item" style="color: #d97706; font-weight: 600;">
+                                    <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                                    <span>Listing Approvals</span>
                                 </a>
                             {% endif %}
                             <div class="dropdown-divider"></div>
@@ -740,15 +770,10 @@
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-                        <span class="logo-badge" style="width: 32px; height: 32px; box-shadow: none;">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
-                                <rect x="5" y="2" width="14" height="20" rx="3" stroke="#ffffff" stroke-width="2" fill="none"/>
-                                <line x1="10" y1="18" x2="14" y2="18" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-                                <path d="M8.5 10.5l2.5 2.5 4.5-4.5" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </span>
-                        <h4 style="margin: 0; font-size: 20px; font-weight: 800; color: var(--primary);">iSellora<span>™</span></h4>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+                        <a href="{{ url_for('home') }}" aria-label="iSellora Home">
+                            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="iSellora" style="height: 40px; width: auto; max-width: 180px; object-fit: contain; display: block;">
+                        </a>
                     </div>
                     <div class="footer-notice">
                         <strong>

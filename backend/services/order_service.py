@@ -6,6 +6,31 @@ from backend.models import Order, OrderStatusHistory, Notification, Listing, utc
 from backend.database import db
 from backend.services.inventory_service import claim_listing_for_checkout, release_listing_reservation, finalize_listing_sold
 
+def get_allowed_transitions(current_status: str, delivery_method: str = "shipping") -> set[str]:
+    """
+    Returns the set of permitted next states based on current order status and delivery method.
+    Shipping orders MUST transition through 'Shipped' before 'Delivered'.
+    Pickup orders transition directly from 'Confirmed' to 'Delivered' upon in-person handover.
+    """
+    if delivery_method == "shipping":
+        transitions = {
+            "Pending": {"Confirmed", "Cancelled"},
+            "Confirmed": {"Shipped", "Cancelled"},  # Shipping orders CANNOT skip Shipped
+            "Shipped": {"Delivered"},
+            "Delivered": set(),  # Terminal state
+            "Cancelled": set()   # Terminal state
+        }
+    else:  # pickup
+        transitions = {
+            "Pending": {"Confirmed", "Cancelled"},
+            "Confirmed": {"Delivered", "Cancelled"},  # In-person physical handover
+            "Shipped": set(),  # Pickup has no courier shipping step
+            "Delivered": set(),  # Terminal state
+            "Cancelled": set()   # Terminal state
+        }
+    return transitions.get(current_status, set())
+
+
 ALLOWED_STATUS_TRANSITIONS = {
     "Pending": {"Confirmed", "Cancelled"},
     "Confirmed": {"Shipped", "Delivered", "Cancelled"},
@@ -25,7 +50,8 @@ def create_order(
     delivery_method: str,
     shipping_address: str,
     pincode: str = None,
-    checkout_token: str = None
+    checkout_token: str = None,
+    payment_method: str = "cod"
 ) -> tuple[Order | None, str]:
     """
     Creates an order with server-side price calculation and atomic reservation.
@@ -54,6 +80,9 @@ def create_order(
     delivery_charge_paise = 0 if delivery_method == "pickup" else STANDARD_SHIPPING_CHARGE_PAISE
     total_paise = price_paise + delivery_charge_paise
 
+    order_payment_method = "razorpay" if payment_method == "razorpay" else "cod"
+    initial_payment_status = "created" if order_payment_method == "razorpay" else "Not collected"
+
     order_id = str(uuid.uuid4())
     order = Order(
         id=order_id,
@@ -75,8 +104,8 @@ def create_order(
         seller_name=listing.seller_name or (listing.seller.name if listing.seller else "Seller"),
         seller_phone=listing.seller_phone or (listing.seller.phone if listing.seller else ""),
         status="Pending",
-        payment_method="cod",
-        payment_status="Not collected",
+        payment_method=order_payment_method,
+        payment_status=initial_payment_status,
         created_at=utc_now(),
         updated_at=utc_now()
     )
@@ -122,9 +151,17 @@ def transition_order_status(
     Validates and performs an order status transition with audit logging.
     """
     old_status = order.status
-    allowed = ALLOWED_STATUS_TRANSITIONS.get(old_status, set())
+    if old_status == new_status:
+        return False, f"Order is already in '{new_status}' status."
+
+    if old_status in ("Delivered", "Cancelled"):
+        return False, f"Order is in terminal state '{old_status}' and cannot be reopened or modified."
+
+    allowed = get_allowed_transitions(old_status, order.delivery_method)
 
     if new_status not in allowed:
+        if order.delivery_method == "shipping" and old_status == "Confirmed" and new_status == "Delivered":
+            return False, "Shipping orders must be marked as Shipped before they can be marked as Delivered."
         return False, f"Cannot transition order status from {old_status} to {new_status}."
 
     # Shipping requirements
@@ -140,9 +177,8 @@ def transition_order_status(
     # If completed/delivered, mark listing as sold
     if new_status == "Delivered":
         finalize_listing_sold(order.listing_id)
-        # Note: Payment status can be updated when confirmed collected
-        if order.payment_status == "Not collected":
-            order.payment_status = "Collected upon delivery"
+        # Note: Payment status is kept decoupled from delivery status.
+        # COD collection must be recorded through explicit collection workflow.
 
     # If cancelled, release listing reservation
     elif new_status == "Cancelled":
@@ -177,3 +213,35 @@ def transition_order_status(
 
     db.session.commit()
     return True, ""
+
+
+def record_cod_payment_collection(
+    order: Order,
+    actor_id: str,
+    actor_role: str,
+    notes: str = None
+) -> tuple[bool, str]:
+    """
+    Explicit, authorized workflow to record COD payment collection upon verified physical delivery.
+    Decoupled from order delivery transitions.
+    """
+    if order.payment_status == "Collected upon delivery":
+        return False, "Payment has already been recorded as collected."
+    if order.status != "Delivered":
+        return False, "Payment can only be confirmed collected for delivered orders."
+
+    order.payment_status = "Collected upon delivery"
+    order.updated_at = utc_now()
+
+    history = OrderStatusHistory(
+        order_id=order.id,
+        from_status=order.status,
+        to_status=order.status,
+        actor_id=actor_id,
+        actor_role=actor_role,
+        notes=f"Payment Collection Confirmed: {notes or 'Cash collected upon delivery.'}",
+        created_at=utc_now()
+    )
+    db.session.add(history)
+    db.session.commit()
+    return True, "Payment collection recorded successfully."

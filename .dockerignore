@@ -14,3 +14,30 @@ htmlcov/
 .gitignore
 .vscode/
 .idea/
+
+# Environment files and secrets
+.env
+backend/.env
+*.env*
+!*.env.example
+
+# Local databases and instance folders
+*.db
+*.sqlite
+*.sqlite3
+instance/
+backend/*.db
+
+# Backups and private archives
+data_backup/
+*.bak
+*.backup
+*.dump
+
+# Test suites and test artifacts
+tests/
+
+# Uploaded user media
+backend/static/uploads/*
+!backend/static/uploads/.gitkeep
+

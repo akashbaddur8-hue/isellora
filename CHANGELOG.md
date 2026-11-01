@@ -4,6 +4,42 @@ All notable changes made to the iSellora marketplace during this engineering tra
 
 ---
 
+## [2.1.0] - October 2026: Complete Razorpay Integration & Payment Hardening
+
+### Razorpay Online Payments & Checkout
+- **Integrated Official Razorpay Python SDK (`razorpay>=2.0.1`)**:
+  - Configured `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET` securely in configuration classes (`Config`, `TestingConfig`, `ProductionConfig`).
+  - Strict server-side storage of API credentials; updated `.env.example` with safe test placeholders.
+- **Authoritative Server-Side Amount Calculation**:
+  - All monetary values calculated strictly in integer paise (`total_paise` in INR) from immutable database pricing and delivery rules.
+  - Zero trust in client-submitted prices, fees, currencies, or payment IDs.
+- **Interactive Razorpay Checkout Flow**:
+  - Implemented responsive checkout modal launcher via `checkout.js` in `backend/templates/checkout.html` and standalone fallback launcher `backend/templates/checkout_razorpay.html`.
+  - Concurrency-protected single-unit inventory locking upon checkout reservation.
+  - Verification endpoint `POST /payment/verify` validating HMAC SHA-256 signatures (`verify_payment_signature`), updating `Payment` and `Order` states atomically, and logging audit history.
+  - Payment failure tracking `POST /payment/failed` recording declined transactions and modal dismissals while preserving the reservation for customer retry.
+
+### Asynchronous Webhook Reconciliation Engine
+- **Inbound Server-to-Server Webhook Handler (`POST /payment/webhook`)**:
+  - Exempt from CSRF (inbound server webhook) but strictly authenticated via HMAC SHA-256 in `X-Razorpay-Signature` against `RAZORPAY_WEBHOOK_SECRET`.
+  - Reconciles events asynchronously: `order.paid`, `payment.captured`, `payment.failed`, `refund.processed`.
+  - Deduplication & idempotency: records each `WebhookEvent` by unique `event_id`, returning HTTP 200 without duplicate execution on replay.
+
+### Priority Placement (₹49 Boost) Verified Payment
+- **Genuine Razorpay Activation**:
+  - Replaced temporary deferral notice with active "Pay ₹49 with Razorpay" checkout workflow in `backend/templates/boost_subscription.html`.
+  - Endpoints `POST /seller/boost/<id>/create-order` and `POST /seller/boost/<id>/verify` enforce server-side 4900 paise pricing and genuine signature verification.
+  - Boost features listing (`is_featured=True`) and ranks device #1 in catalog search only upon verified payment confirmation.
+
+### Inventory Expiry & Administrative Refunds
+- **Abandoned Reservation Expiry Job**:
+  - `expire_abandoned_reservations(timeout_minutes=30)` safely cancels uncompleted pending checkout orders and releases listing inventory back to `available`.
+- **Administrative Refund Management**:
+  - Route `POST /admin/payment/<payment_id>/refund` restricted strictly to verified administrators.
+  - Executes refund via Razorpay client API, updates `Payment.status="refunded"`, `Order.payment_status="refunded"`, and logs an immutable `AuditEvent`.
+
+---
+
 ## [2.0.0] - October 2026
 
 ### Architectural & Database Transformation
@@ -81,3 +117,33 @@ All notable changes made to the iSellora marketplace during this engineering tra
 - **Comprehensive Pytest Suite (`tests/`)**:
   - 24 automated tests covering Authentication, Authorization, CSRF rejection, Listing validations, Image magic bytes, Concurrency race conditions, Order state transitions, and Idempotent JSON migrations.
   - 100% test pass rate.
+
+---
+
+## [2.1.0] - October 2026
+
+### Critical Security Hardening & Audit Remediation
+- **Admin Privilege Escalation Prevention (SEC-01)**:
+  - Eliminated automatic admin promotion in `signup()` and `admin_login()`. Public signups are unconditionally assigned `role="user"`.
+  - Removed client role tampering opportunities. Added audit logging for administrator provisioning.
+  - Provided dedicated CLI command `flask create-admin` for authorized administrator creation.
+- **Repository Hygiene & Production Configuration Fail-Safe (SEC-02)**:
+  - Updated `.gitignore` and `.dockerignore` to exclude `data_backup/`, local databases, uploads, logs, and sensitive files.
+  - Implemented `ProductionConfig.validate_production()` ensuring the app will not start in production with missing or insecure placeholder secrets or missing `DATABASE_URL`.
+- **Payment Strategy & Revenue Integrity (SEC-03)**:
+  - Disabled unpaid priority placement boost activations. Display professional notices indicating online payments are deferred pending verified payment gateway integration.
+  - Admin dashboard revenue and count metrics updated to only report verified subscriptions (`payment_status == 'paid'`).
+- **Order Lifecycle & Payment Decoupling (SEC-04)**:
+  - Enforced strict order status state transitions: shipping orders cannot jump from `Confirmed` to `Delivered` without `Shipped`. Courier tracking details are required prior to shipment.
+  - Decoupled physical delivery from payment collection; introduced explicit authorized `record_cod_payment_collection` workflow.
+- **Open Redirect Protection (SEC-05)**:
+  - Implemented `is_safe_redirect_url` validation rejecting protocol-relative (`//evil.example`), backslash (`/\`), and cross-domain redirects in post-login flow.
+- **Support Ticket Authorization (SEC-06)**:
+  - Validated order references in support tickets server-side to guarantee users can only link tickets to their own orders.
+- **Input Fuzzing & Numeric Parameter Hardening (SEC-07)**:
+  - Protected catalog endpoints from `inf`, `-inf`, `nan`, out-of-range pagination, and malformed numeric parameters with finite-float bounds checking.
+- **Database Reconciliation**:
+  - Reconciled dual SQLite databases (`instance/isellora.db` and `backend/isellora.db`). Standardized on `instance/isellora.db` as canonical, synchronized tables, and backed up pre-audit state.
+- **Expanded Test Coverage**:
+  - Added 26 dedicated security and regression tests in `tests/test_security_audit.py`. Full test suite contains 61 passing tests (100% pass rate).
+

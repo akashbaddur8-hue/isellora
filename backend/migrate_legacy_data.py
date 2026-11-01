@@ -50,17 +50,30 @@ def parse_timestamp(ts_str):
 
 def load_json_file(file_path):
     if not os.path.exists(file_path):
-        return []
+        fname = os.path.basename(file_path)
+        backup_path = os.path.join(PROJECT_ROOT, "data_backup", fname)
+        if os.path.exists(backup_path):
+            file_path = backup_path
+        else:
+            return []
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
+            if not data:
+                fname = os.path.basename(file_path)
+                backup_path = os.path.join(PROJECT_ROOT, "data_backup", fname)
+                if os.path.exists(backup_path) and os.path.abspath(backup_path) != os.path.abspath(file_path):
+                    with open(backup_path, "r", encoding="utf-8") as bf:
+                        bdata = json.load(bf)
+                        if bdata and isinstance(bdata, list):
+                            return bdata
             return data if isinstance(data, list) else []
     except Exception as e:
         print(f"[WARN] Error loading {file_path}: {e}")
         return []
 
 
-def run_migration(app=None, dry_run=False):
+def run_migration(app=None, dry_run=False, data_dir=None):
     """
     Executes the migration inside the Flask application context.
     Returns migration report dict.
@@ -85,11 +98,12 @@ def run_migration(app=None, dry_run=False):
         db.create_all()
 
         # Paths
-        users_file = os.path.join(BASE_DIR, "users.json")
-        backend_listings_file = os.path.join(BASE_DIR, "listings.json")
+        search_dir = data_dir or BASE_DIR
+        users_file = os.path.join(search_dir, "users.json")
+        backend_listings_file = os.path.join(search_dir, "listings.json")
         root_listings_file = os.path.join(PROJECT_ROOT, "listings.json")
-        orders_file = os.path.join(BASE_DIR, "orders.json")
-        notifications_file = os.path.join(BASE_DIR, "notifications.json")
+        orders_file = os.path.join(search_dir, "orders.json")
+        notifications_file = os.path.join(search_dir, "notifications.json")
 
         admin_email = app.config.get("ADMIN_EMAIL", "").strip().lower()
 

@@ -183,7 +183,14 @@
             <h1>Seller Dashboard</h1>
             <p style="color: var(--text-muted); font-size: 14px;">Monitor your active listings, customer orders, and sales performance.</p>
         </div>
-        <a href="{{ url_for('sell') }}" class="btn-sell">+ Add New Phone Listing</a>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            {% if session.get('user_id') %}
+                <a href="{{ url_for('seller_profile', user_id=session.get('user_id')) }}" target="_blank" style="background: white; border: 1px solid var(--border); color: var(--text-main); font-weight: 700; padding: 9px 16px; border-radius: var(--radius-md); font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                    <span>View Public Profile ↗</span>
+                </a>
+            {% endif %}
+            <a href="{{ url_for('sell') }}" class="btn-sell">+ Add New Phone Listing</a>
+        </div>
     </div>
 
     <!-- STATS OVERVIEW -->
@@ -193,12 +200,12 @@
             <strong>{{ listings|selectattr('approval_status', 'equalto', 'approved')|selectattr('inventory_status', 'equalto', 'available')|list|length }}</strong>
         </div>
         <div class="stat-card">
-            <span>Pending Moderation</span>
-            <strong>{{ listings|selectattr('approval_status', 'equalto', 'pending')|list|length }}</strong>
+            <span>Listed Inventory Value</span>
+            <strong>₹{{ "{:,.0f}".format(total_listed_value or 0) }}</strong>
         </div>
         <div class="stat-card">
-            <span>Pending Orders</span>
-            <strong>{{ pending_orders_count }}</strong>
+            <span>Pending Moderation</span>
+            <strong>{{ listings|selectattr('approval_status', 'equalto', 'pending')|list|length }}</strong>
         </div>
         <div class="stat-card">
             <span>Completed Earnings</span>
@@ -239,7 +246,7 @@
                                     </div>
                                 </td>
                                 <td>{{ phone.storage }}</td>
-                                <td><strong>{{ phone.formatted_price }}</strong></td>
+                                <td><strong style="color: var(--primary); font-size: 15px;">{{ phone.formatted_price }}</strong></td>
                                 <td>{{ phone.condition }}</td>
                                 <td>
                                     <span class="badge-pill badge-{{ phone.approval_status }}">
@@ -257,15 +264,18 @@
                                             <svg style="width: 12px; height: 12px; color: #b45309;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                                             </svg>
-                                            Priority Active
+                                            Priority #1 Active
                                         </span>
                                     {% elif phone.inventory_status == 'available' %}
-                                        <a href="{{ url_for('seller_boost_listing', listing_id=phone.id) }}" class="btn-boost-mini" title="Feature this phone #1 at the top of search for ₹49">
-                                            <svg style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                                            </svg>
-                                            Boost (₹49)
-                                        </a>
+                                        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                                            <span style="color: var(--text-muted); font-size: 11px; font-weight: 600;">Standard Free</span>
+                                            <a href="{{ url_for('seller_boost_listing', listing_id=phone.id) }}" class="btn-boost-mini" title="Feature this phone #1 at the top of search for ₹49">
+                                                <svg style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                                </svg>
+                                                Boost to #1 (₹49)
+                                            </a>
+                                        </div>
                                     {% else %}
                                         <span style="color: var(--text-muted); font-size: 12px;">Standard</span>
                                     {% endif %}

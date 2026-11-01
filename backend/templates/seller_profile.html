@@ -1,0 +1,669 @@
+{% extends "base.html" %}
+
+{% block title %}{{ seller.name }} | Seller Profile | iSellora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .seller-profile-page {
+        margin-bottom: 60px;
+    }
+
+    /* Hero Card */
+    .seller-hero-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 36px;
+        margin-bottom: 36px;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        gap: 32px;
+        align-items: flex-start;
+        position: relative;
+    }
+
+    .seller-avatar-wrapper {
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .seller-avatar-img {
+        width: 104px;
+        height: 104px;
+        border-radius: var(--radius-full);
+        object-fit: cover;
+        border: 3px solid white;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+        background: #f8fafc;
+    }
+
+    .seller-avatar-fallback {
+        width: 104px;
+        height: 104px;
+        border-radius: var(--radius-full);
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white;
+        display: grid;
+        place-items: center;
+        font-size: 38px;
+        font-weight: 800;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+    }
+
+    .seller-meta-col {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .seller-title-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+    }
+
+    .seller-name {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--text-main);
+        letter-spacing: -0.3px;
+        margin: 0;
+    }
+
+    .seller-handle {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--primary);
+        background: var(--primary-light);
+        padding: 2px 10px;
+        border-radius: 999px;
+    }
+
+    .seller-trust-badge {
+        font-size: 12px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .seller-trust-badge.verified {
+        background: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    .seller-trust-badge.registered {
+        background: #f8fafc;
+        color: #475569;
+        border: 1px solid var(--border);
+    }
+
+    .seller-stats-strip {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        align-items: center;
+        font-size: 13px;
+        color: var(--text-muted);
+        margin: 10px 0 16px 0;
+    }
+
+    .seller-stat-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .seller-bio {
+        font-size: 14px;
+        color: #334155;
+        line-height: 1.6;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 14px 18px;
+        margin: 14px 0 0 0;
+        max-width: 760px;
+    }
+
+    .owner-notice-pill {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e40af;
+        border-radius: var(--radius-md);
+        padding: 10px 16px;
+        font-size: 13px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    /* Catalog Section */
+    .section-headline-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--border);
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .section-headline-bar h2 {
+        font-size: 20px;
+        font-weight: 800;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Product Grid */
+    .listings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 22px;
+        margin-bottom: 40px;
+    }
+
+    .phone-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .phone-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .phone-card-thumb {
+        height: 200px;
+        background: #f8fafc;
+        display: grid;
+        place-items: center;
+        padding: 14px;
+        position: relative;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .phone-card-thumb img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        position: relative;
+        z-index: 1;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .badge-boost {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        pointer-events: none;
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    }
+
+    .phone-card-body {
+        padding: 18px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .brand-chip {
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--primary);
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+
+    .phone-title {
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--text-main);
+        margin: 0 0 10px 0;
+        line-height: 1.3;
+    }
+
+    .specs-chips {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+    }
+
+    .spec-chip {
+        background: #f1f5f9;
+        font-size: 11px;
+        font-weight: 700;
+        color: #475569;
+        padding: 3px 7px;
+        border-radius: var(--radius-sm);
+    }
+
+    .spec-chip.condition {
+        background: #ecfdf5;
+        color: #065f46;
+    }
+
+    /* Phone Card Bottom Pricing & Action Panel */
+    .phone-panel {
+        margin-top: auto;
+        padding-top: 14px;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .phone-panel-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .phone-price-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .phone-price-amount {
+        font-size: 22px;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -0.5px;
+        line-height: 1.1;
+    }
+
+    .phone-price-label {
+        font-size: 12px;
+        color: #8a99ad;
+        font-weight: 500;
+        margin-top: 3px;
+    }
+
+    .phone-panel-arrow {
+        width: 42px;
+        height: 42px;
+        background: #f1effe;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6366f1;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .phone-panel-arrow svg {
+        width: 18px;
+        height: 18px;
+        transition: transform 0.2s ease;
+    }
+
+    .phone-panel-arrow:hover {
+        background: #e9e5ff;
+        color: #4f46e5;
+    }
+
+    .phone-panel-arrow:hover svg {
+        transform: translateX(3px);
+    }
+
+    .phone-panel-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .btn-panel-details {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        border: 1.5px solid #dcd7fe;
+        color: #6366f1;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 10px 14px;
+        border-radius: 12px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-panel-details:hover {
+        background: #f8f7ff;
+        border-color: #6366f1;
+        color: #4f46e5;
+    }
+
+    .btn-panel-buy {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        border: 1px solid transparent;
+        color: #ffffff !important;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 10px 14px;
+        border-radius: 12px;
+        text-decoration: none;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.22);
+        transition: all 0.2s ease;
+    }
+
+    .btn-panel-buy:hover {
+        background: linear-gradient(135deg, #5850ec 0%, #4338ca 100%);
+        box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+        transform: translateY(-1px);
+    }
+
+    .btn-panel-buy:active {
+        transform: translateY(0);
+    }
+
+    /* Empty State */
+    .empty-state-box {
+        background: white;
+        border: 1px dashed var(--border);
+        border-radius: var(--radius-lg);
+        padding: 48px 24px;
+        text-align: center;
+        max-width: 600px;
+        margin: 0 auto 40px auto;
+    }
+
+    .empty-state-icon {
+        width: 56px;
+        height: 56px;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+    }
+
+    .empty-state-box h3 {
+        font-size: 18px;
+        font-weight: 800;
+        margin-bottom: 8px;
+        color: var(--text-main);
+    }
+
+    .empty-state-box p {
+        color: var(--text-muted);
+        font-size: 14px;
+        line-height: 1.5;
+        margin-bottom: 20px;
+    }
+
+    /* Trust banner */
+    .buyer-protection-note {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 13px;
+        color: #475569;
+        margin-top: 24px;
+    }
+
+    @media (max-width: 768px) {
+        .seller-hero-card {
+            flex-direction: column;
+            padding: 24px;
+            gap: 20px;
+            text-align: center;
+            align-items: center;
+        }
+        .seller-title-row {
+            justify-content: center;
+        }
+        .seller-stats-strip {
+            justify-content: center;
+        }
+        .seller-bio {
+            text-align: left;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container seller-profile-page">
+
+    <!-- IF LOGGED-IN SELLER VIEWING OWN PROFILE -->
+    {% if is_own_profile %}
+        <div class="owner-notice-pill">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span><strong>Public Preview Mode:</strong> This is how your seller profile appears to buyers across iSellora.</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <a href="{{ url_for('account') }}" style="background: white; border: 1px solid #bfdbfe; color: #1e40af; font-weight: 700; padding: 4px 12px; border-radius: var(--radius-md); font-size: 12px;">Edit Profile Details</a>
+                <a href="{{ url_for('seller_dashboard') }}" style="background: #1e40af; color: white; font-weight: 700; padding: 4px 12px; border-radius: var(--radius-md); font-size: 12px;">Seller Dashboard</a>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- HERO CARD -->
+    <div class="seller-hero-card">
+        <div class="seller-avatar-wrapper">
+            {% if seller.avatar_url %}
+                <img src="{{ seller.avatar_url }}" alt="{{ seller.name }}" class="seller-avatar-img">
+            {% else %}
+                <div class="seller-avatar-fallback">{{ seller.initial }}</div>
+            {% endif %}
+        </div>
+
+        <div class="seller-meta-col">
+            <div class="seller-title-row">
+                <h1 class="seller-name">{{ seller.name }}</h1>
+                {% if seller.username %}
+                    <span class="seller-handle">@{{ seller.username }}</span>
+                {% endif %}
+                
+                {% if seller.is_verified %}
+                    <span class="seller-trust-badge verified" title="Identity and seller trust verified by iSellora">
+                        <svg class="ui-icon" style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Verified Seller
+                    </span>
+                {% else %}
+                    <span class="seller-trust-badge registered">Marketplace Seller</span>
+                {% endif %}
+            </div>
+
+            <div class="seller-stats-strip">
+                <div class="seller-stat-item">
+                    <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <span>{{ seller.display_location or 'Location not specified' }}</span>
+                </div>
+
+                <div class="seller-stat-item">
+                    <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span>Member since {{ seller.member_since }}</span>
+                </div>
+
+                {% if seller.average_rating %}
+                    <div class="seller-stat-item" style="color: #b45309; font-weight: 700;">
+                        <svg class="ui-icon" style="fill: #f59e0b; color: #f59e0b;" viewBox="0 0 24 24">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                        <span>{{ seller.average_rating }} ({{ seller.review_count }} review{{ 's' if seller.review_count != 1 else '' }})</span>
+                    </div>
+                {% endif %}
+
+                <div class="seller-stat-item">
+                    <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="1" y="3" width="15" height="13"></rect>
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                        <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                        <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                    </svg>
+                    <span>{{ completed_sales_count }} item{{ 's' if completed_sales_count != 1 else '' }} delivered</span>
+                </div>
+            </div>
+
+            {% if seller.bio %}
+                <p class="seller-bio">{{ seller.bio }}</p>
+            {% else %}
+                <p class="seller-bio" style="color: var(--text-muted); font-style: italic;">
+                    No seller introduction provided yet.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ACTIVE DEVICES FOR SALE -->
+    <div class="section-headline-bar">
+        <h2>
+            <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="3"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+            Available Smartphones ({{ listings|length }})
+        </h2>
+        <span style="font-size: 13px; color: var(--text-muted);">
+            All devices reviewed and verified by iSellora Trust & Safety
+        </span>
+    </div>
+
+    {% if listings %}
+        <div class="listings-grid">
+            {% for phone in listings %}
+                <div class="phone-card">
+                    <div class="phone-card-thumb">
+                        <img src="{{ phone.primary_image }}" alt="{{ phone.brand }} {{ phone.model }}">
+                        {% if phone.is_priority %}
+                            <span class="badge-boost">
+                                <svg style="width: 10px; height: 10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                </svg>
+                                Priority
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="phone-card-body">
+                        <span class="brand-chip">{{ phone.brand }}</span>
+                        <h3 class="phone-title">{{ phone.brand }} {{ phone.model }}</h3>
+                        <div class="specs-chips">
+                            <span class="spec-chip">{{ phone.storage }}</span>
+                            <span class="spec-chip condition">{{ phone.condition }}</span>
+                            {% if phone.battery_health %}
+                                <span class="spec-chip">{{ phone.battery_health }}% Battery</span>
+                            {% endif %}
+                        </div>
+                        <div class="phone-panel">
+                            <div class="phone-panel-top">
+                                <div class="phone-price-group">
+                                    <span class="phone-price-amount phone-price">{{ phone.formatted_price }}</span>
+                                    <span class="phone-price-label">Listed price</span>
+                                </div>
+                                <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="phone-panel-arrow" aria-label="View {{ phone.brand }} {{ phone.model }} details">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                    </svg>
+                                </a>
+                            </div>
+                            <div class="phone-panel-actions">
+                                <a href="{{ url_for('listing_detail', listing_id=phone.id) }}" class="btn-panel-details">Details</a>
+                                <a href="{{ url_for('buy_now', listing_id=phone.id) }}" class="btn-panel-buy">Buy Now</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state-box">
+            <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="3"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+            <h3>No Active Listings Currently Available</h3>
+            <p>{{ seller.name }} does not have any smartphones actively listed for sale right now. Check back soon or explore our complete catalog of verified pre-owned phones.</p>
+            <a href="{{ url_for('products') }}" class="btn-view-phone" style="display: inline-block; padding: 10px 22px;">Browse All Smartphones &rarr;</a>
+        </div>
+    {% endif %}
+
+    <!-- VERIFIED BUYER REVIEWS (IF ANY) -->
+    {% if reviews %}
+        <div class="section-headline-bar" style="margin-top: 48px;">
+            <h2>
+                <svg class="ui-icon" style="color: var(--primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                Buyer Reviews ({{ reviews|length }})
+            </h2>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 40px;">
+            {% for r in reviews %}
+                <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 700; font-size: 14px;">{{ r.buyer.name if r.buyer else 'Verified Buyer' }}</span>
+                        <span style="color: #f59e0b; font-size: 13px; font-weight: 700;">★ {{ r.rating }} / 5</span>
+                    </div>
+                    {% if r.comment %}
+                        <p style="font-size: 13px; color: #475569; margin: 0; line-height: 1.5;">{{ r.comment }}</p>
+                    {% endif %}
+                    <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 6px;">{{ r.created_at.strftime('%d %B %Y') if r.created_at else '' }}</small>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- PRIVACY & SAFETY NOTE -->
+    <div class="buyer-protection-note">
+        <svg class="ui-icon-md" style="color: var(--primary); flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        <div>
+            <strong>iSellora Buyer & Privacy Protection:</strong>
+            To protect community members from spam, unverified solicitations, and phishing, direct seller contact details and physical pickup coordinates are shared securely upon confirmed checkout.
+        </div>
+    </div>
+
+</div>
+{% endblock %}

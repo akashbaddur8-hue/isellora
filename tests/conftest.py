@@ -13,16 +13,22 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from backend.app import create_app
 from backend.database import db
 from backend.models import User, Listing, ListingImage, Order, OrderStatusHistory, Notification, utc_now
+from backend.services.email_service import clear_test_outbox
+from backend.services.auth_service import clear_reset_rate_limits
 
 
 @pytest.fixture
 def app():
+    clear_test_outbox()
+    clear_reset_rate_limits()
     app = create_app("testing")
     with app.app_context():
         db.create_all()
         yield app
         db.session.remove()
         db.drop_all()
+    clear_test_outbox()
+    clear_reset_rate_limits()
 
 
 @pytest.fixture

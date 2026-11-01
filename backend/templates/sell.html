@@ -108,15 +108,195 @@
         font-size: 16px;
         font-weight: 800;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: background 0.2s, transform 0.1s;
     }
 
     .btn-submit-listing:hover {
         background: var(--primary-hover);
     }
 
+    /* Listing Type Selector Styles */
+    .listing-type-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 10px;
+    }
+
+    .listing-type-card {
+        background: #ffffff;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 22px 20px;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        user-select: none;
+    }
+
+    .listing-type-card:hover:not(.disabled) {
+        border-color: #cbd5e1;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .listing-type-card.selected {
+        background: #f5f3ff;
+        border: 2px solid #6366f1;
+        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
+    }
+
+    .listing-type-card.disabled {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        cursor: not-allowed;
+        opacity: 0.75;
+    }
+
+    .type-card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .type-title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .type-name {
+        font-size: 17px;
+        font-weight: 800;
+        color: var(--text-main);
+    }
+
+    .type-price {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--text-main);
+        margin-top: 2px;
+    }
+
+    .price-priority {
+        color: #6d28d9;
+    }
+
+    /* Custom Radio Indicator */
+    .custom-radio {
+        width: 22px;
+        height: 22px;
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .custom-radio input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .radio-circle {
+        display: block;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2px solid #cbd5e1;
+        background: #ffffff;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .listing-type-card.selected .radio-circle {
+        border-color: #6366f1;
+    }
+
+    .listing-type-card.selected .radio-circle::after {
+        content: '';
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #6366f1;
+    }
+
+    .radio-circle.disabled {
+        border-color: #e2e8f0;
+        background: #f1f5f9;
+        cursor: not-allowed;
+    }
+
+    .type-description {
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        margin: 6px 0 16px;
+        flex-grow: 1;
+    }
+
+    .type-footer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .type-pill {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: var(--radius-full);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .pill-free {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+
+    .pill-priority {
+        background: #ede9fe;
+        color: #6d28d9;
+        border: 1px solid #ddd6fe;
+    }
+
+    .badge-priority-pill {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #78350f;
+        border: 1px solid #fcd34d;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 2px 8px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        letter-spacing: 0.3px;
+    }
+
+    .badge-unavailable-pill {
+        background: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #cbd5e1;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+    }
+
     @media (max-width: 650px) {
-        .form-row {
+        .form-row, .listing-type-grid {
             grid-template-columns: 1fr;
         }
         .sell-card {
@@ -314,34 +494,86 @@
                 </div>
             </div>
 
-            <!-- 4. PRIORITY PLACEMENT SUBSCRIPTION (₹49) -->
-            <div class="form-section" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fde68a; border-radius: var(--radius-lg); padding: 22px;">
-                <div style="display: flex; gap: 14px; align-items: flex-start;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #fef08a; display: grid; place-items: center; flex-shrink: 0; color: #b45309; border: 1px solid #fcd34d;">
-                        <svg style="width: 24px; height: 24px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                        </svg>
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px;">
-                            <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #92400e; display: flex; align-items: center; gap: 6px;">
-                                Sell First with Priority Placement
-                                <span style="background: #b45309; color: white; font-size: 11px; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;">Recommended</span>
-                            </h3>
-                            <div style="font-size: 18px; font-weight: 800; color: #78350f;">₹49 <span style="font-size: 12px; font-weight: 500; color: #92400e;">one-time boost</span></div>
+            <!-- 4. CHOOSE LISTING TYPE -->
+            <div class="form-section">
+                <h3 style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                    <span style="color: #f59e0b; font-size: 18px;">⭐</span>
+                    4. Choose Listing Type *
+                </h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                    Choose how your smartphone is displayed across iSellora search results and category catalogs.
+                </p>
+
+                <div class="listing-type-grid">
+                    <!-- CARD A: FREE LISTING -->
+                    <label class="listing-type-card selected" id="card-free" for="listing_type_free" onclick="selectListingType('free')">
+                        <div class="type-card-top">
+                            <div>
+                                <div class="type-name">Free Listing</div>
+                                <div class="type-price">₹0</div>
+                            </div>
+                            <div class="custom-radio">
+                                <input type="radio" id="listing_type_free" name="listing_type" value="free" checked onchange="selectListingType('free')">
+                                <span class="radio-circle"></span>
+                            </div>
                         </div>
-                        <p style="margin: 6px 0 12px; font-size: 13px; color: #78350f; line-height: 1.5;">
-                            Feature your smartphone at the <strong>#1 top position</strong> of search results and brand catalog feeds. Priority smartphones receive up to <strong>3x more buyer inquiries</strong> and sell significantly faster.
-                        </p>
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; font-size: 14px; font-weight: 700; color: #78350f; background: white; padding: 10px 14px; border-radius: 8px; border: 1px solid #fde68a;">
-                            <input type="checkbox" name="priority_boost" value="1" style="width: 18px; height: 18px; accent-color: #b45309; cursor: pointer;">
-                            <span>Yes, activate Priority Placement for ₹49 upon review</span>
-                        </label>
+                        <p class="type-description">Post your phone on iSellora without any listing fee.</p>
+                        <div class="type-footer">
+                            <span class="type-pill pill-free">Standard Placement</span>
+                        </div>
+                    </label>
+
+                    <!-- CARD B: PRIORITY LISTING (₹49) -->
+                    {% if razorpay_configured %}
+                    <label class="listing-type-card" id="card-priority" for="listing_type_priority" onclick="selectListingType('priority')">
+                        <div class="type-card-top">
+                            <div>
+                                <div class="type-title-row">
+                                    <span class="type-name">Priority Listing</span>
+                                    <span class="badge-priority-pill">
+                                        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                        </svg>
+                                        Priority
+                                    </span>
+                                </div>
+                                <div class="type-price price-priority">₹49 <small style="font-size: 12px; font-weight: 600; color: #7c3aed;">one-time</small></div>
+                            </div>
+                            <div class="custom-radio">
+                                <input type="radio" id="listing_type_priority" name="listing_type" value="priority" onchange="selectListingType('priority')">
+                                <span class="radio-circle"></span>
+                            </div>
+                        </div>
+                        <p class="type-description">Give your phone greater visibility with priority placement after approval.</p>
+                        <div class="type-footer">
+                            <span class="type-pill pill-priority">Rank #1 • Sell Faster</span>
+                        </div>
+                    </label>
+                    {% else %}
+                    <div class="listing-type-card disabled" id="card-priority">
+                        <div class="type-card-top">
+                            <div>
+                                <div class="type-title-row">
+                                    <span class="type-name" style="color: #64748b;">Priority Listing</span>
+                                    <span class="badge-unavailable-pill">Temporarily Unavailable</span>
+                                </div>
+                                <div class="type-price" style="color: #94a3b8;">₹49</div>
+                            </div>
+                            <div class="custom-radio">
+                                <input type="radio" id="listing_type_priority" name="listing_type" value="priority" disabled>
+                                <span class="radio-circle disabled"></span>
+                            </div>
+                        </div>
+                        <p class="type-description" style="color: #94a3b8;">Give your phone greater visibility with priority placement after approval.</p>
+                        <div class="type-footer">
+                            <span class="type-pill" style="background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;">Gateway Setup Required</span>
+                        </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
 
-            <button type="submit" class="btn-submit-listing">Submit Listing for Moderation</button>
+            <button type="submit" id="btnSubmitListing" class="btn-submit-listing">Submit Free Listing for Moderation</button>
         </form>
     </div>
 
@@ -350,6 +582,28 @@
 
 {% block extra_js %}
 <script>
+    function selectListingType(type) {
+        const cardFree = document.getElementById('card-free');
+        const cardPriority = document.getElementById('card-priority');
+        const radioFree = document.getElementById('listing_type_free');
+        const radioPriority = document.getElementById('listing_type_priority');
+        const submitBtn = document.getElementById('btnSubmitListing');
+
+        if (type === 'free') {
+            if (radioFree) radioFree.checked = true;
+            if (cardFree) cardFree.classList.add('selected');
+            if (cardPriority) cardPriority.classList.remove('selected');
+            if (submitBtn) submitBtn.textContent = 'Submit Free Listing for Moderation';
+        } else if (type === 'priority') {
+            if (cardPriority && !cardPriority.classList.contains('disabled')) {
+                if (radioPriority) radioPriority.checked = true;
+                cardPriority.classList.add('selected');
+                if (cardFree) cardFree.classList.remove('selected');
+                if (submitBtn) submitBtn.textContent = 'Submit Listing & Proceed to Priority Boost (₹49)';
+            }
+        }
+    }
+
     function showFileCount(input) {
         const count = input.files.length;
         const msg = document.getElementById('fileCountMsg');

@@ -55,3 +55,32 @@ def finalize_listing_sold(listing_id: str) -> bool:
 
     db.session.flush()
     return rows_updated > 0
+
+
+def expire_abandoned_reservations(timeout_minutes: int = 30) -> int:
+    """
+    Safely releases inventory reservations that have exceeded the checkout window
+    without a verified paid order or active COD confirmation.
+    """
+    from datetime import timedelta
+    from backend.models import Order, utc_now
+
+    cutoff = utc_now() - timedelta(minutes=timeout_minutes)
+    
+    # Find orders that are still pending with uncompleted payment beyond the cutoff
+    stale_orders = Order.query.filter(
+        Order.status == "Pending",
+        Order.payment_status.in_(["created", "failed", "pending"]),
+        Order.created_at < cutoff
+    ).all()
+
+    released_count = 0
+    for order in stale_orders:
+        order.status = "Cancelled"
+        order.cancelled_by = "system"
+        order.cancellation_reason = f"Checkout reservation expired after {timeout_minutes} minutes without completed payment."
+        if release_listing_reservation(order.listing_id):
+            released_count += 1
+
+    db.session.commit()
+    return released_count

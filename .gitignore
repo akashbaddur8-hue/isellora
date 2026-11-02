@@ -40,7 +40,7 @@ local_backups_*
 # Uploaded private media
 backend/static/uploads/*
 !backend/static/uploads/.gitkeep
-static/
+# Note: Do NOT ignore backend/static/ — it contains tracked logo/favicon assets
 listings.json
 
 

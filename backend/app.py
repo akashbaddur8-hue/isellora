@@ -19,7 +19,7 @@ if PROJECT_ROOT not in sys.path:
 from datetime import datetime, timezone
 from urllib.parse import quote_plus
 from flask import (
-    Flask, render_template, request, redirect,
+    Flask, render_template, request, redirect, Response,
     url_for, session, abort, flash, jsonify, current_app
 )
 from flask_wtf.csrf import CSRFProtect, CSRFError
@@ -455,6 +455,55 @@ def create_app(config_name=None):
             phone=listing,
             is_owner=is_owner
         )
+
+    # =========================================================================
+    # GOOGLE SEARCH CONSOLE - SITEMAP & ROBOTS
+    # =========================================================================
+
+    @app.route("/sitemap.xml")
+    def sitemap():
+        base_url = "https://isellora.in"
+
+        xml_parts = [
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        ]
+
+        for path in ["/", "/products"]:
+            xml_parts.append(
+                f"<url><loc>{base_url}{path}</loc></url>"
+            )
+
+        listings = Listing.query.filter_by(
+            approval_status="approved",
+            inventory_status="available"
+        ).all()
+
+        for listing in listings:
+            product_url = base_url + url_for(
+                "listing_detail", listing_id=listing.id
+            )
+            xml_parts.append(
+                f"<url><loc>{product_url}</loc></url>"
+            )
+
+        xml_parts.append("</urlset>")
+
+        return Response("\n".join(xml_parts), mimetype="application/xml")
+
+    @app.route("/robots.txt")
+    def robots_txt():
+        content = (
+            "User-agent: *\n"
+            "Allow: /\n"
+            "Disallow: /admin\n"
+            "Disallow: /account\n"
+            "Disallow: /orders\n"
+            "Disallow: /login\n"
+            "Disallow: /signup\n"
+            "Sitemap: https://isellora.in/sitemap.xml\n"
+        )
+        return Response(content, mimetype="text/plain")
 
     # =========================================================================
     # CHECKOUT & PAYMENT ROUTES (Razorpay Online Checkout & COD)

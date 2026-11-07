@@ -1,10 +1,13 @@
-"""
+﻿"""
 iSellora Marketplace Application
 Full-featured, secure, and relational-backed marketplace for second-hand smartphones.
 """
 import os
 import sys
 import uuid
+import cloudinary
+import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
 
 # Ensure project root is in sys.path so 'backend' is recognized regardless of invocation method
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -61,6 +64,34 @@ from backend.services.payment_service import (
 csrf = CSRFProtect()
 
 
+def upload_to_cloudinary(file_storage, folder):
+    """Upload an image to persistent Cloudinary storage."""
+    if not current_app.config.get("CLOUDINARY_CONFIGURED"):
+        raise RuntimeError("Cloudinary is not configured. Image upload is unavailable.")
+
+    result = cloudinary.uploader.upload(
+        file_storage,
+        folder=folder,
+        resource_type="image"
+    )
+
+    public_id = result.get("public_id")
+    if not public_id:
+        raise RuntimeError("Cloudinary did not return an image ID.")
+
+    image_url, _ = cloudinary_url(
+        public_id,
+        secure=True,
+        quality="auto",
+        fetch_format="auto"
+    )
+
+    if not image_url:
+        raise RuntimeError("Cloudinary did not generate an image URL.")
+
+    return image_url
+
+
 def create_app(config_name=None):
     if config_name is None:
         config_name = os.environ.get("FLASK_ENV", "development")
@@ -77,6 +108,26 @@ def create_app(config_name=None):
 
     config_class = config_by_name.get(config_name, config_by_name["development"])
     app.config.from_object(config_class)
+
+    # Cloudinary persistent image storage
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
+    cloud_api_key = os.environ.get("CLOUDINARY_API_KEY", "").strip()
+    cloud_api_secret = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
+
+    app.config["CLOUDINARY_CONFIGURED"] = bool(
+        cloud_name and cloud_api_key and cloud_api_secret
+    )
+
+    if app.config["CLOUDINARY_CONFIGURED"]:
+        cloudinary.config(
+            cloud_name=cloud_name,
+            api_key=cloud_api_key,
+            api_secret=cloud_api_secret,
+            secure=True
+        )
+        app.logger.info("Cloudinary image storage configured.")
+    else:
+        app.logger.warning("Cloudinary credentials are missing.")
 
     # Razorpay Test Mode credential startup validation (never printing secret values)
     if not app.config.get("TESTING"):
@@ -344,7 +395,7 @@ def create_app(config_name=None):
             if not val:
                 return None
             try:
-                p = float(str(val).replace(",", "").replace("₹", "").strip())
+                p = float(str(val).replace(",", "").replace("â‚¹", "").strip())
                 if not math.isfinite(p) or math.isnan(p) or p < 0 or p > 100000000:
                     return None
                 return p
@@ -910,12 +961,12 @@ def create_app(config_name=None):
             return render_template("sell.html", user=user), 400
 
         try:
-            price_float = float(price_text.replace(",", "").replace("₹", ""))
+            price_float = float(price_text.replace(",", "").replace("â‚¹", ""))
             if price_float < 500 or price_float > 500000:
                 raise ValueError
             price_paise = int(round(price_float * 100))
         except ValueError:
-            flash("Please enter a valid price between ₹500 and ₹5,00,000.", "error")
+            flash("Please enter a valid price between â‚¹500 and â‚¹5,00,000.", "error")
             return render_template("sell.html", user=user), 400
 
         battery_val = None
@@ -991,18 +1042,22 @@ def create_app(config_name=None):
         )
         db.session.add(new_listing)
 
-        # Save photos
-        for idx, f in enumerate(valid_files):
-            ext = secure_filename(f.filename).rsplit(".", 1)[1].lower()
-            fname = f"{uuid.uuid4()}.{ext}"
-            f.save(os.path.join(app.config["UPLOAD_FOLDER"], fname))
-            img_rec = ListingImage(
-                listing_id=listing_id,
-                image_path=f"/static/uploads/{fname}",
-                display_order=idx,
-                created_at=utc_now()
-            )
-            db.session.add(img_rec)
+        # Upload photos to persistent Cloudinary storage
+        try:
+            for idx, f in enumerate(valid_files):
+                image_url = upload_to_cloudinary(f, "isellora/products")
+                img_rec = ListingImage(
+                    listing_id=listing_id,
+                    image_path=image_url,
+                    display_order=idx,
+                    created_at=utc_now()
+                )
+                db.session.add(img_rec)
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Cloudinary product image upload failed.")
+            flash("Image upload failed. Please try again.", "error")
+            return render_template("sell.html", user=user), 503
 
         # Determine chosen listing type (Free vs Priority Boost)
         listing_type = request.form.get("listing_type", "free").strip().lower()
@@ -1020,7 +1075,7 @@ def create_app(config_name=None):
 
         rzp_configured = bool(app.config.get("RAZORPAY_KEY_ID") and app.config.get("RAZORPAY_KEY_SECRET"))
         if is_priority_chosen and rzp_configured:
-            flash("Listing submitted for review! Complete your ₹49 priority payment now to activate #1 top placement once approved.", "info")
+            flash("Listing submitted for review! Complete your â‚¹49 priority payment now to activate #1 top placement once approved.", "info")
             return redirect(url_for("seller_boost_listing", listing_id=new_listing.id))
         elif is_priority_chosen and not rzp_configured:
             flash("Your listing has been submitted for review! (Note: Paid priority boosts are temporarily unavailable pending gateway setup).", "info")
@@ -1118,7 +1173,7 @@ def create_app(config_name=None):
         if not success:
             return jsonify({"success": False, "error": msg}), 400
 
-        flash("Priority Placement (₹49) activated! Your smartphone is now pinned at #1 in search results.", "success")
+        flash("Priority Placement (â‚¹49) activated! Your smartphone is now pinned at #1 in search results.", "success")
         return jsonify({
             "success": True,
             "message": msg,
@@ -1149,7 +1204,7 @@ def create_app(config_name=None):
 
         if price_text:
             try:
-                p_float = float(price_text.replace(",", "").replace("₹", ""))
+                p_float = float(price_text.replace(",", "").replace("â‚¹", ""))
                 if p_float < 500 or p_float > 500000:
                     raise ValueError
                 listing.price_paise = int(round(p_float * 100))
@@ -1516,12 +1571,14 @@ def create_app(config_name=None):
                     elif not validate_image_file(avatar_file):
                         errors.append("Invalid profile image. Supported formats: JPG, PNG, WEBP.")
                     else:
-                        avatar_ext = secure_filename(avatar_file.filename).rsplit('.', 1)[1].lower()
-                        avatar_fname = f"avatar_{user.id}_{uuid.uuid4().hex[:8]}.{avatar_ext}"
-                        avatar_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], "avatars")
-                        os.makedirs(avatar_dir, exist_ok=True)
-                        avatar_file.save(os.path.join(avatar_dir, avatar_fname))
-                        saved_avatar_path = f"/static/uploads/avatars/{avatar_fname}"
+                        try:
+                            saved_avatar_path = upload_to_cloudinary(
+                                avatar_file,
+                                "isellora/avatars"
+                            )
+                        except Exception:
+                            current_app.logger.exception("Cloudinary avatar upload failed.")
+                            errors.append("Profile image upload failed. Please try again.")
 
                 if errors:
                     for err in errors:
@@ -2015,4 +2072,10 @@ if __name__ == "__main__":
     backend_env = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
     extra_files = [backend_env] if os.path.exists(backend_env) else []
     app.run(debug=True, host="127.0.0.1", port=5000, extra_files=extra_files)
+
+
+
+
+
+
 

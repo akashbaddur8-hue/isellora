@@ -1907,6 +1907,8 @@ def create_app(config_name=None):
                 flash("Please log in to submit a support ticket.", "error")
                 return redirect(url_for("login"))
 
+            subject = request.form.get("subject", "").strip()
+            description = request.form.get("description", "").strip()
             order_id = request.form.get("order_id", "").strip() or None
 
             if order_id:

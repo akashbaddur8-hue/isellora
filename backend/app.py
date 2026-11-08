@@ -2086,6 +2086,42 @@ def create_app(config_name=None):
             upi_payments=upi_payments
         )
 
+    @app.route("/admin/support/<ticket_id>/update", methods=["POST"])
+    def admin_update_support_ticket(ticket_id):
+        if not is_admin():
+            abort(403)
+
+        ticket = db.session.get(SupportTicket, ticket_id)
+        if ticket is None:
+            abort(404)
+
+        new_status = request.form.get("status", "").strip()
+        notes = request.form.get("resolution_notes", "").strip()
+        allowed_statuses = {"Open", "In Progress", "Resolved", "Closed"}
+
+        if new_status not in allowed_statuses:
+            flash("Invalid support ticket status.", "error")
+            return redirect(url_for("admin_dashboard"))
+
+        admin_user = get_current_user()
+        old_status = ticket.status
+        ticket.status = new_status
+        ticket.resolution_notes = notes or None
+
+        db.session.add(AuditEvent(
+            user_id=admin_user.id,
+            action="SUPPORT_TICKET_UPDATED",
+            target_type="SupportTicket",
+            target_id=ticket.id,
+            details=f"Support ticket {ticket.ticket_number} status changed from {old_status} to {new_status}.",
+            ip_address=request.remote_addr,
+            created_at=utc_now()
+        ))
+
+        db.session.commit()
+        flash(f"Support ticket {ticket.ticket_number} updated.", "success")
+        return redirect(url_for("admin_dashboard"))
+
     @app.route("/admin/listing-approvals")
     def admin_listing_approvals():
         if not is_admin():

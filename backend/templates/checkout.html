@@ -259,6 +259,11 @@
                             <strong>Pay Online (Razorpay)</strong>
                             <small>{% if razorpay_configured %}UPI, Credit/Debit Cards, NetBanking{% else %}Pending keys in backend/.env{% endif %}</small>
                         </label>
+                        <label class="delivery-option-box" id="optUpi">
+                            <input type="radio" name="payment_method" value="upi" onchange="togglePaymentMode(this.value)">
+                            <strong>Manual UPI Transfer</strong>
+                            <small>Submit UTR after placing your order; admin verifies payment</small>
+                        </label>
                         <label class="delivery-option-box {% if not razorpay_configured %}active{% endif %}" id="optCod">
                             <input type="radio" name="payment_method" value="cod" {% if not razorpay_configured %}checked{% endif %} onchange="togglePaymentMode(this.value)">
                             <strong>Cash on Delivery (COD)</strong>
@@ -290,6 +295,22 @@
                     </h4>
                     <p style="margin: 0; font-size: 13px; line-height: 1.5;">
                         No online payment required now. Your order will be marked <em>"Not collected"</em>. You will inspect the phone firsthand and settle payment directly upon handover.
+                    </p>
+                </div>
+
+                <div id="upiNoticeBox" class="payment-notice-box" style="display: none; background: #f5f3ff; border-color: #c4b5fd; color: #5b21b6;">
+                    <h4>Manual UPI Payment</h4>
+                    <p style="margin: 0; font-size: 13px; line-height: 1.5;">
+                        Scan this QR code using Google Pay, PhonePe or any UPI app. Complete your transfer, then submit your UTR from the Orders page. Payment remains pending until an admin independently verifies it.
+                    </p>
+                    <div style="text-align:center; margin-top:16px;">
+                        <img src="{{ url_for('static', filename='images/gpay-qr.jpeg') }}"
+                             alt="iSellora UPI Payment QR Code"
+                             style="width:220px; max-width:100%; background:#fff; padding:10px; border-radius:12px; border:1px solid #ddd;">
+                    </div>
+                    <p style="text-align:center; font-size:12px; margin-top:10px;">
+                        Verify the recipient name before making payment.
+
                     </p>
                 </div>
 
@@ -378,21 +399,25 @@
         currentPaymentMethod = method;
         const optRazorpay = document.getElementById('optRazorpay');
         const optCod = document.getElementById('optCod');
+        const optUpi = document.getElementById('optUpi');
         const razorpayNoticeBox = document.getElementById('razorpayNoticeBox');
         const codNoticeBox = document.getElementById('codNoticeBox');
+        const upiNoticeBox = document.getElementById('upiNoticeBox');
         const btnSubmit = document.getElementById('btnSubmitOrder');
 
+        optRazorpay.classList.toggle('active', method === 'razorpay');
+        optCod.classList.toggle('active', method === 'cod');
+        optUpi.classList.toggle('active', method === 'upi');
+
+        razorpayNoticeBox.style.display = method === 'razorpay' ? 'block' : 'none';
+        codNoticeBox.style.display = method === 'cod' ? 'block' : 'none';
+        upiNoticeBox.style.display = method === 'upi' ? 'block' : 'none';
+
         if (method === 'razorpay') {
-            optRazorpay.classList.add('active');
-            optCod.classList.remove('active');
-            razorpayNoticeBox.style.display = 'block';
-            codNoticeBox.style.display = 'none';
             btnSubmit.textContent = 'Proceed to Razorpay Online Payment';
+        } else if (method === 'upi') {
+            btnSubmit.textContent = 'Continue with Manual UPI';
         } else {
-            optCod.classList.add('active');
-            optRazorpay.classList.remove('active');
-            codNoticeBox.style.display = 'block';
-            razorpayNoticeBox.style.display = 'none';
             btnSubmit.textContent = 'Confirm Order & Reserve Phone (COD)';
         }
     }

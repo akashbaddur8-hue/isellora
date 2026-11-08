@@ -484,6 +484,13 @@ class Payment(db.Model):
     razorpay_payment_id = db.Column(db.String(100), unique=True, nullable=True, index=True)
     razorpay_signature = db.Column(db.String(255), nullable=True)
 
+    # Manual UPI payment reference and admin review
+    upi_reference = db.Column(db.String(100), nullable=True, unique=True, index=True)
+    upi_submitted_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    reviewed_by = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=True)
+    reviewed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    review_note = db.Column(db.String(500), nullable=True)
+
     amount_paise = db.Column(db.BigInteger, nullable=False)
     currency = db.Column(db.String(10), default="INR", nullable=False)
     status = db.Column(db.String(30), default="created", nullable=False, index=True)  # 'created', 'pending', 'authorized', 'paid', 'failed', 'refunded', 'partially_refunded'

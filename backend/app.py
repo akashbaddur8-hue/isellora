@@ -1,4 +1,4 @@
-﻿"""
+"""
 iSellora Marketplace Application
 Full-featured, secure, and relational-backed marketplace for second-hand smartphones.
 """
@@ -178,6 +178,24 @@ def create_app(config_name=None):
                         conn.execute(text("ALTER TABLE listings ADD COLUMN is_featured BOOLEAN DEFAULT 0"))
                     if "featured_at" not in listing_cols:
                         conn.execute(text("ALTER TABLE listings ADD COLUMN featured_at DATETIME"))
+                if "payments" in existing_tables:
+                    payment_cols = [c["name"] for c in inspector.get_columns("payments")]
+                    if "upi_reference" not in payment_cols:
+                        conn.execute(text("ALTER TABLE payments ADD COLUMN upi_reference VARCHAR(100)"))
+                    if "upi_submitted_at" not in payment_cols:
+                        conn.execute(text("ALTER TABLE payments ADD COLUMN upi_submitted_at TIMESTAMP WITH TIME ZONE"))
+                    if "reviewed_by" not in payment_cols:
+                        conn.execute(text("ALTER TABLE payments ADD COLUMN reviewed_by VARCHAR(36)"))
+                    if "reviewed_at" not in payment_cols:
+                        conn.execute(text("ALTER TABLE payments ADD COLUMN reviewed_at TIMESTAMP WITH TIME ZONE"))
+                    if "review_note" not in payment_cols:
+                        conn.execute(text("ALTER TABLE payments ADD COLUMN review_note VARCHAR(500)"))
+
+                    conn.execute(text(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS ix_payments_upi_reference "
+                        "ON payments (upi_reference)"
+                    ))
+
                 if "users" in existing_tables:
                     user_cols = [c["name"] for c in inspector.get_columns("users")]
                     if "username" not in user_cols:
@@ -559,7 +577,7 @@ def create_app(config_name=None):
             flash("Invalid delivery method selected.", "error")
             return render_template("checkout.html", phone=listing, checkout_token=checkout_token, razorpay_key_id=razorpay_key_id), 400
 
-        if payment_method not in ("cod", "razorpay"):
+        if payment_method not in ("cod", "razorpay", "upi"):
             flash("Invalid payment method selected.", "error")
             return render_template("checkout.html", phone=listing, checkout_token=checkout_token, razorpay_key_id=razorpay_key_id), 400
 
@@ -602,6 +620,39 @@ def create_app(config_name=None):
                 return jsonify({
                     "success": True,
                     "payment_method": "cod",
+                    "redirect_url": url_for("order_confirmation", order_id=order.id)
+                })
+            return redirect(url_for("order_confirmation", order_id=order.id))
+
+        # Handle Manual UPI (payment remains pending until admin verifies UTR)
+        if payment_method == "upi":
+            existing_upi_payment = Payment.query.filter_by(
+                order_id=order.id,
+                provider="upi_manual",
+                purpose="order"
+            ).first()
+
+            if not existing_upi_payment:
+                upi_payment = Payment(
+                    order_id=order.id,
+                    user_id=user.id,
+                    purpose="order",
+                    provider="upi_manual",
+                    amount_paise=order.total_paise,
+                    currency="INR",
+                    status="pending"
+                )
+                db.session.add(upi_payment)
+                db.session.commit()
+
+            session.pop("checkout_token", None)
+            session.pop("checkout_listing_id", None)
+            flash("Your order is reserved. Complete the UPI transfer and submit the UTR for admin verification.", "success")
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({
+                    "success": True,
+                    "payment_method": "upi",
+                    "order_id": order.id,
                     "redirect_url": url_for("order_confirmation", order_id=order.id)
                 })
             return redirect(url_for("order_confirmation", order_id=order.id))
@@ -728,7 +779,89 @@ def create_app(config_name=None):
             return redirect(url_for("login", next=request.path))
 
         my_orders = Order.query.filter_by(buyer_id=user.id).order_by(Order.created_at.desc()).all()
-        return render_template("orders.html", orders=my_orders)
+
+        # Latest manual UPI payment attempt for each buyer order
+        upi_records = Payment.query.filter_by(
+            user_id=user.id,
+            provider="upi_manual",
+            purpose="order"
+        ).order_by(Payment.created_at.desc()).all()
+
+        upi_payments_by_order = {}
+        for payment in upi_records:
+            upi_payments_by_order.setdefault(payment.order_id, payment)
+
+        return render_template(
+            "orders.html",
+            orders=my_orders,
+            upi_payments_by_order=upi_payments_by_order
+        )
+
+    @app.route("/orders/<order_id>/upi-reference", methods=["POST"])
+    def submit_upi_reference(order_id):
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login", next=request.path))
+
+        order = db.session.get(Order, order_id)
+        if not order or order.buyer_id != user.id:
+            abort(404)
+
+        if order.payment_method != "upi":
+            abort(400)
+
+        if order.payment_status == "paid" or order.status == "Cancelled":
+            flash("This order cannot accept another UPI reference.", "error")
+            return redirect(url_for("orders"))
+
+        reference = (request.form.get("upi_reference") or "").strip().replace(" ", "")
+        if not (8 <= len(reference) <= 100) or not reference.isalnum():
+            flash("Enter a valid UPI transaction reference (8-100 letters or digits).", "error")
+            return redirect(url_for("orders"))
+
+        duplicate = Payment.query.filter(
+            Payment.upi_reference == reference
+        ).first()
+        if duplicate:
+            flash("This UPI reference has already been submitted.", "error")
+            return redirect(url_for("orders"))
+
+        payment = Payment.query.filter_by(
+            order_id=order.id,
+            user_id=user.id,
+            provider="upi_manual",
+            purpose="order"
+        ).order_by(Payment.created_at.desc()).first()
+
+        if not payment:
+            flash("UPI payment record was not found. Please contact support.", "error")
+            return redirect(url_for("orders"))
+
+        if payment.status == "paid":
+            flash("This payment has already been verified.", "info")
+            return redirect(url_for("orders"))
+
+        if payment.upi_reference:
+            flash("A UPI reference has already been submitted for this payment.", "error")
+            return redirect(url_for("orders"))
+
+        payment.upi_reference = reference
+        payment.upi_submitted_at = utc_now()
+        payment.status = "pending"
+        order.payment_status = "pending"
+
+        db.session.add(AuditEvent(
+            user_id=user.id,
+            action="UPI_REFERENCE_SUBMITTED",
+            target_type="Payment",
+            target_id=payment.id,
+            details=f"UPI reference submitted for order {order.id}",
+            ip_address=request.remote_addr
+        ))
+        db.session.commit()
+
+        flash("UPI reference submitted. Payment remains pending until admin verification.", "success")
+        return redirect(url_for("orders"))
 
     @app.route("/orders/<order_id>/cancel", methods=["POST"])
     def cancel_order(order_id):
@@ -1916,6 +2049,14 @@ def create_app(config_name=None):
         reports_list = ReportDispute.query.order_by(ReportDispute.created_at.desc()).limit(10).all()
         audit_logs = AuditEvent.query.order_by(AuditEvent.created_at.desc()).limit(20).all()
 
+        # Manual UPI references awaiting admin review
+        upi_payments = Payment.query.filter(
+            Payment.provider == "upi_manual",
+            Payment.purpose == "order",
+            Payment.upi_reference.isnot(None),
+            Payment.status == "pending"
+        ).order_by(Payment.upi_submitted_at.asc()).limit(50).all()
+
         # Only genuine, verified paid subscriptions count toward active boosts and revenue
         verified_boosts = ListingSubscription.query.filter_by(status="active", payment_status="paid").all()
         total_boosts = len(verified_boosts)
@@ -1939,7 +2080,8 @@ def create_app(config_name=None):
             orders=orders_list,
             tickets=tickets_list,
             reports=reports_list,
-            audit_logs=audit_logs
+            audit_logs=audit_logs,
+            upi_payments=upi_payments
         )
 
     @app.route("/admin/listing-approvals")
@@ -2008,6 +2150,127 @@ def create_app(config_name=None):
         next_url = data.get("next") or request.referrer
         if next_url and is_safe_redirect_url(next_url):
             return redirect(next_url)
+        return redirect(url_for("admin_dashboard"))
+
+    @app.route("/admin/payment/<payment_id>/upi/verify", methods=["POST"])
+    def admin_verify_upi_payment(payment_id):
+        if not is_admin():
+            abort(403)
+
+        payment = db.session.get(Payment, payment_id)
+        if (
+            not payment
+            or payment.provider != "upi_manual"
+            or payment.purpose != "order"
+            or not payment.upi_reference
+            or payment.status != "pending"
+        ):
+            flash("UPI payment is not available for verification.", "error")
+            return redirect(url_for("admin_dashboard"))
+
+        order = db.session.get(Order, payment.order_id)
+        if not order or order.payment_method != "upi":
+            abort(404)
+
+        if order.payment_status == "paid" or order.status == "Cancelled":
+            flash("This order cannot be verified again.", "error")
+            return redirect(url_for("admin_dashboard"))
+
+        admin_user = get_current_user()
+        now = utc_now()
+
+        # Admin must independently confirm the bank/UPI credit before this action.
+        payment.status = "paid"
+        payment.paid_at = now
+        payment.reviewed_by = admin_user.id
+        payment.reviewed_at = now
+        payment.review_note = "UPI payment independently verified by admin."
+        order.payment_status = "paid"
+
+        db.session.add(AuditEvent(
+            user_id=admin_user.id,
+            action="UPI_PAYMENT_VERIFIED",
+            target_type="Payment",
+            target_id=payment.id,
+            details=f"UPI payment verified for order {order.id}.",
+            ip_address=request.remote_addr
+        ))
+        if order.buyer_id:
+            db.session.add(Notification(
+                user_id=order.buyer_id,
+                title="UPI Payment Verified",
+                message=f"Your UPI payment for order {order.id} has been verified.",
+                order_id=order.id
+            ))
+        if order.seller_id:
+            db.session.add(Notification(
+                user_id=order.seller_id,
+                title="Buyer Payment Verified",
+                message=f"UPI payment for order {order.id} has been verified.",
+                order_id=order.id
+            ))
+
+        db.session.commit()
+        flash("UPI payment verified. Order payment status is now paid.", "success")
+        return redirect(url_for("admin_dashboard"))
+
+    @app.route("/admin/payment/<payment_id>/upi/reject", methods=["POST"])
+    def admin_reject_upi_payment(payment_id):
+        if not is_admin():
+            abort(403)
+
+        payment = db.session.get(Payment, payment_id)
+        if (
+            not payment
+            or payment.provider != "upi_manual"
+            or payment.purpose != "order"
+            or not payment.upi_reference
+            or payment.status != "pending"
+        ):
+            flash("UPI payment is not available for review.", "error")
+            return redirect(url_for("admin_dashboard"))
+
+        order = db.session.get(Order, payment.order_id)
+        if not order or order.payment_method != "upi":
+            abort(404)
+
+        if order.payment_status == "paid" or order.status == "Cancelled":
+            flash("This order cannot be rejected.", "error")
+            return redirect(url_for("admin_dashboard"))
+
+        admin_user = get_current_user()
+        reason = (request.form.get("reason") or "").strip()
+        if not reason or len(reason) > 500:
+            flash("Enter a rejection reason (maximum 500 characters).", "error")
+            return redirect(url_for("admin_dashboard"))
+
+        now = utc_now()
+        payment.status = "failed"
+        payment.error_code = "UPI_REFERENCE_REJECTED"
+        payment.error_description = reason
+        payment.reviewed_by = admin_user.id
+        payment.reviewed_at = now
+        payment.review_note = reason
+        order.payment_status = "failed"
+
+        db.session.add(AuditEvent(
+            user_id=admin_user.id,
+            action="UPI_PAYMENT_REJECTED",
+            target_type="Payment",
+            target_id=payment.id,
+            details=f"UPI reference rejected for order {order.id}: {reason}",
+            ip_address=request.remote_addr
+        ))
+        if order.buyer_id:
+            db.session.add(Notification(
+                user_id=order.buyer_id,
+                title="UPI Payment Needs Attention",
+                message=f"Your UPI reference for order {order.id} was not verified. Reason: {reason}",
+                order_id=order.id
+            ))
+
+        db.session.commit()
+        flash("UPI reference rejected. The order has not been cancelled.", "warning")
         return redirect(url_for("admin_dashboard"))
 
     @app.route("/admin/payment/<payment_id>/refund", methods=["POST"])

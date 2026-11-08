@@ -182,6 +182,31 @@
                                 <a href="{{ order.tracking_url }}" target="_blank" rel="noopener noreferrer" class="btn-tracking">Track Courier ↗</a>
                             {% endif %}
 
+                            {% if order.payment_method == 'upi' and order.payment_status != 'paid' and order.status != 'Cancelled' %}
+                                {% set upi_payment = upi_payments_by_order.get(order.id) %}
+                                <div style="margin: 14px 0; padding: 14px; border: 1px solid #c4b5fd; border-radius: 12px; background: #f5f3ff; width: 100%;">
+                                    <strong style="color: #5b21b6;">Manual UPI Payment</strong>
+                                    {% if upi_payment and upi_payment.upi_reference %}
+                                        <p style="font-size: 13px; margin: 8px 0;">
+                                            Submitted UTR: <strong>{{ upi_payment.upi_reference }}</strong><br>
+                                            Verification status: <strong>{{ upi_payment.status|capitalize }}</strong>
+                                        </p>
+                                        {% if upi_payment.status == 'failed' %}
+                                            <p style="font-size: 12px; color: #b91c1c;">{{ upi_payment.review_note or upi_payment.error_description or 'Reference was not verified.' }}</p>
+                                        {% elif upi_payment.status == 'pending' %}
+                                            <p style="font-size: 12px; color: #6b21a8;">Waiting for admin verification. A submitted UTR is not proof of payment.</p>
+                                        {% endif %}
+                                    {% else %}
+                                        <p style="font-size: 12px; margin: 8px 0;">After transferring through UPI, enter the transaction reference (UTR) below. Payment remains pending until admin verification.</p>
+                                        <form action="{{ url_for('submit_upi_reference', order_id=order.id) }}" method="POST" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="text" name="upi_reference" minlength="8" maxlength="100" pattern="[A-Za-z0-9]+" placeholder="Enter UPI UTR / reference" required style="flex: 1; min-width: 190px; padding: 10px; border: 1px solid #c4b5fd; border-radius: 8px;">
+                                            <button type="submit" class="btn-tracking">Submit UTR</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+
                             {% if order.status == 'Pending' %}
                                 <form action="{{ url_for('cancel_order', order_id=order.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this order? The smartphone will be released.');">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

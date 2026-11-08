@@ -80,8 +80,17 @@ def create_order(
     delivery_charge_paise = 0 if delivery_method == "pickup" else STANDARD_SHIPPING_CHARGE_PAISE
     total_paise = price_paise + delivery_charge_paise
 
-    order_payment_method = "razorpay" if payment_method == "razorpay" else "cod"
-    initial_payment_status = "created" if order_payment_method == "razorpay" else "Not collected"
+    if payment_method not in ("cod", "razorpay", "upi"):
+        release_listing_reservation(listing_id)
+        return None, "Invalid payment method."
+
+    order_payment_method = payment_method
+    if payment_method == "razorpay":
+        initial_payment_status = "created"
+    elif payment_method == "upi":
+        initial_payment_status = "pending"
+    else:
+        initial_payment_status = "Not collected"
 
     order_id = str(uuid.uuid4())
     order = Order(

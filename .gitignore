@@ -55,3 +55,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.tmp
+
+*.before-local-upload
+
+*.before-local-upload

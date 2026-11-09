@@ -1,4 +1,4 @@
-"""
+﻿"""
 iSellora Marketplace Application
 Full-featured, secure, and relational-backed marketplace for second-hand smartphones.
 """
@@ -27,6 +27,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import click
 
+from sqlalchemy.exc import IntegrityError
 from backend.database import db
 from backend.models import (
     User, Listing, ListingImage, Order, OrderStatusHistory,
@@ -65,31 +66,46 @@ csrf = CSRFProtect()
 
 
 def upload_to_cloudinary(file_storage, folder):
-    """Upload an image to persistent Cloudinary storage."""
-    if not current_app.config.get("CLOUDINARY_CONFIGURED"):
-        raise RuntimeError("Cloudinary is not configured. Image upload is unavailable.")
+    """Use Cloudinary in production and local storage in development/tests."""
+    if current_app.config.get("CLOUDINARY_CONFIGURED"):
+        result = cloudinary.uploader.upload(
+            file_storage,
+            folder=folder,
+            resource_type="image"
+        )
+        public_id = result.get("public_id")
+        if not public_id:
+            raise RuntimeError("Cloudinary did not return an image ID.")
 
-    result = cloudinary.uploader.upload(
-        file_storage,
-        folder=folder,
-        resource_type="image"
-    )
+        image_url, _ = cloudinary_url(
+            public_id,
+            secure=True,
+            quality="auto",
+            fetch_format="auto"
+        )
+        if not image_url:
+            raise RuntimeError("Cloudinary did not generate an image URL.")
+        return image_url
 
-    public_id = result.get("public_id")
-    if not public_id:
-        raise RuntimeError("Cloudinary did not return an image ID.")
+    if current_app.config.get("ENV") == "production" or current_app.config.get("DEBUG") is False and not current_app.config.get("TESTING"):
+        raise RuntimeError("Cloudinary is required for production image uploads.")
 
-    image_url, _ = cloudinary_url(
-        public_id,
-        secure=True,
-        quality="auto",
-        fetch_format="auto"
-    )
+    filename = secure_filename(file_storage.filename or "")
+    if not filename:
+        raise RuntimeError("Invalid image filename.")
 
-    if not image_url:
-        raise RuntimeError("Cloudinary did not generate an image URL.")
+    extension = os.path.splitext(filename)[1].lower().lstrip(".")
+    if extension not in current_app.config.get("ALLOWED_EXTENSIONS", set()):
+        raise RuntimeError("Unsupported image format.")
 
-    return image_url
+    safe_folder = os.path.basename(folder.rstrip("/"))
+    target_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], safe_folder)
+    os.makedirs(target_dir, exist_ok=True)
+
+    unique_name = f"avatar_{uuid.uuid4().hex}.{extension}" if safe_folder == "avatars" else f"{uuid.uuid4().hex}.{extension}"
+    file_storage.save(os.path.join(target_dir, unique_name))
+
+    return url_for("static", filename=f"uploads/{safe_folder}/{unique_name}")
 
 
 def create_app(config_name=None):
@@ -814,14 +830,21 @@ def create_app(config_name=None):
             flash("This order cannot accept another UPI reference.", "error")
             return redirect(url_for("orders"))
 
-        reference = (request.form.get("upi_reference") or "").strip().replace(" ", "")
+        reference = (
+            request.form.get("upi_reference") or ""
+        ).strip().replace(" ", "")
+
         if not (8 <= len(reference) <= 100) or not reference.isalnum():
-            flash("Enter a valid UPI transaction reference (8-100 letters or digits).", "error")
+            flash(
+                "Enter a valid UPI transaction reference (8-100 letters or digits).",
+                "error"
+            )
             return redirect(url_for("orders"))
 
         duplicate = Payment.query.filter(
             Payment.upi_reference == reference
         ).first()
+
         if duplicate:
             flash("This UPI reference has already been submitted.", "error")
             return redirect(url_for("orders"))
@@ -834,7 +857,10 @@ def create_app(config_name=None):
         ).order_by(Payment.created_at.desc()).first()
 
         if not payment:
-            flash("UPI payment record was not found. Please contact support.", "error")
+            flash(
+                "UPI payment record was not found. Please contact support.",
+                "error"
+            )
             return redirect(url_for("orders"))
 
         if payment.status == "paid":
@@ -842,7 +868,10 @@ def create_app(config_name=None):
             return redirect(url_for("orders"))
 
         if payment.upi_reference:
-            flash("A UPI reference has already been submitted for this payment.", "error")
+            flash(
+                "A UPI reference has already been submitted for this payment.",
+                "error"
+            )
             return redirect(url_for("orders"))
 
         payment.upi_reference = reference
@@ -858,9 +887,36 @@ def create_app(config_name=None):
             details=f"UPI reference submitted for order {order.id}",
             ip_address=request.remote_addr
         ))
-        db.session.commit()
 
-        flash("UPI reference submitted. Payment remains pending until admin verification.", "success")
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+
+            duplicate = Payment.query.filter(
+                Payment.upi_reference == reference
+            ).first()
+
+            if duplicate:
+                flash(
+                    "This UPI reference has already been submitted.",
+                    "error"
+                )
+            else:
+                app.logger.exception(
+                    "Database integrity error while saving UPI reference."
+                )
+                flash(
+                    "Unable to submit UPI reference. Please contact support.",
+                    "error"
+                )
+
+            return redirect(url_for("orders"))
+
+        flash(
+            "UPI reference submitted. Payment remains pending until admin verification.",
+            "success"
+        )
         return redirect(url_for("orders"))
 
     @app.route("/orders/<order_id>/cancel", methods=["POST"])
@@ -2422,6 +2478,9 @@ if __name__ == "__main__":
     backend_env = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
     extra_files = [backend_env] if os.path.exists(backend_env) else []
     app.run(debug=True, host="127.0.0.1", port=5000, extra_files=extra_files)
+
+
+
 
 
 

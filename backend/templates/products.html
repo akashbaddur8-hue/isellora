@@ -146,18 +146,18 @@
         overflow: hidden;
     }
 
-    .phone-image-wrapper img {
-        width: auto;
-        height: auto;
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-        padding: 0;
-        position: relative;
-        z-index: 1;
-        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
+   .phone-image-wrapper img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 180px;
+    object-fit: contain;
+    padding: 0;
+    position: relative;
+    z-index: 1;
+    transition: none;
+}
     .phone-card:hover .phone-image-wrapper img {
         transform: none;
     }

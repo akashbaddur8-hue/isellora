@@ -11,6 +11,7 @@ import json
 import logging
 from datetime import timedelta
 import razorpay
+from sqlalchemy.exc import IntegrityError
 from flask import current_app
 from backend.database import db
 from backend.models import (
@@ -564,7 +565,19 @@ def process_webhook(raw_body: bytes, signature: str) -> tuple[bool, str, int]:
         created_at=utc_now()
     )
     db.session.add(webhook_record)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        existing_event = WebhookEvent.query.filter_by(event_id=event_id).first()
+        if existing_event:
+            return True, "Event already processed.", 200
+        logger.exception("Webhook database integrity error.")
+        return False, "Webhook could not be processed.", 500
+    except Exception:
+        db.session.rollback()
+        logger.exception("Webhook transaction failed.")
+        return False, "Webhook could not be processed.", 500
 
     return True, "Webhook processed successfully.", 200
 

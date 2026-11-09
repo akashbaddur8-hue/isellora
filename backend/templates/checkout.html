@@ -257,7 +257,7 @@
                         <label class="delivery-option-box {% if razorpay_configured %}active{% endif %}" id="optRazorpay" style="{% if not razorpay_configured %}opacity: 0.65; cursor: not-allowed;{% endif %}">
                             <input type="radio" name="payment_method" value="razorpay" {% if razorpay_configured %}checked{% else %}disabled{% endif %} onchange="togglePaymentMode(this.value)">
                             <strong>Pay Online (Razorpay)</strong>
-                            <small>{% if razorpay_configured %}UPI, Credit/Debit Cards, NetBanking{% else %}Pending keys in backend/.env{% endif %}</small>
+                            <small>{% if razorpay_configured %}UPI, Credit/Debit Cards, NetBanking{% else %}Currently unavailable - Coming soon{% endif %}</small>
                         </label>
                         <label class="delivery-option-box" id="optUpi">
                             <input type="radio" name="payment_method" value="upi" onchange="togglePaymentMode(this.value)">

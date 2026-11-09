@@ -10,6 +10,9 @@ import logging
 import os
 import smtplib
 import socket
+import json
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 from flask import current_app
 
 logger = logging.getLogger(__name__)
@@ -240,6 +243,52 @@ def send_password_reset_email(to_email: str, user_name: str, reset_url: str) -> 
         current_app.logger.debug("Captured password reset email for %s in TEST_OUTBOX", to_email)
         return True, "Email recorded in testing outbox."
 
+    # 2. Prefer Brevo HTTPS API when configured (SMTP may be blocked on hosting).
+    brevo_api_key = (os.environ.get("BREVO_API_KEY") or "").strip()
+
+    if brevo_api_key:
+        brevo_sender = (os.environ.get("BREVO_SENDER_EMAIL") or "").strip()
+        brevo_sender_name = (os.environ.get("BREVO_SENDER_NAME") or "iSellora Support").strip()
+
+        if not brevo_sender:
+            current_app.logger.error("Brevo is configured but BREVO_SENDER_EMAIL is missing.")
+            return False, "Email sender is not configured on this server."
+
+        payload = {
+            "sender": {"name": brevo_sender_name, "email": brevo_sender},
+            "to": [{"email": to_email, "name": user_name}],
+            "subject": subject,
+            "textContent": text_body,
+            "htmlContent": html_body
+        }
+
+        try:
+            request = Request(
+                "https://api.brevo.com/v3/smtp/email",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "accept": "application/json",
+                    "api-key": brevo_api_key,
+                    "content-type": "application/json"
+                },
+                method="POST"
+            )
+            with urlopen(request, timeout=20) as response:
+                if response.status in (200, 201, 202):
+                    current_app.logger.info("Password reset email sent through Brevo to %s", to_email)
+                    return True, "Reset instructions sent to your email."
+                current_app.logger.error("Brevo returned unexpected HTTP status %s", response.status)
+                return False, "Email delivery failed. Please try again later."
+
+        except HTTPError as err:
+            current_app.logger.error("Brevo API rejected email request with HTTP status %s", err.code)
+            return False, "Email delivery failed. Please try again later."
+        except (URLError, socket.timeout, OSError) as err:
+            current_app.logger.error("Brevo connection failure: %s", err.__class__.__name__)
+            return False, "Could not connect to email service. Please try again later."
+        except Exception as err:
+            current_app.logger.error("Unexpected Brevo email error: %s", err.__class__.__name__)
+            return False, "An unexpected error occurred while sending the email."
     # 2. Check if SMTP configuration is present
     server = (current_app.config.get("MAIL_SERVER") or "").strip()
     port = int(current_app.config.get("MAIL_PORT", 587))
